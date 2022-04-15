@@ -254,8 +254,8 @@ def main():
         evaluate(model, data, start_epoch, args, writer)
         return
     elif start_epoch == 0 and 'val' in data:
-        # evaluate(model, data, 0, args, writer)
-        pass
+        evaluate(model, data, 0, args, writer)
+        # pass
 
     for epoch in range(start_epoch, args.epochs):
         if is_master(args):
