@@ -63,6 +63,9 @@ def train_one_epoch(model, data, epoch, optimizer, scaler, scheduler, args, tb_w
     num_batches_per_epoch = dataloader.num_batches
     sample_digits = math.ceil(math.log(dataloader.num_samples + 1, 10))
 
+    # for toy dataset
+    dataloader.dataset.generate_queue()
+
     loss_m = AverageMeter()
     batch_time_m = AverageMeter()
     data_time_m = AverageMeter()
@@ -70,17 +73,17 @@ def train_one_epoch(model, data, epoch, optimizer, scaler, scheduler, args, tb_w
     for i, batch in enumerate(dataloader):
         step = num_batches_per_epoch * epoch + i
         scheduler(step)
-
-        images, texts = batch
-        images = images.to(device=device, non_blocking=True)
+        audios = batch["waveform"]
+        texts = batch["text"]
+        audios = audios.to(device=device, non_blocking=True)
         texts = texts.to(device=device, non_blocking=True)
 
         data_time_m.update(time.time() - end)
         optimizer.zero_grad()
 
         with autocast():
-            image_features, text_features, logit_scale = model(images, texts)
-            total_loss = loss(image_features, text_features, logit_scale)
+            audio_features, text_features, logit_scale = model(audios, texts)
+            total_loss = loss(audio_features, text_features, logit_scale)
 
         if scaler is not None:
             scaler.scale(total_loss).backward()
@@ -104,7 +107,7 @@ def train_one_epoch(model, data, epoch, optimizer, scaler, scheduler, args, tb_w
         end = time.time()
         batch_count = i + 1
         if is_master(args) and (i % 100 == 0 or batch_count == num_batches_per_epoch):
-            batch_size = len(images)
+            batch_size = len(audios)
             num_samples = batch_count * batch_size * args.world_size
             samples_per_epoch = dataloader.num_samples
             percent_complete = 100.0 * batch_count / num_batches_per_epoch
@@ -150,8 +153,9 @@ def evaluate(model, data, epoch, args, tb_writer=None):
     device = torch.device(args.device)
     model.eval()
 
-    zero_shot_metrics = zero_shot_eval(model, data, epoch, args)
-    metrics.update(zero_shot_metrics)
+    # CHANGE
+    # zero_shot_metrics = zero_shot_eval(model, data, epoch, args)
+    # metrics.update(zero_shot_metrics)
 
     autocast = torch.cuda.amp.autocast if args.precision == 'amp' else suppress
     if 'val' in data and (args.val_frequency and ((epoch % args.val_frequency) == 0 or epoch == args.epochs)):
@@ -160,29 +164,30 @@ def evaluate(model, data, epoch, args, tb_writer=None):
         samples_per_val = dataloader.num_samples
 
         # FIXME this does not scale past small eval datasets
-        # all_image_features @ all_text_features will blow up memory and compute very quickly
+        # all_audio_features @ all_text_features will blow up memory and compute very quickly
         cumulative_loss = 0.0
-        all_image_features, all_text_features = [], []
+        all_audio_features, all_text_features = [], []
         with torch.no_grad():
             for i, batch in enumerate(dataloader):
-                images, texts = batch
-                images = images.to(device=device, non_blocking=True)
+                audios = batch["waveform"]
+                texts = batch["text"]
+                audios = audios.to(device=device, non_blocking=True)
                 texts = texts.to(device=device, non_blocking=True)
 
                 with autocast():
-                    image_features, text_features, logit_scale = model(images, texts)
+                    audio_features, text_features, logit_scale = model(audios, texts)
                     # features are accumulated in CPU tensors, otherwise GPU memory exhausted quickly
                     # however, system RAM is easily exceeded and compute time becomes problematic
-                    all_image_features.append(image_features.cpu())
+                    all_audio_features.append(audio_features.cpu())
                     all_text_features.append(text_features.cpu())
                     logit_scale = logit_scale.mean()
-                    logits_per_image = logit_scale * image_features @ text_features.t()
-                    logits_per_text = logits_per_image.t()
+                    logits_per_audio = logit_scale * audio_features @ text_features.t()
+                    logits_per_text = logits_per_audio.t()
 
-                    batch_size = images.shape[0]
+                    batch_size = audios.shape[0]
                     labels = torch.arange(batch_size, device=device).long()
                     total_loss = (
-                        F.cross_entropy(logits_per_image, labels) +
+                        F.cross_entropy(logits_per_audio, labels) +
                         F.cross_entropy(logits_per_text, labels)
                     ) / 2
 
@@ -194,7 +199,7 @@ def evaluate(model, data, epoch, args, tb_writer=None):
                         f"Loss: {cumulative_loss / num_samples:.6f}\t")
 
             val_metrics = get_metrics(
-                image_features=torch.cat(all_image_features),
+                audio_features=torch.cat(all_audio_features),
                 text_features=torch.cat(all_text_features),
                 logit_scale=logit_scale.cpu(),
             )
@@ -228,12 +233,11 @@ def evaluate(model, data, epoch, args, tb_writer=None):
     return metrics
 
 
-def get_metrics(image_features, text_features, logit_scale):
+def get_metrics(audio_features, text_features, logit_scale):
     metrics = {}
-    logits_per_image = (logit_scale * image_features @ text_features.t()).detach().cpu()
-    logits_per_text = logits_per_image.t().detach().cpu()
-
-    logits = {"image_to_text": logits_per_image, "text_to_image": logits_per_text}
+    logits_per_audio = (logit_scale * audio_features @ text_features.t()).detach().cpu()
+    logits_per_text = logits_per_audio.t().detach().cpu()
+    logits = {"audio_to_text": logits_per_audio, "text_to_audio": logits_per_text}
     ground_truth = torch.arange(len(text_features)).view(-1, 1)
 
     for name, logit in logits.items():

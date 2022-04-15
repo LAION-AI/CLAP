@@ -4,6 +4,7 @@ import logging
 import math
 import os
 import random
+import h5py
 from dataclasses import dataclass
 
 import braceexpand
@@ -19,6 +20,7 @@ from functools import partial
 import soundfile as sf
 import librosa
 import io
+from pathlib import Path
 
 try:
     import horovod.torch as hvd
@@ -26,6 +28,139 @@ except ImportError:
     hvd = None
 
 from open_clip import tokenize
+
+# initizlied the audioset map
+_AUDIOSET_MAP_PATH = os.path.join(Path(__file__).parent, "audioset_textmap.npy")
+_AUDIOSET_MAP = np.load(_AUDIOSET_MAP_PATH, allow_pickle=True)
+
+
+def int16_to_float32(x):
+    return (x / 32767.).astype(np.float32)
+
+# For Toy Dataset 
+class ToyDataset(Dataset):
+    def __init__(self, index_path, ipc, config, eval_mode = False):
+        """Toy Dataset for testing the audioset input with text labels
+        
+        Parameters
+        ----------
+            index_path: str
+                the link to the h5 file of each audio
+            idc: str
+                the link to the npy file, the number of samples in each class
+            config: dict
+                the audio cfg file
+           eval_model (bool): to indicate if the dataset is a testing dataset
+        """
+        self.audio_cfg = config["audio_cfg"]
+        self.text_cfg = config["text_cfg"]
+        self.fp = h5py.File(index_path, "r")
+        self.ipc = np.load(ipc, allow_pickle=True)
+        self.total_size = len(self.fp["audio_name"])
+        self.classes_num = self.audio_cfg["class_num"]
+        self.eval_mode = eval_mode
+
+        if not eval_mode:
+            self.generate_queue()
+        else:
+            self.queue = []
+            for i in range(self.total_size):
+                target = self.fp["target"][i]
+                if np.sum(target) > 0:
+                    self.queue.append(i)
+            self.total_size = len(self.queue)
+        logging.info("total dataset size: %d" %(self.total_size))
+        logging.info("class num: %d" %(self.classes_num))
+
+    def time_shifting(self, x):
+        frame_num = len(x)
+        shift_len = random.randint(0, frame_num - 1)
+        new_sample = np.concatenate([x[shift_len:], x[:shift_len]], axis = 0)
+        return new_sample 
+
+    def generate_queue(self):
+        self.queue = []      
+        while len(self.queue) < self.total_size:
+            class_set = [*range(self.classes_num)]
+            random.shuffle(class_set)
+            self.queue += [self.ipc[d][random.randint(0, len(self.ipc[d]) - 1)] for d in class_set]
+        self.queue = self.queue[:self.total_size]
+        
+        logging.info("queue regenerated:%s" %(self.queue[-5:]))
+
+    def crop_wav(self, x):
+        crop_size = self.audio_cfg["crop_size"]
+        crop_pos = random.randint(0, len(x) - crop_size - 1)
+        return x[crop_pos:crop_pos + crop_size]
+
+    def prompt_text(self, target):
+        events = _AUDIOSET_MAP[np.where(target > 0)]
+        event_text = "The sounds of " + ", ".join(events[:-1]) + " and " + events[-1]
+        text = tokenize(event_text)[0]
+        return text
+
+    def __getitem__(self, index):
+        """Load waveform, text, and target of an audio clip
+
+        Parameters
+        ----------
+            index: int
+                the index number
+        Return
+        ------ 
+            output: dict {
+                "hdf5_path": str,
+                "index_in_hdf5": int,
+                "audio_name": str,
+                "waveform": list (audio_length,),
+                "target": list (class_num, ),
+                "text": torch.tensor (context_length,)
+            }
+                the output dictionary
+        """
+        s_index = self.queue[index]
+        
+        audio_name = self.fp["audio_name"][s_index].decode()
+        # Hardcode here CHANGE
+        hdf5_path = self.fp["hdf5_path"][s_index].decode().replace("/home/tiger/DB/knut/data/audioset/hdf5s/waveforms", "/mnt/audio_clip/test/data")
+        r_idx = self.fp["index_in_hdf5"][s_index]
+        target = self.fp["target"][s_index].astype(np.float32)
+        text = self.prompt_text(target)
+        with h5py.File(hdf5_path, "r") as f:
+            waveform = int16_to_float32(f["waveform"][r_idx])[:self.audio_cfg["clip_samples"]]
+        assert len(waveform) == self.audio_cfg["clip_samples"], "The sample length is not match"
+        # Time shift
+        # if (self.config.enable_time_shift) and (not self.eval_mode):
+        #     waveform = self.time_shifting(waveform)
+        # # Label Enhance
+        # if (self.config.crop_size is not None) and (not self.eval_mode):
+        #     waveform = self.crop_wav(waveform)
+        # # the label enhance rate is fixed 0.5
+        # if (self.config.enable_label_enhance) and (not self.eval_mode) and random.random() < 0.5:
+        #     kidx = np.where(target)[0]
+        #     for k in kidx:
+        #         for add_key in self.class_map[k][1]:
+        #             target[add_key] = 1.0
+        #         if len(self.class_map[k][2]) > 0:
+        #             add_key = random.choice(self.class_map[k][2])
+        #             target[add_key] = 1.0
+    
+        # missing the text input
+
+        data_dict = {
+            "hdf5_path": hdf5_path,
+            "index_in_hdf5": r_idx,
+            "audio_name": audio_name,
+            "waveform": waveform,
+            "target": target,
+            "text": text
+        }
+        return data_dict
+
+    def __len__(self):
+        return self.total_size
+
+
 
 
 class CsvDataset(Dataset):
@@ -212,6 +347,7 @@ def preprocess(
 # def get_wds_dataset(args, preprocess_img, is_train):
 def get_wds_dataset(
     args,
+    model_cfg,
     is_train,
     file_path_type="local",
     audio_ext="flac",
@@ -337,6 +473,36 @@ def get_csv_dataset(args, preprocess_fn, is_train):
     dataloader.num_batches = len(dataloader)
 
     return DataInfo(dataloader, sampler)
+
+
+def get_toy_dataset(args, model_cfg, is_train):
+    index_path = args.train_data if is_train else args.val_data
+    ipc_path = args.train_ipc if is_train else args.val_ipc
+    assert index_path and ipc_path
+    eval_mode = not is_train
+    dataset = ToyDataset(
+        index_path,
+        ipc_path,
+        model_cfg,
+        eval_mode=eval_mode
+    )
+
+    num_samples = len(dataset)
+    sampler = DistributedSampler(dataset, shuffle=False) if args.distributed and is_train else None
+
+    dataloader = DataLoader(
+        dataset,
+        batch_size=args.batch_size,
+        shuffle=False,
+        num_workers=args.workers,
+        sampler=sampler,
+        drop_last=is_train,
+    )
+    dataloader.num_samples = num_samples
+    dataloader.num_batches = len(dataloader)
+
+    return DataInfo(dataloader, sampler)
+
 def get_dataset_fn(data_path, dataset_type):
     if dataset_type == "webdataset":
         return get_wds_dataset
@@ -352,28 +518,41 @@ def get_dataset_fn(data_path, dataset_type):
             raise ValueError(
                 f"Tried to figure out dataset type, but failed for extention {ext}."
             )
+    elif dataset_type == "toy":
+        return get_toy_dataset
     else:
         raise ValueError(f"Unsupported dataset type: {dataset_type}")
 
 
-def get_data(args, preprocess_fns):
-    preprocess_train, preprocess_val = preprocess_fns
+def get_data(args, model_cfg):
+    # deprecated for audio
+    # preprocess_train, preprocess_val = preprocess_fns
     data = {}
 
+    # need to CHANGE when using the formal webdataset
+    # if args.train_data:
+    #     data["train"] = get_dataset_fn(args.train_data, args.dataset_type)(
+    #         args, preprocess_train, is_train=True
+    #     )
+
+    # if args.val_data:
+    #     data["val"] = get_dataset_fn(args.val_data, args.dataset_type)(
+    #         args, preprocess_val, is_train=False
+    #     )
+
+    # if args.imagenet_val is not None:
+    #     data["imagenet-val"] = get_imagenet(args, preprocess_fns, "val")
+
+    # if args.imagenet_v2 is not None:
+    #     data["imagenet-v2"] = get_imagenet(args, preprocess_fns, "v2")
     if args.train_data:
         data["train"] = get_dataset_fn(args.train_data, args.dataset_type)(
-            args, preprocess_train, is_train=True
+            args, model_cfg, is_train=True
         )
 
     if args.val_data:
         data["val"] = get_dataset_fn(args.val_data, args.dataset_type)(
-            args, preprocess_val, is_train=False
+            args, model_cfg, is_train=False
         )
-
-    if args.imagenet_val is not None:
-        data["imagenet-val"] = get_imagenet(args, preprocess_fns, "val")
-
-    if args.imagenet_v2 is not None:
-        data["imagenet-v2"] = get_imagenet(args, preprocess_fns, "v2")
 
     return data

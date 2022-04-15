@@ -25,7 +25,7 @@ def load_openai_model(
         device: Union[str, torch.device] = "cuda" if torch.cuda.is_available() else "cpu",
         jit=True,
 ):
-    """Load a CLIP model
+    """Load a CLIP model, preserve its text pretrained part, and set in the CLAP model
 
     Parameters
     ----------
@@ -39,7 +39,7 @@ def load_openai_model(
     Returns
     -------
     model : torch.nn.Module
-        The CLIP model
+        The CLAP model
     preprocess : Callable[[PIL.Image], torch.Tensor]
         A torchvision transform that converts a PIL image into a tensor that the returned model can take as its input
     """
@@ -91,7 +91,7 @@ def load_openai_model(
                     node.copyAttributes(device_node)
 
     model.apply(patch_device)
-    patch_device(model.encode_image)
+    patch_device(model.encode_audio)
     patch_device(model.encode_text)
 
     # patch dtype to float32 on CPU
@@ -117,10 +117,9 @@ def load_openai_model(
                             inputs[i].node().copyAttributes(float_node)
 
         model.apply(patch_float)
-        patch_float(model.encode_image)
+        patch_float(model.encode_audio)
         patch_float(model.encode_text)
         model.float()
 
-    # ensure image_size attr available at consistent location for both jit and non-jit
-    model.visual.image_size = model.input_resolution.item()
+    model.audio_branch.audio_length = model.audio_cfg.audio_length
     return model

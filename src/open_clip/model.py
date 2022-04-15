@@ -1,10 +1,12 @@
-""" CLIP Model
+""" CLAP Model
 
-Adapted from https://github.com/openai/CLIP. Originally MIT License, Copyright (c) 2021 OpenAI.
+Adapted from CLIP: https://github.com/openai/CLIP. Originally MIT License, Copyright (c) 2021 OpenAI.
+Adapted to the Audio Task.
 """
 
 from collections import OrderedDict
 from dataclasses import dataclass
+from email.mime import audio
 from typing import Tuple, Union, Callable, Optional
 
 import numpy as np
@@ -13,7 +15,11 @@ import torch.nn.functional as F
 from torch import nn
 
 from .timm_model import TimmModel
+import logging
 from .utils import freeze_batch_norm_2d
+
+from .pann_model import create_pann_model
+
 
 
 class Bottleneck(nn.Module):
@@ -280,7 +286,7 @@ class VisualTransformer(nn.Module):
 
 
 @dataclass
-class CLIPVisionCfg:
+class CLAPVisionCfg:
     layers: Union[Tuple[int, int, int, int], int] = 12
     width: int = 768
     patch_size: int = 16
@@ -292,7 +298,24 @@ class CLIPVisionCfg:
 
 
 @dataclass
-class CLIPTextCfg:
+class CLAPAudioCfp:
+    model_type: str = "PANN"
+    model_name: str = "Cnn14"
+    sample_rate: int = 32000
+    # HTS-AT Param
+    # PANN Param
+    audio_length: int = 1024
+    window_size: int = 1024
+    hop_size: int = 1024
+    fmin: int = 50
+    fmax: int = 14000
+    class_num: int = 527
+    mel_bins: int = 64
+    clip_samples: int = 320000
+
+
+@dataclass
+class CLAPTextCfg:
     context_length: int
     vocab_size: int
     width: int
@@ -300,19 +323,19 @@ class CLIPTextCfg:
     layers: int
 
 
-class CLIP(nn.Module):
+class CLAP(nn.Module):
     def __init__(
             self,
             embed_dim: int,
-            vision_cfg: CLIPVisionCfg,
-            text_cfg: CLIPTextCfg,
+            audio_cfg: CLAPAudioCfp,
+            text_cfg: CLAPTextCfg,
             quick_gelu: bool = False,
     ):
         super().__init__()
-        if isinstance(vision_cfg, dict):
-            vision_cfg = CLIPVisionCfg(**vision_cfg)
+        if isinstance(audio_cfg, dict):
+            audio_cfg = CLAPAudioCfp(**audio_cfg)
         if isinstance(text_cfg, dict):
-            text_cfg = CLIPTextCfg(**text_cfg)
+            text_cfg = CLAPTextCfg(**text_cfg)
 
         self.context_length = text_cfg.context_length
 
@@ -321,37 +344,18 @@ class CLIP(nn.Module):
         # NOTE: timm models always use native GELU regardless of quick_gelu flag.
         act_layer = QuickGELU if quick_gelu else nn.GELU
 
-        if vision_cfg.timm_model_name:
-            self.visual = TimmModel(
-                vision_cfg.timm_model_name,
-                pretrained=vision_cfg.timm_model_pretrained,
-                pool=vision_cfg.timm_pool,
-                proj=vision_cfg.timm_proj,
-                embed_dim=embed_dim,
-                image_size=vision_cfg.image_size
-            )
-            act_layer = nn.GELU  # so that text transformer doesn't use QuickGELU w/ timm models
-        elif isinstance(vision_cfg.layers, (tuple, list)):
-            vision_heads = vision_cfg.width * 32 // 64
-            self.visual = ModifiedResNet(
-                layers=vision_cfg.layers,
-                output_dim=embed_dim,
-                heads=vision_heads,
-                image_size=vision_cfg.image_size,
-                width=vision_cfg.width
-            )
-        else:
-            vision_heads = vision_cfg.width // 64
-            self.visual = VisualTransformer(
-                image_size=vision_cfg.image_size,
-                patch_size=vision_cfg.patch_size,
-                width=vision_cfg.width,
-                layers=vision_cfg.layers,
-                heads=vision_heads,
-                output_dim=embed_dim,
-                act_layer=act_layer,
-            )
+        # audio branch
 
+        if audio_cfg.model_type == "PANN":
+            self.audio_branch = create_pann_model(audio_cfg)
+        elif audio_cfg.model_type == "HTSAT":
+            pass
+        else:
+            logging.error(f'Model config for {audio_cfg.model_type} not found')
+            raise RuntimeError(f'Model config for {audio_cfg.model_type} not found.')
+            
+        # text branch
+        
         self.transformer = Transformer(
             width=text_cfg.width,
             layers=text_cfg.layers,
@@ -368,15 +372,16 @@ class CLIP(nn.Module):
         self.logit_scale = nn.Parameter(torch.ones([]) * np.log(1 / 0.07))
         self.register_buffer('attn_mask', self.build_attention_mask(), persistent=False)
 
-        self.init_parameters()
+        self.init_text_branch_parameters()
 
-    def init_parameters(self):
+    def init_text_branch_parameters(self):
         nn.init.normal_(self.token_embedding.weight, std=0.02)
         nn.init.normal_(self.positional_embedding, std=0.01)
         nn.init.constant_(self.logit_scale, np.log(1 / 0.07))
 
-        if hasattr(self.visual, 'init_parameters'):
-            self.visual.init_parameters()
+        # deprecated
+        # if hasattr(self.visual, 'init_parameters'):
+            # self.visual.init_parameters()
 
         proj_std = (self.transformer.width ** -0.5) * ((2 * self.transformer.layers) ** -0.5)
         attn_std = self.transformer.width ** -0.5
@@ -398,12 +403,15 @@ class CLIP(nn.Module):
         mask.triu_(1)  # zero out the lower diagonal
         return mask
 
-    def lock_image_tower(self, unlocked_groups=0, freeze_bn_stats=False):
-        # lock image tower as per LiT - https://arxiv.org/abs/2111.07991
-        self.visual.lock(unlocked_groups=unlocked_groups, freeze_bn_stats=freeze_bn_stats)
+    # def lock_image_tower(self, unlocked_groups=0, freeze_bn_stats=False):
+    #     # lock image tower as per LiT - https://arxiv.org/abs/2111.07991
+    #     self.visual.lock(unlocked_groups=unlocked_groups, freeze_bn_stats=freeze_bn_stats)
 
-    def encode_image(self, image):
-        return self.visual(image)
+    # def encode_image(self, image):
+        # return self.visual(image)
+
+    def encode_audio(self, audio):
+        return self.audio_branch(audio, None) # mix lambda needs to add
 
     def encode_text(self, text):
         x = self.token_embedding(text)  # [batch_size, n_ctx, d_model]
@@ -420,18 +428,26 @@ class CLIP(nn.Module):
 
         return x
 
-    def forward(self, image, text):
-        if image is None:
+    def forward(self, audio, text):
+        """Forward audio and text into the CLAP
+
+        Parameters
+        ----------
+        audio: torch.Tensor (batch_size, audio_length)
+            the time-domain audio input
+        text: torch.Tensor () // need to add
+            the text token input 
+        """
+        if audio is None:
             return self.encode_text(text)
         elif text is None:
-            return self.encode_image(image)
-        image_features = self.encode_image(image)
-        image_features = F.normalize(image_features, dim=-1)
+            return self.encode_audio(audio)
+        audio_features = self.encode_audio(audio)["embedding"]
+        audio_features = F.normalize(audio_features, dim=-1)
 
         text_features = self.encode_text(text)
         text_features = F.normalize(text_features, dim=-1)
-
-        return image_features, text_features, self.logit_scale.exp()
+        return audio_features, text_features, self.logit_scale.exp()
 
 
 def convert_weights_to_fp16(model: nn.Module):
@@ -458,25 +474,27 @@ def convert_weights_to_fp16(model: nn.Module):
     model.apply(_convert_weights_to_fp16)
 
 
-def build_model_from_openai_state_dict(state_dict: dict):
-    vit = "visual.proj" in state_dict
 
-    if vit:
-        vision_width = state_dict["visual.conv1.weight"].shape[0]
-        vision_layers = len(
-            [k for k in state_dict.keys() if k.startswith("visual.") and k.endswith(".attn.in_proj_weight")])
-        vision_patch_size = state_dict["visual.conv1.weight"].shape[-1]
-        grid_size = round((state_dict["visual.positional_embedding"].shape[0] - 1) ** 0.5)
-        image_size = vision_patch_size * grid_size
-    else:
-        counts: list = [
-            len(set(k.split(".")[2] for k in state_dict if k.startswith(f"visual.layer{b}"))) for b in [1, 2, 3, 4]]
-        vision_layers = tuple(counts)
-        vision_width = state_dict["visual.layer1.0.conv1.weight"].shape[0]
-        output_width = round((state_dict["visual.attnpool.positional_embedding"].shape[0] - 1) ** 0.5)
-        vision_patch_size = None
-        assert output_width ** 2 + 1 == state_dict["visual.attnpool.positional_embedding"].shape[0]
-        image_size = output_width * 32
+# Ignore the state dict of the vision part  
+def build_model_from_openai_state_dict(state_dict: dict, audio_cfg):
+    # vit = "visual.proj" in state_dict
+
+    # if vit:
+    #     vision_width = state_dict["visual.conv1.weight"].shape[0]
+    #     vision_layers = len(
+    #         [k for k in state_dict.keys() if k.startswith("visual.") and k.endswith(".attn.in_proj_weight")])
+    #     vision_patch_size = state_dict["visual.conv1.weight"].shape[-1]
+    #     grid_size = round((state_dict["visual.positional_embedding"].shape[0] - 1) ** 0.5)
+    #     image_size = vision_patch_size * grid_size
+    # else:
+    #     counts: list = [
+    #         len(set(k.split(".")[2] for k in state_dict if k.startswith(f"visual.layer{b}"))) for b in [1, 2, 3, 4]]
+    #     vision_layers = tuple(counts)
+    #     vision_width = state_dict["visual.layer1.0.conv1.weight"].shape[0]
+    #     output_width = round((state_dict["visual.attnpool.positional_embedding"].shape[0] - 1) ** 0.5)
+    #     vision_patch_size = None
+    #     assert output_width ** 2 + 1 == state_dict["visual.attnpool.positional_embedding"].shape[0]
+    #     image_size = output_width * 32
 
     embed_dim = state_dict["text_projection"].shape[1]
     context_length = state_dict["positional_embedding"].shape[0]
@@ -485,45 +503,46 @@ def build_model_from_openai_state_dict(state_dict: dict):
     transformer_heads = transformer_width // 64
     transformer_layers = len(set(k.split(".")[2] for k in state_dict if k.startswith(f"transformer.resblocks")))
 
-    vision_cfg = CLIPVisionCfg(
-        layers=vision_layers,
-        width=vision_width,
-        patch_size=vision_patch_size,
-        image_size=image_size,
-    )
-    text_cfg = CLIPTextCfg(
+
+    audio_cfg = CLAPAudioCfp(**audio_cfg)
+    text_cfg = CLAPTextCfg(
         context_length=context_length,
         vocab_size=vocab_size,
         width=transformer_width,
         heads=transformer_heads,
         layers=transformer_layers
     )
-    model = CLIP(
+    model = CLAP(
         embed_dim,
-        vision_cfg=vision_cfg,
+        audio_cfg=audio_cfg,
         text_cfg=text_cfg,
         quick_gelu=True,  # OpenAI models were trained with QuickGELU
     )
+
+    # pop the visual branch saved weights
+    for key in state_dict.keys():
+        if key.startswith("visual."):
+            state_dict.pop(key, None)
 
     for key in ["input_resolution", "context_length", "vocab_size"]:
         state_dict.pop(key, None)
 
     convert_weights_to_fp16(model)
-    model.load_state_dict(state_dict)
+    model.load_state_dict(state_dict, strict=False)
     return model.eval()
 
 
 def trace_model(model, batch_size=256, device=torch.device('cpu')):
     model.eval()
-    image_size = model.visual.image_size
-    example_images = torch.ones((batch_size, 3, image_size, image_size), device=device)
+    audio_length = model.audio_cfg.audio_length
+    example_audio = torch.ones((batch_size, audio_length), device=device)
     example_text = torch.zeros((batch_size, model.context_length), dtype=torch.int, device=device)
     model = torch.jit.trace_module(
         model,
         inputs=dict(
-            forward=(example_images, example_text),
+            forward=(example_audio, example_text),
             encode_text=(example_text,),
-            encode_image=(example_images,)
+            encode_image=(example_audio,)
         ))
-    model.visual.image_size = image_size
+    model.audio_cfg.audio_length = audio_length # Question: what does this do?
     return model

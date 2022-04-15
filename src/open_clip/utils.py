@@ -1,6 +1,10 @@
+import numpy as np
+import torch
 from torch import nn as nn
 from torchvision.ops.misc import FrozenBatchNorm2d
-
+import logging
+import h5py
+from tqdm import tqdm
 
 def freeze_batch_norm_2d(module, module_match={}, name=''):
     """
@@ -39,3 +43,64 @@ def freeze_batch_norm_2d(module, module_match={}, name=''):
             if new_child is not child:
                 res.add_module(child_name, new_child)
     return res
+
+
+def get_mix_lambda(mixup_alpha, batch_size):
+    mixup_lambdas = [np.random.beta(mixup_alpha, mixup_alpha, 1)[0] for _ in range(batch_size)]
+    return np.array(mixup_lambdas).astype(np.float32)
+
+def do_mixup(x, mixup_lambda):
+    """
+    Args:
+      x: (batch_size , ...)
+      mixup_lambda: (batch_size,)
+    Returns:
+      out: (batch_size, ...)
+    """
+    out = (x.transpose(0,-1) * mixup_lambda + torch.flip(x, dims = [0]).transpose(0,-1) * (1 - mixup_lambda)).transpose(0,-1)
+    return out
+
+
+def interpolate(x, ratio):
+    """Interpolate data in time domain. This is used to compensate the 
+    resolution reduction in downsampling of a CNN.
+    
+    Args:
+      x: (batch_size, time_steps, classes_num)
+      ratio: int, ratio to interpolate
+    Returns:
+      upsampled: (batch_size, time_steps * ratio, classes_num)
+    """
+    (batch_size, time_steps, classes_num) = x.shape
+    upsampled = x[:, :, None, :].repeat(1, 1, ratio, 1)
+    upsampled = upsampled.reshape(batch_size, time_steps * ratio, classes_num)
+    return upsampled
+
+
+def pad_framewise_output(framewise_output, frames_num):
+    """Pad framewise_output to the same length as input frames. The pad value 
+    is the same as the value of the last frame.
+    Args:
+      framewise_output: (batch_size, frames_num, classes_num)
+      frames_num: int, number of frames to pad
+    Outputs:
+      output: (batch_size, frames_num, classes_num)
+    """
+    pad = framewise_output[:, -1 :, :].repeat(1, frames_num - framewise_output.shape[1], 1)
+    """tensor for padding"""
+
+    output = torch.cat((framewise_output, pad), dim=1)
+    """(batch_size, frames_num, classes_num)"""
+
+def process_ipc(index_path, classes_num, filename):
+    # load data
+    logging.info("Load Data...............")
+    ipc = [[] for _ in range(classes_num)]
+    with h5py.File(index_path, "r") as f:
+        for i in tqdm(range(len(f["target"]))):
+            t_class = np.where(f["target"][i])[0]
+            for t in t_class:
+                ipc[t].append(i)
+    print(ipc)
+    np.save(filename, ipc)
+    logging.info("Load Data Succeed...............")

@@ -24,7 +24,7 @@ try:
 except ImportError:
     hvd = None
 
-from open_clip import create_model_and_transforms, trace_model
+from open_clip import create_model_and_transforms, trace_model, create_model
 from training.data import get_data
 from training.distributed import is_master, init_distributed_device, world_info_from_env
 from training.logger import setup_logging
@@ -111,24 +111,37 @@ def main():
     else:
         logging.info(f'Running with a single process. Device {args.device}.')
 
-    model, preprocess_train, preprocess_val = create_model_and_transforms(
+
+
+    # don't need the transform
+    # model, preprocess_train, preprocess_val = create_model_and_transforms(
+    #     args.model,
+    #     args.pretrained,
+    #     precision=args.precision,
+    #     device=device,
+    #     jit=args.torchscript,
+    #     force_quick_gelu=args.force_quick_gelu,
+    #     # pretrained_image=args.pretrained_image,
+    # )
+    model, model_cfg = create_model(
         args.model,
         args.pretrained,
         precision=args.precision,
         device=device,
         jit=args.torchscript,
-        force_quick_gelu=args.force_quick_gelu,
-        pretrained_image=args.pretrained_image,
+        force_quick_gelu=args.force_quick_gelu
     )
+
 
     if args.trace:
         model = trace_model(model, batch_size=args.batch_size, device=device)
 
-    if args.lock_image:
-        # lock image tower as per LiT - https://arxiv.org/abs/2111.07991
-        model.lock_image_tower(
-            unlocked_groups=args.lock_image_unlocked_groups,
-            freeze_bn_stats=args.lock_image_freeze_bn_stats)
+    # Not work in audio
+    # if args.lock_image:
+    #     # lock image tower as per LiT - https://arxiv.org/abs/2111.07991
+    #     model.lock_image_tower(
+    #         unlocked_groups=args.lock_image_unlocked_groups,
+    #         freeze_bn_stats=args.lock_image_freeze_bn_stats)
 
     if is_master(args):
         logging.info("Model:")
@@ -150,7 +163,7 @@ def main():
             ddp_args['static_graph'] = True
         model = torch.nn.parallel.DistributedDataParallel(model, device_ids=[device], **ddp_args)
 
-    data = get_data(args, (preprocess_train, preprocess_val))
+    data = get_data(args, model_cfg)
     assert len(data), 'At least one train or eval dataset must be specified.'
     if args.trace:
         assert 'train' not in data, 'Cannot train with traced model'
@@ -241,7 +254,8 @@ def main():
         evaluate(model, data, start_epoch, args, writer)
         return
     elif start_epoch == 0 and 'val' in data:
-        evaluate(model, data, 0, args, writer)
+        # evaluate(model, data, 0, args, writer)
+        pass
 
     for epoch in range(start_epoch, args.epochs):
         if is_master(args):
