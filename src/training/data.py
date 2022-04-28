@@ -19,6 +19,8 @@ from functools import partial
 import soundfile as sf
 import librosa
 import io
+import wget
+
 
 try:
     import horovod.torch as hvd
@@ -26,7 +28,7 @@ except ImportError:
     hvd = None
 
 from open_clip import tokenize
-
+import json 
 
 class CsvDataset(Dataset):
     def __init__(self, input_filename, transforms, img_key, caption_key, sep="\t"):
@@ -57,28 +59,41 @@ def preprocess_txt(text):
     return tokenize([str(text)])[0]
 
 
-def get_dataset_size(shards):
+def get_dataset_size(shards, sizefilepath_=None, is_local=True):
+    if not is_local:
+        if os.path.exists('sizes.json'):
+            os.remove('sizes.json')
+        if not sizefilepath_ is None:
+            wget.download(sizefilepath_, 'sizes.json')
+        else:
+            wget.download(os.path.join(os.path.dirname(shards[0]), "sizes.json"), 'sizes.json')
+        sizefilepath_ = 'sizes.json'
     if isinstance(shards, list):
         size_list = []
         for s in shards:
-            size_list.append(get_dataset_size(s)[0])
+            size_list.append(get_dataset_size(s, sizefilepath_=sizefilepath_, is_local=True)[0])
     else:
         shards_list = list(braceexpand.braceexpand(shards))
         dir_path = os.path.dirname(shards)
-        sizes_filename = os.path.join(dir_path, "sizes.json")
-        len_filename = os.path.join(dir_path, "__len__")
-        if os.path.exists(sizes_filename):
-            sizes = json.load(open(sizes_filename, "r"))
+        if not sizefilepath_ is None:
+            sizes = json.load(open(sizefilepath_, "r"))
             total_size = sum([int(sizes[os.path.basename(shard)]) for shard in shards_list])
-        elif os.path.exists(len_filename):
-            # FIXME this used to be eval(open(...)) but that seemed rather unsafe
-            total_size = ast.literal_eval(open(len_filename, "r").read())
         else:
-            total_size = None  # num samples undefined
-            # some common dataset sizes (at time of authors last download)
-            # cc3m-train: 2905954
-            # cc12m: 10968539
-            # LAION-400m: 407332084
+            sizes_filename = os.path.join(dir_path, "sizes.json")
+            len_filename = os.path.join(dir_path, "__len__")
+            if os.path.exists(sizes_filename):
+                sizes = json.load(open(sizes_filename, "r"))
+                total_size = sum([int(sizes[os.path.basename(shard)]) for shard in shards_list])
+            elif os.path.exists(len_filename):
+                # FIXME this used to be eval(open(...)) but that seemed rather unsafe
+                total_size = ast.literal_eval(open(len_filename, "r").read())
+            else:
+                raise Exception("Cannot find sizes file for dataset. Please specify the path to the file.")
+                # total_size = None  # num samples undefined
+                # some common dataset sizes (at time of authors last download)
+                # cc3m-train: 2905954
+                # cc12m: 10968539
+                # LAION-400m: 407332084
         num_shards = len(shards_list)
     if isinstance(shards, list):
         return sum(size_list), len(shards)
@@ -158,6 +173,24 @@ _SHARD_SHUFFLE_INITIAL = 500
 _SAMPLE_SHUFFLE_SIZE = 5000
 _SAMPLE_SHUFFLE_INITIAL = 1000
 
+def sample_prop(sizefile, inputs, proportion, is_local=True):
+    file_path_dict = {os.path.split(inputs[i])[1]:os.path.split(inputs[i])[0] for i in range(len(inputs))}
+    sampled_filepath_dict = {}
+    sampled_size_dict = {}
+    if not is_local:
+        if os.path.exists('sizes.json'):
+            os.remove('sizes.json')
+        wget.download(sizefile, 'sizes.json')
+        sizefile = 'sizes.json'
+    with open(sizefile,'r', encoding='UTF-8') as f:
+        load_dict = json.load(f)
+    L = int(len(file_path_dict)*proportion)
+    subkeys = random.sample(file_path_dict.keys(), L)
+    for k in subkeys:
+        sampled_size_dict[k] = load_dict[k]
+        sampled_filepath_dict[k] = file_path_dict[k]
+    return sum(sampled_size_dict.values()), L, [os.path.join(v,k) for k,v in sampled_filepath_dict.items()], sampled_size_dict
+
 
 def preprocess(
     sample,
@@ -213,7 +246,6 @@ def preprocess(
 def get_wds_dataset(
     args,
     is_train,
-    file_path_type="local",
     audio_ext="flac",
     text_ext="json",
     samplerate=32000,
@@ -221,11 +253,24 @@ def get_wds_dataset(
     max_len=1000000,
     dtype="float64",
     res_type="kaiser_best",
+    proportion=1.0,
+    sizefilepath_=None,
+    is_local=True
 ):
+    
     input_shards = args.train_data if is_train else args.val_data
     assert input_shards is not None
 
-    num_samples, num_shards = get_dataset_size(input_shards)
+    if not sizefilepath_ is None:
+        sizefilepath = sizefilepath_
+    else:
+        sizefilepath = os.path.join(os.path.dirname(input_shards[0]), "sizes.json")
+    
+    if proportion!=1.0:
+        num_samples, num_shards, input_shards, _ = sample_prop(sizefilepath, input_shards, proportion, is_local=is_local)
+    else:
+        num_samples, num_shards = get_dataset_size(input_shards, sizefilepath_=sizefilepath_, is_local=is_local)
+
     if not num_samples:
         if is_train:
             num_samples = args.train_num_samples
