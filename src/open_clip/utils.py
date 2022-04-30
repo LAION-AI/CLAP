@@ -78,8 +78,6 @@ def get_tar_path_from_txts(txt_path, islocal):
     Get tar path from txt path
     """
     if isinstance(txt_path, (list,tuple)):
-        print("txt_path",txt_path)
-        print([get_tar_path_from_txts(txt_path[i], islocal=islocal) for i in range(len(txt_path))])
         return sum([get_tar_path_from_txts(txt_path[i], islocal=islocal) for i in range(len(txt_path))], [])
     if isinstance(txt_path, str):
         with open(txt_path) as f:
