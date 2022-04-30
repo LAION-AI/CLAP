@@ -254,13 +254,14 @@ def evaluate(model, data, epoch, args, tb_writer=None):
 
     return metrics
 
-
-def get_metrics(image_features, text_features, logit_scale):
+# CHANGE here 
+def get_metrics(audio_features, text_features, audio_features_mlp, text_features_mlp, logit_scale_a, logit_scale_t):
     metrics = {}
-    logits_per_image = (logit_scale * image_features @ text_features.t()).detach().cpu()
-    logits_per_text = logits_per_image.t().detach().cpu()
-
-    logits = {"image_to_text": logits_per_image, "text_to_image": logits_per_text}
+    a_logits_per_audio = (logit_scale_a * audio_features @ text_features_mlp.t()).detach().cpu()
+    a_logits_per_text = a_logits_per_audio.t().detach().cpu()
+    t_logits_per_audio = (logit_scale_t * audio_features_mlp @ text_features.t()).detach().cpu()
+    t_logits_per_text = t_logits_per_audio.t().detach().cpu()
+    logits = {"audio_to_text": (a_logits_per_audio + t_logits_per_audio) / 2, "text_to_audio": (a_logits_per_text + t_logits_per_text) / 2}
     ground_truth = torch.arange(len(text_features)).view(-1, 1)
 
     for name, logit in logits.items():

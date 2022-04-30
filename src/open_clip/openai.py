@@ -22,10 +22,11 @@ def list_openai_models() -> List[str]:
 
 def load_openai_model(
         name: str,
+        model_cfg,
         device: Union[str, torch.device] = "cuda" if torch.cuda.is_available() else "cpu",
         jit=True,
 ):
-    """Load a CLIP model
+    """Load a CLIP model, preserve its text pretrained part, and set in the CLAP model
 
     Parameters
     ----------
@@ -39,7 +40,7 @@ def load_openai_model(
     Returns
     -------
     model : torch.nn.Module
-        The CLIP model
+        The CLAP model
     preprocess : Callable[[PIL.Image], torch.Tensor]
         A torchvision transform that converts a PIL image into a tensor that the returned model can take as its input
     """
@@ -63,10 +64,10 @@ def load_openai_model(
 
     if not jit:
         try:
-            model = build_model_from_openai_state_dict(state_dict or model.state_dict()).to(device)
+            model = build_model_from_openai_state_dict(state_dict or model.state_dict(), model_cfg).to(device)
         except KeyError:
             sd = {k[7:]: v for k, v in state_dict["state_dict"].items()}
-            model = build_model_from_openai_state_dict(sd).to(device)
+            model = build_model_from_openai_state_dict(sd, model_cfg).to(device)
 
         if str(device) == "cpu":
             model.float()
@@ -91,7 +92,7 @@ def load_openai_model(
                     node.copyAttributes(device_node)
 
     model.apply(patch_device)
-    patch_device(model.encode_image)
+    patch_device(model.encode_audio)
     patch_device(model.encode_text)
 
     # patch dtype to float32 on CPU
@@ -117,10 +118,9 @@ def load_openai_model(
                             inputs[i].node().copyAttributes(float_node)
 
         model.apply(patch_float)
-        patch_float(model.encode_image)
+        patch_float(model.encode_audio)
         patch_float(model.encode_text)
         model.float()
 
-    # ensure image_size attr available at consistent location for both jit and non-jit
-    model.visual.image_size = model.input_resolution.item()
+    model.audio_branch.audio_length = model.audio_cfg.audio_length
     return model

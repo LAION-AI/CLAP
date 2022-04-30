@@ -16,13 +16,25 @@ def parse_args():
         "--train-data",
         type=str,
         default=None,
-        help="Path to csv filewith training data",
+        help="Path to h5 filewith training data",
     )
     parser.add_argument(
         "--val-data",
         type=str,
         default=None,
-        help="Path to csv file with validation data",
+        help="Path to h5 file with validation data",
+    )
+    parser.add_argument(
+        "--train-ipc",
+        type=str,
+        default=None,
+        help="Path to npy file of the number of instance per class in training data",
+    )
+    parser.add_argument(
+        "--val-ipc",
+        type=str,
+        default=None,
+        help="Path to npy file of the number of instance per class in validation data",
     )
     parser.add_argument(
         "--train-num-samples",
@@ -38,7 +50,7 @@ def parse_args():
     )
     parser.add_argument(
         "--dataset-type",
-        choices=["webdataset", "csv", "auto"],
+        choices=["webdataset", "csv", "auto", "toy"],
         default="auto",
         help="Which type of dataset to process."
     )
