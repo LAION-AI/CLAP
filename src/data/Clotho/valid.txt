@@ -1,0 +1,3 @@
+s3://laion-audio/webdataset_tar/Clotho/valid/0.tar
+s3://laion-audio/webdataset_tar/Clotho/valid/1.tar
+s3://laion-audio/webdataset_tar/Clotho/valid/2.tar

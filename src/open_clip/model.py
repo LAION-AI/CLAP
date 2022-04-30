@@ -19,8 +19,27 @@ import logging
 from .utils import freeze_batch_norm_2d
 
 from .pann_model import create_pann_model
+from .htsat import create_htsat_model
 
 
+class MLPLayers(nn.Module):
+    def __init__(self, units=[512, 512, 512], nonlin=nn.ReLU(), dropout=0.1):
+        super(MLPLayers, self).__init__()
+        self.nonlin = nonlin
+        self.dropout = dropout
+
+        sequence = []
+        for u0, u1 in zip(units[:-1], units[1:]):
+            sequence.append(nn.Linear(u0, u1))
+            sequence.append(self.nonlin)
+            sequence.append(nn.Dropout(self.dropout))
+        sequence = sequence[:-2]
+
+        self.sequential = nn.Sequential(*sequence)
+
+    def forward(self, X):
+        X = self.sequential(X)
+        return X
 
 class Bottleneck(nn.Module):
     expansion = 4
@@ -302,8 +321,7 @@ class CLAPAudioCfp:
     model_type: str = "PANN"
     model_name: str = "Cnn14"
     sample_rate: int = 32000
-    # HTS-AT Param
-    # PANN Param
+    # Param
     audio_length: int = 1024
     window_size: int = 1024
     hop_size: int = 1024
@@ -349,7 +367,7 @@ class CLAP(nn.Module):
         if audio_cfg.model_type == "PANN":
             self.audio_branch = create_pann_model(audio_cfg)
         elif audio_cfg.model_type == "HTSAT":
-            pass
+            self.audio_branch = create_htsat_model(audio_cfg)
         else:
             logging.error(f'Model config for {audio_cfg.model_type} not found')
             raise RuntimeError(f'Model config for {audio_cfg.model_type} not found.')
@@ -363,13 +381,21 @@ class CLAP(nn.Module):
             act_layer=act_layer,
         )
 
+        self.text_transform = MLPLayers(
+            units=[embed_dim,embed_dim,embed_dim], dropout=0.1
+        )
+        self.audio_transform = MLPLayers(
+            units=[embed_dim,embed_dim,embed_dim], dropout=0.1
+        )
+        
         self.vocab_size = text_cfg.vocab_size
         self.token_embedding = nn.Embedding(text_cfg.vocab_size, text_cfg.width)
         self.positional_embedding = nn.Parameter(torch.empty(self.context_length, text_cfg.width))
         self.ln_final = LayerNorm(text_cfg.width)
 
         self.text_projection = nn.Parameter(torch.empty(text_cfg.width, embed_dim))
-        self.logit_scale = nn.Parameter(torch.ones([]) * np.log(1 / 0.07))
+        self.logit_scale_a = nn.Parameter(torch.ones([]) * np.log(1 / 0.07))
+        self.logit_scale_t = nn.Parameter(torch.ones([]) * np.log(1 / 0.07))
         self.register_buffer('attn_mask', self.build_attention_mask(), persistent=False)
 
         self.init_text_branch_parameters()
@@ -377,7 +403,8 @@ class CLAP(nn.Module):
     def init_text_branch_parameters(self):
         nn.init.normal_(self.token_embedding.weight, std=0.02)
         nn.init.normal_(self.positional_embedding, std=0.01)
-        nn.init.constant_(self.logit_scale, np.log(1 / 0.07))
+        nn.init.constant_(self.logit_scale_a, np.log(1 / 0.07))
+        nn.init.constant_(self.logit_scale_t, np.log(1 / 0.07))
 
         # deprecated
         # if hasattr(self.visual, 'init_parameters'):
@@ -447,7 +474,11 @@ class CLAP(nn.Module):
 
         text_features = self.encode_text(text)
         text_features = F.normalize(text_features, dim=-1)
-        return audio_features, text_features, self.logit_scale.exp()
+
+        # CHANGE: before normalize or after
+        audio_features_mlp = self.audio_transform(audio_features)
+        text_features_mlp = self.text_transform(text_features)
+        return audio_features, text_features, audio_features_mlp, text_features_mlp, self.logit_scale_a.exp(), self.logit_scale_t.exp()
 
 
 def convert_weights_to_fp16(model: nn.Module):
