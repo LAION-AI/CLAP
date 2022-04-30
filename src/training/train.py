@@ -17,7 +17,7 @@ except ImportError:
 from open_clip import ClipLoss
 from .distributed import is_master
 from .zero_shot import zero_shot_eval
-
+from .data import wds_batch_list2dict
 
 class AverageMeter(object):
     """Computes and stores the average and current value"""
@@ -63,24 +63,31 @@ def train_one_epoch(model, data, epoch, optimizer, scaler, scheduler, args, tb_w
     num_batches_per_epoch = dataloader.num_batches
     sample_digits = math.ceil(math.log(dataloader.num_samples + 1, 10))
 
+    # for toy dataset
+    dataloader.dataset.generate_queue()
+
     loss_m = AverageMeter()
     batch_time_m = AverageMeter()
     data_time_m = AverageMeter()
     end = time.time()
+
     for i, batch in enumerate(dataloader):
+        if args.dataset_type == 'webdataset':
+            batch = wds_batch_list2dict(batch)
+
         step = num_batches_per_epoch * epoch + i
         scheduler(step)
-
-        images, texts = batch
-        images = images.to(device=device, non_blocking=True)
+        audios = batch["waveform"]
+        texts = batch["text"]
+        audios = audios.to(device=device, non_blocking=True)
         texts = texts.to(device=device, non_blocking=True)
 
         data_time_m.update(time.time() - end)
         optimizer.zero_grad()
 
         with autocast():
-            image_features, text_features, logit_scale = model(images, texts)
-            total_loss = loss(image_features, text_features, logit_scale)
+            audio_features, text_features, audio_features_mlp, text_features_mlp, logit_scale_a, logit_scale_t = model(audios, texts)
+            total_loss = loss(audio_features, text_features, audio_features_mlp, text_features_mlp, logit_scale_a, logit_scale_t)
 
         if scaler is not None:
             scaler.scale(total_loss).backward()
@@ -98,27 +105,30 @@ def train_one_epoch(model, data, epoch, optimizer, scaler, scheduler, args, tb_w
 
         # Note: we clamp to 4.6052 = ln(100), as in the original paper.
         with torch.no_grad():
-            unwrap_model(model).logit_scale.clamp_(0, math.log(100))
+            unwrap_model(model).logit_scale_a.clamp_(0, math.log(100))
+            unwrap_model(model).logit_scale_t.clamp_(0, math.log(100))
 
         batch_time_m.update(time.time() - end)
         end = time.time()
         batch_count = i + 1
         if is_master(args) and (i % 100 == 0 or batch_count == num_batches_per_epoch):
-            batch_size = len(images)
+            batch_size = len(audios)
             num_samples = batch_count * batch_size * args.world_size
             samples_per_epoch = dataloader.num_samples
             percent_complete = 100.0 * batch_count / num_batches_per_epoch
 
             # NOTE loss is coarsely sampled, just master node and per log update
             loss_m.update(total_loss.item(), batch_size)
-            logit_scale_scalar = logit_scale.item()
+            logit_scale_scalar_a = logit_scale_a.item()
+            logit_scale_scalar_t = logit_scale_t.item()
             logging.info(
                 f"Train Epoch: {epoch} [{num_samples:>{sample_digits}}/{samples_per_epoch} ({percent_complete:.0f}%)] "
                 f"Loss: {loss_m.val:#.5g} ({loss_m.avg:#.4g}) "
                 f"Data (t): {data_time_m.avg:.3f} "
                 f"Batch (t): {batch_time_m.avg:.3f} "
                 f"LR: {optimizer.param_groups[0]['lr']:5f} "
-                f"Logit Scale: {logit_scale_scalar:.3f}"
+                f"Logit Scale Audio: {logit_scale_scalar_a:.3f}"
+                f"Logit Scale Text: {logit_scale_scalar_t:.3f}"
             )
 
             # Save train loss / etc. Using non avg meter values as loggers have their own smoothing
@@ -126,7 +136,8 @@ def train_one_epoch(model, data, epoch, optimizer, scaler, scheduler, args, tb_w
                 "loss": loss_m.val,
                 "data_time": data_time_m.val,
                 "batch_time": batch_time_m.val,
-                "scale":  logit_scale_scalar,
+                "scale_audio":  logit_scale_scalar_a,
+                "scale_text":  logit_scale_scalar_t,
                 "lr": optimizer.param_groups[0]["lr"]
             }
             for name, val in log_data.items():
@@ -150,8 +161,9 @@ def evaluate(model, data, epoch, args, tb_writer=None):
     device = torch.device(args.device)
     model.eval()
 
-    zero_shot_metrics = zero_shot_eval(model, data, epoch, args)
-    metrics.update(zero_shot_metrics)
+    # CHANGE
+    # zero_shot_metrics = zero_shot_eval(model, data, epoch, args)
+    # metrics.update(zero_shot_metrics)
 
     autocast = torch.cuda.amp.autocast if args.precision == 'amp' else suppress
     if 'val' in data and (args.val_frequency and ((epoch % args.val_frequency) == 0 or epoch == args.epochs)):
@@ -160,31 +172,42 @@ def evaluate(model, data, epoch, args, tb_writer=None):
         samples_per_val = dataloader.num_samples
 
         # FIXME this does not scale past small eval datasets
-        # all_image_features @ all_text_features will blow up memory and compute very quickly
+        # all_audio_features @ all_text_features will blow up memory and compute very quickly
         cumulative_loss = 0.0
-        all_image_features, all_text_features = [], []
+        all_audio_features, all_text_features, all_audio_features_mlp, all_text_features_mlp = [], [], [], []
         with torch.no_grad():
             for i, batch in enumerate(dataloader):
-                images, texts = batch
-                images = images.to(device=device, non_blocking=True)
+                if args.dataset_type == 'webdataset':
+                    batch = wds_batch_list2dict(batch)
+                audios = batch["waveform"]
+                texts = batch["text"]
+                audios = audios.to(device=device, non_blocking=True)
                 texts = texts.to(device=device, non_blocking=True)
 
                 with autocast():
-                    image_features, text_features, logit_scale = model(images, texts)
+                    audio_features, text_features, audio_features_mlp, text_features_mlp, logit_scale_a, logit_scale_t = model(audios, texts)
                     # features are accumulated in CPU tensors, otherwise GPU memory exhausted quickly
                     # however, system RAM is easily exceeded and compute time becomes problematic
-                    all_image_features.append(image_features.cpu())
+                    all_audio_features.append(audio_features.cpu())
                     all_text_features.append(text_features.cpu())
-                    logit_scale = logit_scale.mean()
-                    logits_per_image = logit_scale * image_features @ text_features.t()
-                    logits_per_text = logits_per_image.t()
+                    all_audio_features_mlp.append(audio_features_mlp.cpu())
+                    all_text_features_mlp.append(text_features_mlp.cpu())
+                    logit_scale_a = logit_scale_a.mean()
+                    a_logits_per_audio = logit_scale_a * audio_features @ text_features_mlp.t()
+                    a_logits_per_text = a_logits_per_audio.t()
+                    logit_scale_t = logit_scale_t.mean()
+                    t_logits_per_audio = logit_scale_t * audio_features_mlp @ text_features.t()
+                    t_logits_per_text = t_logits_per_audio.t()
 
-                    batch_size = images.shape[0]
+
+                    batch_size = audios.shape[0]
                     labels = torch.arange(batch_size, device=device).long()
                     total_loss = (
-                        F.cross_entropy(logits_per_image, labels) +
-                        F.cross_entropy(logits_per_text, labels)
-                    ) / 2
+                        F.cross_entropy(a_logits_per_audio, labels) +
+                        F.cross_entropy(a_logits_per_text, labels) +
+                        F.cross_entropy(t_logits_per_audio, labels) +
+                        F.cross_entropy(t_logits_per_text, labels)
+                    ) / 4
 
                 cumulative_loss += total_loss * batch_size
                 num_samples += batch_size
@@ -194,9 +217,13 @@ def evaluate(model, data, epoch, args, tb_writer=None):
                         f"Loss: {cumulative_loss / num_samples:.6f}\t")
 
             val_metrics = get_metrics(
-                image_features=torch.cat(all_image_features),
+                audio_features=torch.cat(all_audio_features),
                 text_features=torch.cat(all_text_features),
-                logit_scale=logit_scale.cpu(),
+                audio_features_mlp=torch.cat(all_audio_features_mlp),
+                text_features_mlp=torch.cat(all_text_features_mlp),
+                logit_scale_a=logit_scale_a.cpu(),
+                logit_scale_t=logit_scale_t.cpu(),
+                
             )
             loss = cumulative_loss / num_samples
             metrics.update(

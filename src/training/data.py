@@ -20,14 +20,14 @@ import soundfile as sf
 import librosa
 import io
 import wget
-
+import random
+from open_clip import tokenize
 
 try:
     import horovod.torch as hvd
 except ImportError:
     hvd = None
 
-from open_clip import tokenize
 import json 
 
 class CsvDataset(Dataset):
@@ -202,6 +202,9 @@ def preprocess(
     dtype,
     res_type,
 ):
+    """
+    Preprocess a single sample for wdsdataloader.
+    """
     keys = list(sample.keys())
     for k in keys:
         if (audio_ext in k) and (audio_ext!=k): # if the key is not extention of audio, something like 'xxxxx.flac'
@@ -212,33 +215,40 @@ def preprocess(
             sample[text_ext] = sample[k]
             del sample[k]
 
-    for key, value in sample.items():
-        if key == audio_ext:
-            audio_data, orig_sr = sf.read(io.BytesIO(value))
-            if samplerate is not None:
-                audio_data = librosa.resample(
-                    audio_data, orig_sr=orig_sr, target_sr=samplerate, res_type=res_type
-                )
-            if len(audio_data) > max_len:  # random clip if too long
-                overflow = len(audio_data) - max_len
-                idx = np.random.randint(0, overflow + 1)
-                if np.random.rand() > 0.5:
-                    audio_data = audio_data[idx : idx + max_len]
-                else:
-                    audio_data = audio_data[
-                        len(audio_data) + 1 - idx - max_len : len(audio_data) + 1 - idx
-                    ]
-            else:  # padding if too short
-                audio_data = np.pad(
-                    audio_data,
-                    (0, max_len - len(audio_data)),
-                    mode="constant",
-                    constant_values=0,
-                )
-            if mono:  # convert to mono
-                audio_data = librosa.to_mono(audio_data)
+    audio_data, orig_sr = sf.read(io.BytesIO(sample[audio_ext]))
+    if samplerate is not None:
+        audio_data = librosa.resample(
+            audio_data, orig_sr=orig_sr, target_sr=samplerate, res_type=res_type
+        )
+    if len(audio_data) > max_len:  # random clip if too long
+        overflow = len(audio_data) - max_len
+        idx = np.random.randint(0, overflow + 1)
+        if np.random.rand() > 0.5:
+            audio_data = audio_data[idx : idx + max_len]
+        else:
+            audio_data = audio_data[
+                len(audio_data) + 1 - idx - max_len : len(audio_data) + 1 - idx
+            ]
+    else:  # padding if too short
+        audio_data = np.pad(
+            audio_data,
+            (0, max_len - len(audio_data)),
+            mode="constant",
+            constant_values=0,
+        )
+    if mono:  # convert to mono
+        audio_data = librosa.to_mono(audio_data)
 
-            sample[audio_ext] = audio_data
+    sample["waveform"] = audio_data
+    del sample[audio_ext]
+    texts = json.loads(sample[text_ext].decode('utf-8'))["text"]
+    if isinstance(texts, list) and isinstance(texts[0], str) and len(texts) > 1:
+        texts = random.choice(texts)
+    sample["raw_text"] = texts
+    sample["text"] = tokenize(texts)
+    del sample[text_ext]
+    sample["audio_name"] = sample["__key__"].split("/")[-1]+"."+audio_ext
+    sample["text_name"] = sample["__key__"].split("/")[-1]+"."+text_ext
     return sample
 
 
@@ -257,7 +267,9 @@ def get_wds_dataset(
     sizefilepath_=None,
     is_local=True
 ):
-    
+    """
+    Get a dataset for wdsdataloader.
+    """
     input_shards = args.train_data if is_train else args.val_data
     assert input_shards is not None
 
@@ -315,7 +327,7 @@ def get_wds_dataset(
                 res_type=res_type,
             )
         ),
-        wds.to_tuple("flac", "json"),
+        wds.to_tuple("__url__", "__key__", "waveform", "text", "raw_text", "audio_name", "text_name"),
         wds.batched(args.batch_size, partial=not is_train),
     ])
 
@@ -354,6 +366,13 @@ def get_wds_dataset(
     dataloader.num_samples = num_samples
 
     return DataInfo(dataloader, None)
+
+def wds_batch_list2dict(batch, keys=["__url__", "__key__", "waveform", "text", "raw_text", "audio_name", "text_name"]):
+    """
+    Return a dictionary of the batch, with keys as the names of the fields.
+    """
+    assert len(keys) == len(batch), "batch must have same number of keys as keys argument"
+    return {keys[i]: batch[i] for i in range(len(batch))}
 
 
 def get_csv_dataset(args, preprocess_fn, is_train):
