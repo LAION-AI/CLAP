@@ -174,6 +174,9 @@ _SAMPLE_SHUFFLE_SIZE = 5000
 _SAMPLE_SHUFFLE_INITIAL = 1000
 
 def sample_prop(sizefile, inputs, proportion, is_local=True):
+    """
+    Sample a proportion of the data.
+    """
     file_path_dict = {os.path.split(inputs[i])[1]:os.path.split(inputs[i])[0] for i in range(len(inputs))}
     sampled_filepath_dict = {}
     sampled_size_dict = {}
@@ -265,11 +268,14 @@ def get_wds_dataset(
     res_type="kaiser_best",
     proportion=1.0,
     sizefilepath_=None,
-    is_local=True
+    is_local=None,
 ):
     """
     Get a dataset for wdsdataloader.
     """
+    if is_local is None and (not args.remotedata is None):
+        is_local = not args.remotedata
+        
     input_shards = args.train_data if is_train else args.val_data
     assert input_shards is not None
 

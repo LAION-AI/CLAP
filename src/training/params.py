@@ -73,6 +73,30 @@ def parse_args():
         help="Path to imagenet v2 for conducting zero shot evaluation.",
     )
     parser.add_argument(
+        "--datasetnames",
+        nargs='+',
+        default=None,
+        help="If loading webdataset, spedify the dataset names to load. Can be some of these: Clotho, audioset, audiocaps, BBCSoundEffects",
+    )
+    parser.add_argument(
+        "--datasetinfos",
+        nargs='+',
+        default=None,
+        help="If loading webdataset, spedify the dataset types to load. Can be some of these: train, test, valid, unbalanced_train, balanced_train, eval",
+    )
+    parser.add_argument(
+        "--remotedata",
+        default=False,
+        action='store_true',
+        help="if the dataset is remote, set this flag",
+    )
+    parser.add_argument(
+        "--data-txt-example",
+        type=str,
+        default='/mnt/audio_clip/code/CLAP/src/data/datasetname/datasettype.txt',
+        help="An example of the path to the txt file for the dataset",
+    )
+    parser.add_argument(
         "--logs",
         type=str,
         default="./logs/",

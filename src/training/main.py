@@ -31,6 +31,7 @@ from training.logger import setup_logging
 from training.params import parse_args
 from training.scheduler import cosine_lr
 from training.train import train_one_epoch, evaluate
+from open_clip.utils import get_tar_path_from_dataset_name
 
 
 def random_seed(seed=42, rank=0):
@@ -44,7 +45,13 @@ def main():
 
     # sanitize model name for filesystem / uri use, easier if we don't use / in name as a rule?
     args.model = args.model.replace('/', '-')
-
+    if args.datasetinfos is None:
+        args.datasetinfos = ["train", "unbalanced_train", "balanced_train"]
+    if args.dataset_type == "webdataset":
+        args.train_data = get_tar_path_from_dataset_name(args.datasetnames, args.datasetinfos, islocal=not args.remotedata, template=args.data_txt_example)
+        args.val_data = get_tar_path_from_dataset_name(args.datasetnames, ["valid", "eval"], islocal=not args.remotedata, template=args.data_txt_example)
+    print("args.train_data", args.train_data)
+    print("args.val_data", args.val_data)
     # get the name of the experiments
     if args.name is None:
         args.name = '-'.join([
