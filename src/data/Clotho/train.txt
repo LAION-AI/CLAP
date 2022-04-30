@@ -1,0 +1,8 @@
+s3://laion-audio/webdataset_tar/Clotho/train/0.tar
+s3://laion-audio/webdataset_tar/Clotho/train/1.tar
+s3://laion-audio/webdataset_tar/Clotho/train/2.tar
+s3://laion-audio/webdataset_tar/Clotho/train/3.tar
+s3://laion-audio/webdataset_tar/Clotho/train/4.tar
+s3://laion-audio/webdataset_tar/Clotho/train/5.tar
+s3://laion-audio/webdataset_tar/Clotho/train/6.tar
+s3://laion-audio/webdataset_tar/Clotho/train/7.tar

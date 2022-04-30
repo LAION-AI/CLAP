@@ -1,0 +1,40 @@
+# Single Card
+
+CUDA_VISIBLE_DEVICES=0 python -m training.main \
+    --save-frequency 1 \
+    --zeroshot-frequency 1 \
+    --dataset-type="toy" \
+    --train-data="/mnt/audio_clip/test/data/indexes/balanced_train.h5"  \
+    --val-data="/mnt/audio_clip/test/data/indexes/eval.h5"  \
+    --train-ipc="/mnt/audio_clip/test/data/train_ipc.npy" \
+    --val-ipc="/mnt/audio_clip/test/data/val_ipc.npy" \
+    --precision="fp32" \
+    --pretrained="openai" \
+    --warmup 10000 \
+    --batch-size=32 \
+    --lr=1e-3 \
+    --wd=0.1 \
+    --epochs=30 \
+    --workers=8 \
+    --model PANN-14
+
+# Multiple Cards
+
+torchrun --nproc_per_node 4 -m training.main \
+    --save-frequency 1 \
+    --zeroshot-frequency 1 \
+    --dataset-type="toy" \
+    --train-data="/mnt/audio_clip/test/data/indexes/balanced_train.h5"  \
+    --val-data="/mnt/audio_clip/test/data/indexes/eval.h5"  \
+    --train-ipc="/mnt/audio_clip/test/data/train_ipc.npy" \
+    --val-ipc="/mnt/audio_clip/test/data/val_ipc.npy" \
+    --precision="fp32" \
+    --pretrained="openai" \
+    --warmup 10000 \
+    --batch-size=32 \
+    --lr=1e-3 \
+    --wd=0.1 \
+    --epochs=30 \
+    --workers=8 \
+    --use-bn-sync \
+    --model PANN-14

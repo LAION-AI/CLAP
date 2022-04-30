@@ -1,0 +1,9 @@
+s3://laion-audio/webdataset_tar/audiocaps/test/0.tar
+s3://laion-audio/webdataset_tar/audiocaps/test/1.tar
+s3://laion-audio/webdataset_tar/audiocaps/test/2.tar
+s3://laion-audio/webdataset_tar/audiocaps/test/3.tar
+s3://laion-audio/webdataset_tar/audiocaps/test/4.tar
+s3://laion-audio/webdataset_tar/audiocaps/test/5.tar
+s3://laion-audio/webdataset_tar/audiocaps/test/6.tar
+s3://laion-audio/webdataset_tar/audiocaps/test/7.tar
+s3://laion-audio/webdataset_tar/audiocaps/test/8.tar

@@ -1,0 +1,4 @@
+s3://laion-audio/webdataset_tar/BBCSoundEffects/test/0.tar
+s3://laion-audio/webdataset_tar/BBCSoundEffects/test/1.tar
+s3://laion-audio/webdataset_tar/BBCSoundEffects/test/2.tar
+s3://laion-audio/webdataset_tar/BBCSoundEffects/test/3.tar
