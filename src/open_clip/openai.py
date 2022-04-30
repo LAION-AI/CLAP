@@ -22,6 +22,7 @@ def list_openai_models() -> List[str]:
 
 def load_openai_model(
         name: str,
+        model_cfg,
         device: Union[str, torch.device] = "cuda" if torch.cuda.is_available() else "cpu",
         jit=True,
 ):
@@ -63,10 +64,10 @@ def load_openai_model(
 
     if not jit:
         try:
-            model = build_model_from_openai_state_dict(state_dict or model.state_dict()).to(device)
+            model = build_model_from_openai_state_dict(state_dict or model.state_dict(), model_cfg).to(device)
         except KeyError:
             sd = {k[7:]: v for k, v in state_dict["state_dict"].items()}
-            model = build_model_from_openai_state_dict(sd).to(device)
+            model = build_model_from_openai_state_dict(sd, model_cfg).to(device)
 
         if str(device) == "cpu":
             model.float()

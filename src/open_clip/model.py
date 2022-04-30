@@ -507,7 +507,7 @@ def convert_weights_to_fp16(model: nn.Module):
 
 
 # Ignore the state dict of the vision part  
-def build_model_from_openai_state_dict(state_dict: dict, audio_cfg):
+def build_model_from_openai_state_dict(state_dict: dict, model_cfg):
     # vit = "visual.proj" in state_dict
 
     # if vit:
@@ -527,7 +527,9 @@ def build_model_from_openai_state_dict(state_dict: dict, audio_cfg):
     #     assert output_width ** 2 + 1 == state_dict["visual.attnpool.positional_embedding"].shape[0]
     #     image_size = output_width * 32
 
-    embed_dim = state_dict["text_projection"].shape[1]
+    embed_dim = model_cfg["embed_dim"]
+    audio_cfg = model_cfg["audio_cfg"]
+
     context_length = state_dict["positional_embedding"].shape[0]
     vocab_size = state_dict["token_embedding.weight"].shape[0]
     transformer_width = state_dict["ln_final.weight"].shape[0]
@@ -549,16 +551,19 @@ def build_model_from_openai_state_dict(state_dict: dict, audio_cfg):
         text_cfg=text_cfg,
         quick_gelu=True,  # OpenAI models were trained with QuickGELU
     )
-
+    state_dict["logit_scale_a"] = state_dict["logit_scale"]
+    state_dict["logit_scale_t"] = state_dict["logit_scale"]
+    pop_keys = list(state_dict.keys())[::]
     # pop the visual branch saved weights
-    for key in state_dict.keys():
+    for key in pop_keys:
         if key.startswith("visual."):
             state_dict.pop(key, None)
 
-    for key in ["input_resolution", "context_length", "vocab_size"]:
+    for key in ["text_projection", "logit_scale","input_resolution", "context_length", "vocab_size"]:
         state_dict.pop(key, None)
 
-    convert_weights_to_fp16(model)
+    # not use fp16
+    # convert_weights_to_fp16(model)
     model.load_state_dict(state_dict, strict=False)
     return model.eval()
 

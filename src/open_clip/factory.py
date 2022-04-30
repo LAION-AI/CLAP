@@ -69,8 +69,16 @@ def create_model(
     model_name = model_name.replace('/', '-')  # for callers using old naming with / in ViT names
     pretrained = pretrained.lower()
     if pretrained == 'openai':
-        logging.info(f'Loading pretrained {model_name} from OpenAI.')
-        model = load_openai_model(model_name, device=device, jit=jit)
+        if model_name in _MODEL_CONFIGS:
+            logging.info(f'Loading {model_name} model config.')
+            model_cfg = deepcopy(_MODEL_CONFIGS[model_name])
+        else:
+            logging.error(f'Model config for {model_name} not found; available models {list_models()}.')
+            raise RuntimeError(f'Model config for {model_name} not found.')
+
+        logging.info(f'Loading pretrained ViT-B-16 text encoder from OpenAI.')
+        # Hard Code in model name
+        model = load_openai_model("ViT-B-16", model_cfg, device=device, jit=jit)
         # See https://discuss.pytorch.org/t/valueerror-attemting-to-unscale-fp16-gradients/81372
         if precision == "amp" or precision == "fp32":
             model = model.float()

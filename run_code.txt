@@ -9,6 +9,7 @@ CUDA_VISIBLE_DEVICES=0 python -m training.main \
     --train-ipc="/mnt/audio_clip/test/data/train_ipc.npy" \
     --val-ipc="/mnt/audio_clip/test/data/val_ipc.npy" \
     --precision="fp32" \
+    --pretrained="openai" \
     --warmup 10000 \
     --batch-size=32 \
     --lr=1e-3 \
@@ -28,6 +29,7 @@ torchrun --nproc_per_node 4 -m training.main \
     --train-ipc="/mnt/audio_clip/test/data/train_ipc.npy" \
     --val-ipc="/mnt/audio_clip/test/data/val_ipc.npy" \
     --precision="fp32" \
+    --pretrained="openai" \
     --warmup 10000 \
     --batch-size=32 \
     --lr=1e-3 \
