@@ -39,7 +39,8 @@ torchrun --nproc_per_node 4 -m training.main \
     --use-bn-sync \
     --model PANN-14
 
-# Single Card WDS
+# Single Card WDS train on "Clotho" "audioset" "audiocaps" "BBCSoundEffects" with types: "train" "unbalanced_train"
+  dataset are store in local drive 
 
 CUDA_VISIBLE_DEVICES=0 python -m training.main \
     --save-frequency 1 \
@@ -47,7 +48,6 @@ CUDA_VISIBLE_DEVICES=0 python -m training.main \
     --dataset-type="webdataset" \
     --datasetnames "Clotho" "audioset" "audiocaps" "BBCSoundEffects" \
     --datasetinfos "train" "unbalanced_train" \
-    --data-txt-example "/home/work/Documents/datasetname/datasettype.txt" \
     --precision="fp32" \
     --pretrained="openai" \
     --warmup 10000 \
@@ -56,4 +56,24 @@ CUDA_VISIBLE_DEVICES=0 python -m training.main \
     --wd=0.1 \
     --epochs=30 \
     --workers=8 \
-    --model PANN-14
+    --model PANN-14 \
+
+# Single Card WDS train on "Clotho" "audioset" "audiocaps" "BBCSoundEffects" with types: "train" "unbalanced_train"
+  dataset are store in remote drive 
+
+CUDA_VISIBLE_DEVICES=0 python -m training.main \
+    --save-frequency 1 \
+    --zeroshot-frequency 1 \
+    --dataset-type="webdataset" \
+    --datasetnames "Clotho" "audioset" "audiocaps" "BBCSoundEffects" \
+    --datasetinfos "train" "unbalanced_train" \
+    --precision="fp32" \
+    --pretrained="openai" \
+    --warmup 10000 \
+    --batch-size=32 \
+    --lr=1e-3 \
+    --wd=0.1 \
+    --epochs=30 \
+    --workers=8 \
+    --model PANN-14 \
+    --remotedata

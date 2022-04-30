@@ -88,4 +88,3 @@ s3://laion-audio/webdataset_tar/audiocaps/train/86.tar
 s3://laion-audio/webdataset_tar/audiocaps/train/87.tar
 s3://laion-audio/webdataset_tar/audiocaps/train/88.tar
 s3://laion-audio/webdataset_tar/audiocaps/train/89.tar
-
