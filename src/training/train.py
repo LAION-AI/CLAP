@@ -17,7 +17,7 @@ except ImportError:
 from open_clip import ClipLoss
 from .distributed import is_master
 from .zero_shot import zero_shot_eval
-
+from .data import wds_batch_list2dict
 
 class AverageMeter(object):
     """Computes and stores the average and current value"""
@@ -70,7 +70,11 @@ def train_one_epoch(model, data, epoch, optimizer, scaler, scheduler, args, tb_w
     batch_time_m = AverageMeter()
     data_time_m = AverageMeter()
     end = time.time()
+
     for i, batch in enumerate(dataloader):
+        if args.dataset_type == 'webdataset':
+            batch = wds_batch_list2dict(batch)
+
         step = num_batches_per_epoch * epoch + i
         scheduler(step)
         audios = batch["waveform"]
@@ -173,6 +177,8 @@ def evaluate(model, data, epoch, args, tb_writer=None):
         all_audio_features, all_text_features, all_audio_features_mlp, all_text_features_mlp = [], [], [], []
         with torch.no_grad():
             for i, batch in enumerate(dataloader):
+                if args.dataset_type == 'webdataset':
+                    batch = wds_batch_list2dict(batch)
                 audios = batch["waveform"]
                 texts = batch["text"]
                 audios = audios.to(device=device, non_blocking=True)

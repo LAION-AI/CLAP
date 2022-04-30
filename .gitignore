@@ -149,3 +149,5 @@ core.*
 # Allow
 !src/evaluation/misc/results_dbs/*
 src/test.py
+src/dev.ipynb
+src/sizes.json
