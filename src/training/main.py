@@ -2,8 +2,8 @@ import logging
 import os
 import random
 from datetime import datetime
-
-
+import bisect
+import copy
 import numpy as np
 import torch
 import torch.backends.cudnn as cudnn
@@ -33,6 +33,48 @@ from training.params import parse_args
 from training.scheduler import cosine_lr
 from training.train import train_one_epoch, evaluate
 from open_clip.utils import get_tar_path_from_dataset_name
+
+
+def maintain_ckpts(args, startidx, all_idx_len):
+    for i in reversed(range(startidx, all_idx_len)):
+        if os.path.exists(os.path.join(args.checkpoint_path,f"epoch_top_{i}.pt")):
+            os.rename(os.path.join(args.checkpoint_path,f"epoch_top_{i}.pt"), os.path.join(args.checkpoint_path,f"epoch_top_{i+1}.pt"))
+    if os.path.exists(os.path.join(args.checkpoint_path,f"epoch_top_{all_idx_len}.pt")):
+        os.remove(os.path.join(args.checkpoint_path,f"epoch_top_{all_idx_len}.pt"))
+    return
+
+
+def update_top_k_performance(new_metrics_inputs, current_top_k_ckpt_metrics, args, ckpt, bignumbetter=True):
+    """
+    Record the top-k performance of the current epoch.
+    current_top_k_metrics is a dictionary of the form: {1: top_1_ckpt_measure, 2: top_2_ckpt_measure, ...}
+    """
+    if isinstance(new_metrics_inputs, (list, tuple)): 
+        new_metrics_inputs = np.mean(new_metrics_inputs)
+        return update_top_k_performance(new_metrics_inputs, current_top_k_ckpt_metrics, args=args, ckpt=ckpt, bignumbetter=bignumbetter)
+    elif isinstance(new_metrics_inputs, dict):
+        new_metrics_inputs = np.mean(list(new_metrics_inputs.values()))
+        return update_top_k_performance(new_metrics_inputs, current_top_k_ckpt_metrics, args=args, ckpt=ckpt, bignumbetter=bignumbetter)
+    elif isinstance(new_metrics_inputs, (float, int)):
+        update_flag = {k: False for k in current_top_k_ckpt_metrics.keys()}
+        sorted_keys = sorted(current_top_k_ckpt_metrics.keys())
+        sorted_values = sorted(current_top_k_ckpt_metrics.values(), reverse=bignumbetter)
+        sorted_values_ = copy.deepcopy(sorted_values)
+        sorted_values = sorted(sorted_values, reverse=bignumbetter)
+        sorted_values = sorted_values[:-1]
+        if sorted_values == sorted_values_:
+            return current_top_k_ckpt_metrics, new_metrics_inputs
+        else:
+            for k in sorted_keys:
+                if current_top_k_ckpt_metrics[k] != sorted_values[k]:
+                    current_top_k_ckpt_metrics[k] = sorted_values[k]
+                    update_flag[k] = True
+            for i in range(len(update_flag)):
+                if update_flag[i]:
+                    maintain_ckpts(args, i, len(sorted_keys))
+                    torch.save(ckpt, os.path.join(args.checkpoint_path, f"epoch_top_{i}.pt"),)
+                    break
+            return current_top_k_ckpt_metrics, new_metrics_inputs
 
 
 def random_seed(seed=42, rank=0):
@@ -262,6 +304,8 @@ def main():
     elif start_epoch == 0 and 'val' in data:
         evaluate(model, data, 0, args, writer)
         # pass
+    if args.save_top_performance:
+        current_top_k_ckpt_metrics = {i:0 for i in range(args.save_top_performance)} # initialize the top-k metric for ckpts to 0
 
     for epoch in range(start_epoch, args.epochs):
         if is_master(args):
@@ -271,8 +315,9 @@ def main():
         completed_epoch = epoch + 1
 
         if any(v in data for v in ('val', 'imagenet-val', 'imagenet-v2')):
-            evaluate(model, data, completed_epoch, args, writer)
-
+            metrics = evaluate(model, data, completed_epoch, args, writer)
+            if args.save_top_performance:
+                filtered_metrics = [v for k,v in metrics.items() if "_R@10" in k] # check all R@10 metrics and use it to update the ckpt
         # Saving checkpoints.
         if args.save_logs:
             checkpoint_dict = {
@@ -296,6 +341,8 @@ def main():
                     checkpoint_dict,
                     os.path.join(args.checkpoint_path, f"epoch_latest.pt"),
                 )
+            if args.save_top_performance:
+                update_top_k_performance(filtered_metrics, current_top_k_ckpt_metrics, args, checkpoint_dict, bignumbetter=True)
 
     if args.wandb and is_master(args):
         wandb.finish()

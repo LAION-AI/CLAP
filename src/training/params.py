@@ -158,6 +158,9 @@ def parse_args():
         "--save-frequency", type=int, default=1, help="How often to save checkpoints."
     )
     parser.add_argument(
+        "--save-top-performance", type=int, default=0, help="Save the top x performance weights if the value >0"
+    )
+    parser.add_argument(
         "--save-most-recent",
         action="store_true",
         default=False,
@@ -168,6 +171,13 @@ def parse_args():
     )
     parser.add_argument(
         "--val-frequency", type=int, default=1, help="How often to run evaluation with val data."
+    )
+    parser.add_argument(
+        "--resample-method",
+        default=None,
+        type=str,
+        required=True,
+        help="Set None to disable resampling. Set TorchAudio to use torchaudio.resample. Set Librosa to use librosa.resample.",
     )
     parser.add_argument(
         "--resume",

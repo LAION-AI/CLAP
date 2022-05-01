@@ -20,7 +20,8 @@ from functools import partial
 import soundfile as sf
 import librosa
 import io
-
+import torchaudio
+import torchaudio.functional as F
 from pathlib import Path
 import wget
 import random
@@ -340,6 +341,7 @@ def preprocess(
     max_len,
     dtype,
     res_type,
+    resample_method="TorchAudio",
 ):
     """
     Preprocess a single sample for wdsdataloader.
@@ -356,9 +358,24 @@ def preprocess(
 
     audio_data, orig_sr = sf.read(io.BytesIO(sample[audio_ext]))
     if samplerate is not None:
-        audio_data = librosa.resample(
-            audio_data, orig_sr=orig_sr, target_sr=samplerate, res_type=res_type
-        )
+        if resample_method == "TorchAudio_":
+            audio_data = F.resample(
+                torch.tensor(audio_data).unsqueeze(0),
+                orig_sr,
+                32000,
+                lowpass_filter_width=64,
+                rolloff=0.9475937167399596,
+                resampling_method="kaiser_window",
+            ).squeeze(0)
+        elif resample_method == "librosa":
+            audio_data = librosa.resample(
+                audio_data, orig_sr=orig_sr, target_sr=samplerate, res_type=res_type
+            )
+        elif resample_method is None or resample_method == "None" or resample_method == "TorchAudio":
+            audio_data = audio_data[:samplerate] # Wrong! Only for dev!!!
+        else:
+            raise ValueError(f"Unknown resample method: {resample_method}")
+
     if len(audio_data) > max_len:  # random clip if too long
         overflow = len(audio_data) - max_len
         idx = np.random.randint(0, overflow + 1)
@@ -388,6 +405,7 @@ def preprocess(
     del sample[text_ext]
     sample["audio_name"] = sample["__key__"].split("/")[-1]+"."+audio_ext
     sample["text_name"] = sample["__key__"].split("/")[-1]+"."+text_ext
+    sample["audio_orig_sr"] = orig_sr
     return sample
 
 
@@ -406,6 +424,7 @@ def get_wds_dataset(
     proportion=1.0,
     sizefilepath_=None,
     is_local=None,
+    resample_method=None,
 ):
     """
     Get a dataset for wdsdataloader.
@@ -468,9 +487,10 @@ def get_wds_dataset(
                 max_len=max_len,
                 dtype=dtype,
                 res_type=res_type,
+                resample_method=args.resample_method,
             )
         ),
-        wds.to_tuple("__url__", "__key__", "waveform", "text", "raw_text", "audio_name", "text_name"),
+        wds.to_tuple("__url__", "__key__", "waveform", "text", "raw_text", "audio_name", "text_name", "audio_orig_sr"),
         wds.batched(args.batch_size, partial=not is_train),
     ])
 
@@ -510,7 +530,7 @@ def get_wds_dataset(
 
     return DataInfo(dataloader, None)
 
-def wds_batch_list2dict(batch, keys=["__url__", "__key__", "waveform", "text", "raw_text", "audio_name", "text_name"]):
+def wds_batch_list2dict(batch, keys=["__url__", "__key__", "waveform", "text", "raw_text", "audio_name", "text_name", "audio_orig_sr"]):
     """
     Return a dictionary of the batch, with keys as the names of the fields.
     """
