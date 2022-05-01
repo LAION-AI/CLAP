@@ -23,7 +23,7 @@ from training.params import parse_args
 #     --model PANN-14
 args = parse_args()
 device = init_distributed_device(args)
-
+args.train_data = ["/mnt/audio_clip/webdataset_tar/audioset/unbalanced_train/0.tar", "/mnt/audio_clip/webdataset_tar/audioset/unbalanced_train/1.tar"]
 model, model_cfg = create_model(
     args.model,
     args.pretrained,
@@ -33,20 +33,22 @@ model, model_cfg = create_model(
     force_quick_gelu=args.force_quick_gelu
 )
     
-data = get_toy_dataset(args, model_cfg, is_train=True)
+data = get_wds_dataset(args, model_cfg, is_train=True)
 
 dl = data.dataloader
 for i, batch in enumerate(dl):
     # print(i, batch)
-    print("batch.keys", batch.keys())
-    # 'hdf5_path', 'index_in_hdf5', 'audio_name', 'waveform', 'target', 'text'
-    print("hdf5_path", batch["hdf5_path"])
-    print("index_in_hdf5", batch["index_in_hdf5"])
-    print("audio_name", batch["audio_name"])
-    print("waveform", batch["waveform"])
-    print("waveform.shape", batch["waveform"].shape)
-    print("target", batch["target"])
-    print("target.shape", batch["target"].shape)
-    print("text", batch["text"])
-    print("text.shape", batch["text"].shape)
+    # print("batch.keys", batch.keys())
+    # # 'hdf5_path', 'index_in_hdf5', 'audio_name', 'waveform', 'target', 'text'
+    # print("hdf5_path", batch["hdf5_path"])
+    # print("index_in_hdf5", batch["index_in_hdf5"])
+    # print("audio_name", batch["audio_name"])
+    # print("waveform", batch["waveform"])
+    # print("waveform.shape", batch["waveform"].shape)
+    # print("target", batch["target"])
+    # print("target.shape", batch["target"].shape)
+    # print("text", batch["text"])
+    # print("text.shape", batch["text"].shape)
+    print("osr", batch[-1])
+    print()
     break 

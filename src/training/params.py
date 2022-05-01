@@ -177,7 +177,7 @@ def parse_args():
         default=None,
         type=str,
         required=True,
-        help="Set None to disable resampling. Set TorchAudio to use torchaudio.resample. Set Librosa to use librosa.resample.",
+        help="Set None to disable resampling. Set TorchAudio to use batchwise torchaudio.resample. Set Librosa to use librosa.resample in the dataloader. Set TorchAudio_ to use torchaudio.resample in the dataloader.",
     )
     parser.add_argument(
         "--resume",
