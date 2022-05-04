@@ -355,8 +355,8 @@ def preprocess(
         if (text_ext in k) and (text_ext!=k): # if the key is not extention of audio, something like 'xxxxx.json'
             sample[text_ext] = sample[k]
             del sample[k]
-
     audio_data, orig_sr = sf.read(io.BytesIO(sample[audio_ext]))
+
     if samplerate is not None:
         if resample_method == "TorchAudio_":
             audio_data = F.resample(
@@ -372,7 +372,7 @@ def preprocess(
                 audio_data, orig_sr=orig_sr, target_sr=samplerate, res_type=res_type
             )
         elif resample_method is None or resample_method == "None" or resample_method == "TorchAudio":
-            audio_data = audio_data
+            pass
         else:
             raise ValueError(f"Unknown resample method: {resample_method}")
 

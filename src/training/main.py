@@ -60,15 +60,17 @@ def update_top_k_performance(new_metrics_inputs, current_top_k_ckpt_metrics, arg
         sorted_keys = sorted(current_top_k_ckpt_metrics.keys())
         sorted_values = sorted(current_top_k_ckpt_metrics.values(), reverse=bignumbetter)
         sorted_values_ = copy.deepcopy(sorted_values)
+        sorted_values.append(new_metrics_inputs)
         sorted_values = sorted(sorted_values, reverse=bignumbetter)
         sorted_values = sorted_values[:-1]
+
         if sorted_values == sorted_values_:
             return current_top_k_ckpt_metrics, new_metrics_inputs
         else:
-            for k in sorted_keys:
-                if current_top_k_ckpt_metrics[k] != sorted_values[k]:
-                    current_top_k_ckpt_metrics[k] = sorted_values[k]
-                    update_flag[k] = True
+            for i in range(len(sorted_keys)):
+                if current_top_k_ckpt_metrics[sorted_keys[i]] != sorted_values[i]:
+                    current_top_k_ckpt_metrics[sorted_keys[i]] = sorted_values[i]
+                    update_flag[sorted_keys[i]] = True
             for i in range(len(update_flag)):
                 if update_flag[i]:
                     maintain_ckpts(args, i, len(sorted_keys))
@@ -92,7 +94,8 @@ def main():
         args.datasetinfos = ["train", "unbalanced_train", "balanced_train"]
     if args.dataset_type == "webdataset":
         args.train_data = get_tar_path_from_dataset_name(args.datasetnames, args.datasetinfos, islocal=not args.remotedata, template=args.data_txt_example)
-        args.val_data = get_tar_path_from_dataset_name(args.datasetnames, ["valid", "eval"], islocal=not args.remotedata, template=args.data_txt_example)
+        # args.val_data = get_tar_path_from_dataset_name(args.datasetnames, ["eval", "valid", "test"], islocal=not args.remotedata, template=args.data_txt_example)
+        args.val_data = get_tar_path_from_dataset_name(args.datasetnames, ["valid"], islocal=not args.remotedata, template=args.data_txt_example)
     # get the name of the experiments
     if args.name is None:
         args.name = '-'.join([

@@ -83,7 +83,7 @@ def get_tar_path_from_txts(txt_path, islocal):
         with open(txt_path) as f:
             lines = f.readlines()
         if islocal:
-            lines = [lines[i].split("\n")[0].replace("s3://laion-audio/", "/mnt/audio_clip/") for i in range(len(lines))]
+            lines = [lines[i].split("\n")[0].replace("pipe:s3cmd get s3://laion-audio/", "/mnt/audio_clip/") for i in range(len(lines))]
         else:
             lines = [lines[i].split("\n")[0] for i in range(len(lines))]
         return lines
