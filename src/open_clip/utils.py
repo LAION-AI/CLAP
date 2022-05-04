@@ -44,6 +44,49 @@ def freeze_batch_norm_2d(module, module_match={}, name=''):
                 res.add_module(child_name, new_child)
     return res
 
+def exist(dataset_name, dataset_type):
+    """
+    Check if dataset exists
+    """
+    if dataset_name in ["Clotho", "audiocaps"] and dataset_type in ["train", "test", "valid"]:
+        return True
+    elif dataset_name == "BBCSoundEffects" and dataset_type in ["train", "test"]:
+        return True
+    elif dataset_name == "audioset" and dataset_type in ["balanced_train", "unbalanced_train", "eval"]:
+        return True
+    else:
+        return False
+        
+
+def get_tar_path_from_dataset_name(dataset_names, dataset_types, islocal, template='/mnt/audio_clip/code/CLAP/src/data/datasetname/datasettype.txt'):
+    """
+    Get tar path from dataset name and type
+    """
+    txt_paths = []
+    for i in range(len(dataset_names)):
+        for j in range(len(dataset_types)):
+            if exist(dataset_names[i],dataset_types[j]):
+                txt_loc = template.replace("datasetname",dataset_names[i]).replace("datasettype",dataset_types[j])
+                txt_paths.append(txt_loc)
+            else:
+                print("Skipping dataset " + dataset_names[i] + " with " + dataset_types[j])
+                continue
+    return get_tar_path_from_txts(txt_paths, islocal=islocal)
+    
+def get_tar_path_from_txts(txt_path, islocal):
+    """
+    Get tar path from txt path
+    """
+    if isinstance(txt_path, (list,tuple)):
+        return sum([get_tar_path_from_txts(txt_path[i], islocal=islocal) for i in range(len(txt_path))], [])
+    if isinstance(txt_path, str):
+        with open(txt_path) as f:
+            lines = f.readlines()
+        if islocal:
+            lines = [lines[i].split("\n")[0].replace("pipe:s3cmd get s3://laion-audio/", "/mnt/audio_clip/") for i in range(len(lines))]
+        else:
+            lines = [lines[i].split("\n")[0] for i in range(len(lines))]
+        return lines
 
 def get_mix_lambda(mixup_alpha, batch_size):
     mixup_lambdas = [np.random.beta(mixup_alpha, mixup_alpha, 1)[0] for _ in range(batch_size)]

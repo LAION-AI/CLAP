@@ -1,4 +1,4 @@
-# Single Card
+# Single Card toy dataset
 
 CUDA_VISIBLE_DEVICES=0 python -m training.main \
     --save-frequency 1 \
@@ -15,10 +15,11 @@ CUDA_VISIBLE_DEVICES=0 python -m training.main \
     --lr=1e-3 \
     --wd=0.1 \
     --epochs=30 \
-    --workers=8 \
-    --model PANN-14
+    --workers=1 \
+    --model PANN-14 \
+    --resample-method="TorchAudio"
 
-# Multiple Cards
+# Multiple Cards toy dataset
 
 torchrun --nproc_per_node 4 -m training.main \
     --save-frequency 1 \
@@ -35,6 +36,49 @@ torchrun --nproc_per_node 4 -m training.main \
     --lr=1e-3 \
     --wd=0.1 \
     --epochs=30 \
-    --workers=8 \
+    --workers=1 \
     --use-bn-sync \
-    --model PANN-14
+    --model PANN-14 \
+    --resample-method="TorchAudio"
+
+
+CUDA_VISIBLE_DEVICES=0 python -m training.main \
+    --save-frequency 100 \
+    --save-top-performance 3 \
+    --save-most-recent \
+    --zeroshot-frequency 1 \
+    --dataset-type="webdataset" \
+    --datasetnames "Clotho" "audioset" "audiocaps" "BBCSoundEffects"\
+    --datasetinfos "train" "unbalanced_train" "balanced_train"\
+    --precision="fp32" \
+    --pretrained="openai" \
+    --warmup 10000 \
+    --batch-size=32 \
+    --lr=1e-3 \
+    --wd=0.1 \
+    --epochs=30 \
+    --workers=1 \
+    --use-bn-sync \
+    --model PANN-14 \
+    --resample-method="None" \
+   # --remotedata # if not remote dataset, please uncomment
+
+# Muitiple Card WDS train on "Clotho" "audioset" "audiocaps" "BBCSoundEffects" with types: "train" "unbalanced_train" "balanced_train"
+torchrun --nproc_per_node 8 -m training.main \
+    --save-frequency 100 \
+    --save-top-performance 3 \
+    --save-most-recent \
+    --dataset-type="webdataset" \
+    --precision="fp32" \
+    --pretrained="openai" \
+    --warmup 10000 \
+    --batch-size=96 \
+    --lr=1e-3 \
+    --wd=0.1 \
+    --epochs=200 \
+    --workers=1 \
+    --use-bn-sync \
+    --model PANN-14 \
+    --resample-method="None" \
+    --datasetnames "Clotho" "audioset" "audiocaps" "BBCSoundEffects" \
+    --datasetinfos "train" "unbalanced_train" "balanced_train"\

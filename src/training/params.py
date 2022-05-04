@@ -85,6 +85,30 @@ def parse_args():
         help="Path to imagenet v2 for conducting zero shot evaluation.",
     )
     parser.add_argument(
+        "--datasetnames",
+        nargs='+',
+        default=None,
+        help="If loading webdataset, spedify the dataset names to load. Can be some of these: Clotho, audioset, audiocaps, BBCSoundEffects",
+    )
+    parser.add_argument(
+        "--datasetinfos",
+        nargs='+',
+        default=None,
+        help="If loading webdataset, spedify the dataset types to load. Can be some of these: train, test, valid, unbalanced_train, balanced_train, eval",
+    )
+    parser.add_argument(
+        "--remotedata",
+        default=False,
+        action='store_true',
+        help="if the dataset is remote, set this flag",
+    )
+    parser.add_argument(
+        "--data-txt-example",
+        type=str,
+        default='/mnt/audio_clip/code/CLAP/src/data/datasetname/datasettype.txt',
+        help="An example of the path to the txt file for the dataset",
+    )
+    parser.add_argument(
         "--logs",
         type=str,
         default="./logs/",
@@ -134,6 +158,9 @@ def parse_args():
         "--save-frequency", type=int, default=1, help="How often to save checkpoints."
     )
     parser.add_argument(
+        "--save-top-performance", type=int, default=0, help="Save the top x performance weights if the value >0"
+    )
+    parser.add_argument(
         "--save-most-recent",
         action="store_true",
         default=False,
@@ -144,6 +171,13 @@ def parse_args():
     )
     parser.add_argument(
         "--val-frequency", type=int, default=1, help="How often to run evaluation with val data."
+    )
+    parser.add_argument(
+        "--resample-method",
+        default=None,
+        type=str,
+        required=True,
+        help="Set None to disable resampling. Set TorchAudio to use batchwise torchaudio.resample. Set Librosa to use librosa.resample in the dataloader. Set TorchAudio_ to use torchaudio.resample in the dataloader.",
     )
     parser.add_argument(
         "--resume",

@@ -8,7 +8,8 @@ from contextlib import suppress
 import numpy as np
 import torch
 import torch.nn.functional as F
-
+import torchaudio
+import torchaudio.functional as audioF
 try:
     import wandb
 except ImportError:
@@ -64,7 +65,8 @@ def train_one_epoch(model, data, epoch, optimizer, scaler, scheduler, args, tb_w
     sample_digits = math.ceil(math.log(dataloader.num_samples + 1, 10))
 
     # for toy dataset
-    dataloader.dataset.generate_queue()
+    if args.dataset_type == 'toy':
+        dataloader.dataset.generate_queue()
 
     loss_m = AverageMeter()
     batch_time_m = AverageMeter()
@@ -74,11 +76,21 @@ def train_one_epoch(model, data, epoch, optimizer, scaler, scheduler, args, tb_w
     for i, batch in enumerate(dataloader):
         if args.dataset_type == 'webdataset':
             batch = wds_batch_list2dict(batch)
-
+            batch["text"] = batch["text"][:,0,:]
         step = num_batches_per_epoch * epoch + i
         scheduler(step)
-        audios = batch["waveform"]
-        texts = batch["text"]
+        audios = batch["waveform"].float()
+        if args.resample_method=="TorchAudio":
+            # kaiser_best
+            audios = audioF.resample(
+                audios,
+                batch["audio_orig_sr"][0],
+                32000,
+                lowpass_filter_width=64,
+                rolloff=0.9475937167399596,
+                resampling_method="kaiser_window",
+            )
+        texts = batch["text"].long()
         audios = audios.to(device=device, non_blocking=True)
         texts = texts.to(device=device, non_blocking=True)
 
@@ -179,8 +191,20 @@ def evaluate(model, data, epoch, args, tb_writer=None):
             for i, batch in enumerate(dataloader):
                 if args.dataset_type == 'webdataset':
                     batch = wds_batch_list2dict(batch)
-                audios = batch["waveform"]
-                texts = batch["text"]
+                    batch["text"] = batch["text"][:,0,:]
+
+                audios = batch["waveform"].float()
+                if args.resample_method=="TorchAudio":
+                    # kaiser_best
+                    audios = audioF.resample(
+                        audios,
+                        batch["audio_orig_sr"][0],
+                        32000,
+                        lowpass_filter_width=64,
+                        rolloff=0.9475937167399596,
+                        resampling_method="kaiser_window",
+                    )
+                texts = batch["text"].long()
                 audios = audios.to(device=device, non_blocking=True)
                 texts = texts.to(device=device, non_blocking=True)
 
