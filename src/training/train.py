@@ -74,23 +74,23 @@ def train_one_epoch(model, data, epoch, optimizer, scaler, scheduler, args, tb_w
     end = time.time()
 
     for i, batch in enumerate(dataloader):
-        if args.dataset_type == 'webdataset':
-            batch = wds_batch_list2dict(batch)
-            batch["text"] = batch["text"][:,0,:]
+        # if args.dataset_type == 'webdataset':
+        #     batch = wds_batch_list2dict(batch)
+        #     batch["text"] = batch["text"][:,0,:]
         step = num_batches_per_epoch * epoch + i
         scheduler(step)
-        audios = batch["waveform"].float()
-        if args.resample_method=="TorchAudio":
+        audios = batch[2]  # (yusong) todo:  change to retrieve from index for now.
+        #if args.resample_method=="TorchAudio":
             # kaiser_best
-            audios = audioF.resample(
-                audios,
-                batch["audio_orig_sr"][0],
-                32000,
-                lowpass_filter_width=64,
-                rolloff=0.9475937167399596,
-                resampling_method="kaiser_window",
-            )
-        texts = batch["text"].long()
+        #    audios = audioF.resample(
+        #        audios,
+        #        batch["audio_orig_sr"][0],
+        #        32000,
+        #        lowpass_filter_width=64,
+        #        rolloff=0.9475937167399596,
+        #        resampling_method="kaiser_window",
+        #    )
+        texts = batch[3][:,0,:]
         audios = audios.to(device=device, non_blocking=True)
         texts = texts.to(device=device, non_blocking=True)
 
@@ -189,22 +189,24 @@ def evaluate(model, data, epoch, args, tb_writer=None):
         all_audio_features, all_text_features, all_audio_features_mlp, all_text_features_mlp = [], [], [], []
         with torch.no_grad():
             for i, batch in enumerate(dataloader):
-                if args.dataset_type == 'webdataset':
-                    batch = wds_batch_list2dict(batch)
-                    batch["text"] = batch["text"][:,0,:]
-
-                audios = batch["waveform"].float()
-                if args.resample_method=="TorchAudio":
-                    # kaiser_best
-                    audios = audioF.resample(
-                        audios,
-                        batch["audio_orig_sr"][0],
-                        32000,
-                        lowpass_filter_width=64,
-                        rolloff=0.9475937167399596,
-                        resampling_method="kaiser_window",
-                    )
-                texts = batch["text"].long()
+                # if args.dataset_type == 'webdataset':
+                #     batch = wds_batch_list2dict(batch)
+                #     batch["text"] = batch["text"][:,0,:]
+                #
+                # audios = batch["waveform"].float()
+                # if args.resample_method=="TorchAudio":
+                #     # kaiser_best
+                #     audios = audioF.resample(
+                #         audios,
+                #         batch["audio_orig_sr"][0],
+                #         32000,
+                #         lowpass_filter_width=64,
+                #         rolloff=0.9475937167399596,
+                #         resampling_method="kaiser_window",
+                #     )
+                # texts = batch["text"].long()
+                audios = batch[2]  # (yusong) todo:  change to retrieve from index for now.
+                texts = batch[3][:, 0, :]
                 audios = audios.to(device=device, non_blocking=True)
                 texts = texts.to(device=device, non_blocking=True)
 
@@ -290,7 +292,7 @@ def get_metrics(audio_features, text_features, audio_features_mlp, text_features
 
     for name, logit in logits.items():
         ranking = torch.argsort(logit, descending=True)
-        preds = torch.where(ranking == ground_truth)[1]
+        preds = torch.where(ranking == ground_truth)[1]  # (yusong) todo: this line is slow as uses single thread
         preds = preds.detach().cpu().numpy()
         metrics[f"{name}_mean_rank"] = preds.mean() + 1
         metrics[f"{name}_median_rank"] = np.floor(np.median(preds)) + 1
