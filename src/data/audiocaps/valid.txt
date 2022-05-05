@@ -1,5 +1,5 @@
-s3://laion-audio/webdataset_tar/audiocaps/valid/0.tar
-s3://laion-audio/webdataset_tar/audiocaps/valid/1.tar
-s3://laion-audio/webdataset_tar/audiocaps/valid/2.tar
-s3://laion-audio/webdataset_tar/audiocaps/valid/3.tar
-s3://laion-audio/webdataset_tar/audiocaps/valid/4.tar
+pipe:s3cmd get s3://laion-audio/webdataset_tar/audiocaps/valid/0.tar
+pipe:s3cmd get s3://laion-audio/webdataset_tar/audiocaps/valid/1.tar
+pipe:s3cmd get s3://laion-audio/webdataset_tar/audiocaps/valid/2.tar
+pipe:s3cmd get s3://laion-audio/webdataset_tar/audiocaps/valid/3.tar
+pipe:s3cmd get s3://laion-audio/webdataset_tar/audiocaps/valid/4.tar

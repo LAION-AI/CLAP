@@ -151,3 +151,5 @@ core.*
 src/test.py
 src/dev.ipynb
 src/sizes.json
+*.pt
+dev.ipynb
