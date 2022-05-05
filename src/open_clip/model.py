@@ -382,10 +382,10 @@ class CLAP(nn.Module):
         )
 
         self.text_transform = MLPLayers(
-            units=[embed_dim,embed_dim,embed_dim], dropout=0.1
+            units=[512,512,512], dropout=0.1
         )
         self.audio_transform = MLPLayers(
-            units=[embed_dim,embed_dim,embed_dim], dropout=0.1
+            units=[512,512,512], dropout=0.1
         )
         
         self.vocab_size = text_cfg.vocab_size
