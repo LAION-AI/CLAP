@@ -393,7 +393,8 @@ class CLAP(nn.Module):
         self.positional_embedding = nn.Parameter(torch.empty(self.context_length, text_cfg.width))
         self.ln_final = LayerNorm(text_cfg.width)
 
-        self.text_projection = nn.Parameter(torch.empty(text_cfg.width, embed_dim))
+        self.audio_projection = MLPLayers(units=[embed_dim, 512, 512], dropout=0.1)
+        self.text_projection = nn.Parameter(torch.empty(text_cfg.width, 512)) # HARDCORE as 512
         self.logit_scale_a = nn.Parameter(torch.ones([]) * np.log(1 / 0.07))
         self.logit_scale_t = nn.Parameter(torch.ones([]) * np.log(1 / 0.07))
         self.register_buffer('attn_mask', self.build_attention_mask(), persistent=False)
@@ -468,10 +469,9 @@ class CLAP(nn.Module):
         if audio is None:
             return self.encode_text(text)
         elif text is None:
-            return self.encode_audio(audio)
-        audio_features = self.encode_audio(audio)["embedding"]
+            return self.audio_projection(self.encode_audio(audio)["embedding"])
+        audio_features = self.audio_projection(self.encode_audio(audio)["embedding"])
         audio_features = F.normalize(audio_features, dim=-1)
-
         text_features = self.encode_text(text)
         text_features = F.normalize(text_features, dim=-1)
 
@@ -559,7 +559,7 @@ def build_model_from_openai_state_dict(state_dict: dict, model_cfg):
         if key.startswith("visual."):
             state_dict.pop(key, None)
 
-    for key in ["text_projection", "logit_scale","input_resolution", "context_length", "vocab_size"]:
+    for key in ["logit_scale","input_resolution", "context_length", "vocab_size"]:
         state_dict.pop(key, None)
 
     # not use fp16

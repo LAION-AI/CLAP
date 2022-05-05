@@ -82,3 +82,44 @@ torchrun --nproc_per_node 8 -m training.main \
     --resample-method="None" \
     --datasetnames "Clotho" "audioset" "audiocaps" "BBCSoundEffects" \
     --datasetinfos "train" "unbalanced_train" "balanced_train"\
+
+
+
+CUDA_VISIBLE_DEVICES=0 python -m training.main \
+    --save-frequency 100 \
+    --save-top-performance 3  \
+    --save-most-recent \
+    --dataset-type="webdataset" \
+    --precision="fp32" \
+    --pretrained="openai" \
+    --warmup 10000  \
+    --batch-size=96 \
+    --lr=1e-3 \
+    --wd=0.1 \
+    --epochs=200  \
+    --workers=4 \
+    --use-bn-sync  \
+    --model PANN-14 \
+    --resample-method="None" \
+    --datasetnames "Clotho" "audiocaps" "BBCSoundEffects" \
+    --datasetinfos "train" "unbalanced_train" "balanced_train"
+
+
+torchrun --nproc_per_node 8 -m training.main \
+    --save-frequency 100 \
+    --save-top-performance 3  \
+    --save-most-recent \
+    --dataset-type="webdataset" \
+    --precision="fp32" \
+    --pretrained="openai" \
+    --warmup 10000  \
+    --batch-size=96 \
+    --lr=1e-3 \
+    --wd=0.1 \
+    --epochs=200  \
+    --workers=4 \
+    --use-bn-sync  \
+    --model PANN-14 \
+    --resample-method="None" \
+    --datasetnames "Clotho" "audiocaps" "BBCSoundEffects" \
+    --datasetinfos "train" "unbalanced_train" "balanced_train"
