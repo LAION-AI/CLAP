@@ -48,7 +48,6 @@ def unwrap_model(model):
 def train_one_epoch(model, data, epoch, optimizer, scaler, scheduler, args, tb_writer=None):
     device = torch.device(args.device)
     autocast = torch.cuda.amp.autocast if args.precision == 'amp' else suppress
-
     model.train()
     loss = ClipLoss(
         local_loss=args.local_loss,
@@ -78,7 +77,11 @@ def train_one_epoch(model, data, epoch, optimizer, scaler, scheduler, args, tb_w
         #     batch = wds_batch_list2dict(batch)
         #     batch["text"] = batch["text"][:,0,:]
         step = num_batches_per_epoch * epoch + i
-        scheduler(step)
+        if isinstance(scheduler, list):
+            for s in scheduler:
+                s(step)
+        else:
+            scheduler(step)
         audios = batch[2]  # (yusong) todo:  change to retrieve from index for now.
         #if args.resample_method=="TorchAudio":
             # kaiser_best
@@ -95,25 +98,44 @@ def train_one_epoch(model, data, epoch, optimizer, scaler, scheduler, args, tb_w
         texts = texts.to(device=device, non_blocking=True)
 
         data_time_m.update(time.time() - end)
-        optimizer.zero_grad()
+        if isinstance(optimizer, dict):
+            for o_ in optimizer.values():
+                o_.zero_grad()
+        else:
+            optimizer.zero_grad()
 
         with autocast():
             audio_features, text_features, audio_features_mlp, text_features_mlp, logit_scale_a, logit_scale_t = model(audios, texts)
             total_loss = loss(audio_features, text_features, audio_features_mlp, text_features_mlp, logit_scale_a, logit_scale_t)
-
-        if scaler is not None:
-            scaler.scale(total_loss).backward()
-            if args.horovod:
-                optimizer.synchronize()
-                scaler.unscale_(optimizer)
-                with optimizer.skip_synchronize():
-                    scaler.step(optimizer)
-            else:
-                scaler.step(optimizer)
-            scaler.update()
+        if isinstance(optimizer, dict):
+            for o_ in optimizer.values():
+                if scaler is not None:
+                    scaler.scale(total_loss).backward()
+                    if args.horovod:
+                        o_.synchronize()
+                        scaler.unscale_(o_)
+                        with o_.skip_synchronize():
+                            scaler.step(o_)
+                    else:
+                        scaler.step(o_)
+                    scaler.update()
+                else:
+                    total_loss.backward()
+                    o_.step()
         else:
-            total_loss.backward()
-            optimizer.step()
+            if scaler is not None:
+                scaler.scale(total_loss).backward()
+                if args.horovod:
+                    optimizer.synchronize()
+                    scaler.unscale_(optimizer)
+                    with optimizer.skip_synchronize():
+                        scaler.step(optimizer)
+                else:
+                    scaler.step(optimizer)
+                scaler.update()
+            else:
+                total_loss.backward()
+                optimizer.step()
 
         # Note: we clamp to 4.6052 = ln(100), as in the original paper.
         with torch.no_grad():
@@ -133,25 +155,44 @@ def train_one_epoch(model, data, epoch, optimizer, scaler, scheduler, args, tb_w
             loss_m.update(total_loss.item(), batch_size)
             logit_scale_scalar_a = logit_scale_a.item()
             logit_scale_scalar_t = logit_scale_t.item()
-            logging.info(
-                f"Train Epoch: {epoch} [{num_samples:>{sample_digits}}/{samples_per_epoch} ({percent_complete:.0f}%)] "
-                f"Loss: {loss_m.val:#.5g} ({loss_m.avg:#.4g}) "
-                f"Data (t): {data_time_m.avg:.3f} "
-                f"Batch (t): {batch_time_m.avg:.3f} "
-                f"LR: {optimizer.param_groups[0]['lr']:5f} "
-                f"Logit Scale Audio: {logit_scale_scalar_a:.3f}"
-                f"Logit Scale Text: {logit_scale_scalar_t:.3f}"
-            )
+            if isinstance(optimizer, dict):
+                logging.info(
+                    f"Train Epoch: {epoch} [{num_samples:>{sample_digits}}/{samples_per_epoch} ({percent_complete:.0f}%)] "
+                    f"Loss: {loss_m.val:#.5g} ({loss_m.avg:#.4g}) "
+                    f"Data (t): {data_time_m.avg:.3f} "
+                    f"Batch (t): {batch_time_m.avg:.3f} "
+                    f"LR: {[o_.param_groups[0]['lr'] for o_ in optimizer.values()]} "
+                    f"Logit Scale Audio: {logit_scale_scalar_a:.3f}"
+                    f"Logit Scale Text: {logit_scale_scalar_t:.3f}"
+                )
+                log_data = {
+                    "loss": loss_m.val,
+                    "data_time": data_time_m.val,
+                    "batch_time": batch_time_m.val,
+                    "scale_audio":  logit_scale_scalar_a,
+                    "scale_text":  logit_scale_scalar_t,
+                    "lr": [o_.param_groups[0]["lr"] for o_ in optimizer.values()],
+                }
+            else:
+                logging.info(
+                    f"Train Epoch: {epoch} [{num_samples:>{sample_digits}}/{samples_per_epoch} ({percent_complete:.0f}%)] "
+                    f"Loss: {loss_m.val:#.5g} ({loss_m.avg:#.4g}) "
+                    f"Data (t): {data_time_m.avg:.3f} "
+                    f"Batch (t): {batch_time_m.avg:.3f} "
+                    f"LR: {optimizer.param_groups[0]['lr']:5f} "
+                    f"Logit Scale Audio: {logit_scale_scalar_a:.3f}"
+                    f"Logit Scale Text: {logit_scale_scalar_t:.3f}"
+                )
 
-            # Save train loss / etc. Using non avg meter values as loggers have their own smoothing
-            log_data = {
-                "loss": loss_m.val,
-                "data_time": data_time_m.val,
-                "batch_time": batch_time_m.val,
-                "scale_audio":  logit_scale_scalar_a,
-                "scale_text":  logit_scale_scalar_t,
-                "lr": optimizer.param_groups[0]["lr"]
-            }
+                # Save train loss / etc. Using non avg meter values as loggers have their own smoothing
+                log_data = {
+                    "loss": loss_m.val,
+                    "data_time": data_time_m.val,
+                    "batch_time": batch_time_m.val,
+                    "scale_audio":  logit_scale_scalar_a,
+                    "scale_text":  logit_scale_scalar_t,
+                    "lr": optimizer.param_groups[0]["lr"]
+                }
             for name, val in log_data.items():
                 name = "train/" + name
                 if tb_writer is not None:

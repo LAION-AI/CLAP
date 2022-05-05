@@ -78,6 +78,9 @@ def update_top_k_performance(new_metrics_inputs, current_top_k_ckpt_metrics, arg
                     break
             return current_top_k_ckpt_metrics, new_metrics_inputs
 
+def updateifNone(a, b):
+    a = b if None else a
+    return a
 
 def random_seed(seed=42, rank=0):
     torch.manual_seed(seed + rank)
@@ -231,36 +234,101 @@ def main():
     # freeze text encoder
     if args.freeze_text:
         print("Freeze Text!!!!")
-        text_parameters = [p for n,p in named_parameters if n.startswith("transformer") or \
+        text_freeze_parameters = [p for n,p in named_parameters if n.startswith("transformer") or \
             n in ["positional_embedding", "text_projection"] or \
             n.startswith("token_embedding") or \
             n.startswith("ln_final")]
-        for k in text_parameters:
+        for k in text_freeze_parameters:
             k.requires_grad = False
     
     gain_or_bias_params = [p for n, p in named_parameters if exclude(n, p) and p.requires_grad]
     rest_params = [p for n, p in named_parameters if include(n, p) and p.requires_grad]
 
+    text_params = []
     if args.train_data is None:
         optimizer = None
         scheduler = None
     else:
-        optimizer = optim.AdamW(
-            [
-                {"params": gain_or_bias_params, "weight_decay": 0.},
-                {"params": rest_params, "weight_decay": args.wd},
-            ],
-            lr=args.lr,
-            betas=(args.beta1, args.beta2),
-            eps=args.eps,
-        )
         total_steps = data["train"].dataloader.num_batches * args.epochs
-        scheduler = cosine_lr(optimizer, args.lr, args.warmup, total_steps)
 
-        if args.horovod:
-            optimizer = hvd.DistributedOptimizer(optimizer, named_parameters=model.named_parameters())
-            hvd.broadcast_parameters(model.state_dict(), root_rank=0)
-            hvd.broadcast_optimizer_state(optimizer, root_rank=0)
+        if args.split_opt:
+            for x in ["lr", "beta1", "beta2", "eps", "wd"]:
+                for y in ["_audio", "_text"]:
+                    args[x+y] = updateifNone(args[x+y], args[x])
+
+            gain_or_bias_text_params = [p for n,p in named_parameters if (exclude(n, p) and p.requires_grad) and \
+                n.startswith("transformer") or \
+                n in ["positional_embedding", "text_projection"] or \
+                n.startswith("token_embedding") or \
+                n.startswith("ln_final") or \
+                n.startswith("text_projection") or \
+                n.startswith("logit_scale_t")]
+            rest_text_params = [p for n, p in named_parameters if (include(n, p) and p.requires_grad) and \
+                n.startswith("transformer") or \
+                n in ["positional_embedding", "text_projection"] or \
+                n.startswith("token_embedding") or \
+                n.startswith("ln_final") or \
+                n.startswith("text_projection") or \
+                n.startswith("logit_scale_t")]
+            gain_or_bias_audio_params = [p for n,p in named_parameters if (exclude(n, p) and p.requires_grad) and \
+                n.startswith("audio_transform") or \
+                n in ["audio_projection"] or \
+                n.startswith("logit_scale_a") ]
+            rest_audio_params = [p for n,p in named_parameters if (include(n, p) and p.requires_grad) and \
+                n.startswith("audio_transform") or \
+                n in ["audio_projection"] or \
+                n.startswith("logit_scale_a") ]
+
+            text_optimizer = optim.AdamW(
+                [
+                    {"params": gain_or_bias_text_params, "weight_decay": 0.},
+                    {"params": rest_text_params, "weight_decay": args.wd},
+                ],
+                lr=args.lr_text,
+                betas=(args.beta1_text, args.beta2_text),
+                eps=args.eps_text,
+            )
+            text_scheduler = cosine_lr(text_optimizer, args.lr_text, args.warmup, total_steps)
+
+            audio_optimizer = optim.AdamW(
+                [
+                    {"params": gain_or_bias_audio_params, "weight_decay": 0.},
+                    {"params": rest_audio_params, "weight_decay": args.wd},
+                ],
+                lr=args.lr_audio,
+                betas=(args.beta1_audio, args.beta2_audio),
+                eps=args.eps_audio,
+            )
+            audio_scheduler = cosine_lr(audio_optimizer, args.lr_audio, args.warmup, total_steps)
+
+            optimizer = {"text":text_optimizer, "audio":audio_scheduler}
+            scheduler = {"text":text_scheduler, "audio":audio_scheduler}
+            
+            if args.horovod:
+                text_optimizer = hvd.DistributedOptimizer(text_optimizer, named_parameters=model.named_parameters())
+                audio_scheduler = hvd.DistributedOptimizer(text_optimizer, named_parameters=model.named_parameters())
+                hvd.broadcast_parameters(model.state_dict(), root_rank=0)
+                hvd.broadcast_optimizer_state(text_optimizer, root_rank=0)
+                hvd.broadcast_optimizer_state(audio_scheduler, root_rank=0)
+        else:            
+            optimizer = optim.AdamW(
+                [
+                    {"params": gain_or_bias_params, "weight_decay": 0.},
+                    {"params": rest_params, "weight_decay": args.wd},
+                ],
+                lr=args.lr,
+                betas=(args.beta1, args.beta2),
+                eps=args.eps,
+            )
+            scheduler = cosine_lr(optimizer, args.lr, args.warmup, total_steps)
+
+            if args.horovod:
+                optimizer = hvd.DistributedOptimizer(optimizer, named_parameters=model.named_parameters())
+                hvd.broadcast_parameters(model.state_dict(), root_rank=0)
+                hvd.broadcast_optimizer_state(optimizer, root_rank=0)
+
+        
+
 
     scaler = GradScaler() if args.precision == "amp" else None
 
@@ -276,6 +344,10 @@ def main():
                 if not args.distributed and next(iter(sd.items()))[0].startswith('module'):
                     sd = {k[len('module.'):]: v for k, v in sd.items()}
                 model.load_state_dict(sd)
+                if args.split_opt:
+                    if optimizer is not None:
+                        for k, o_ in optimizer.items():
+                            o_.load_state_dict(checkpoint[k+"optimizer"])
                 if optimizer is not None:
                     optimizer.load_state_dict(checkpoint["optimizer"])
                 if scaler is not None and 'scaler' in checkpoint:
@@ -338,12 +410,16 @@ def main():
                 filtered_metrics = [v for k,v in metrics.items() if "_R@10" in k] # check all R@10 metrics and use it to update the ckpt
         # Saving checkpoints.
         if args.save_logs:
+            if args.slipt_opt:
+                opt_dict = {k+"optimizer":v.state_dict() for k,v in optimizer.items()}
+            else:
+                opt_dict = {"optimizer": optimizer.state_dict()}
             checkpoint_dict = {
                 "epoch": completed_epoch,
                 "name": args.name,
                 "state_dict": model.state_dict(),
-                "optimizer": optimizer.state_dict(),
             }
+            checkpoint_dict.update(opt_dict)
             if scaler is not None:
                 checkpoint_dict["scaler"] = scaler.state_dict()
 

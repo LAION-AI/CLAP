@@ -146,6 +146,25 @@ def parse_args():
     parser.add_argument("--beta2", type=float, default=None, help="Adam beta 2.")
     parser.add_argument("--eps", type=float, default=None, help="Adam epsilon.")
     parser.add_argument("--wd", type=float, default=0.2, help="Weight decay.")
+
+    parser.add_argument(
+        "--split-opt",
+        action="store_true",
+        default=False,
+        help="Use this flag to skip the learning rate decay.",
+    )
+    parser.add_argument("--lr_text", type=float, default=None, help="Learning rate for text.")
+    parser.add_argument("--beta1_text", type=float, default=None, help="Adam beta 1 for text.")
+    parser.add_argument("--beta2_text", type=float, default=None, help="Adam beta 2 for text.")
+    parser.add_argument("--eps_text", type=float, default=None, help="Adam epsilon for text.")
+    parser.add_argument("--wd_text", type=float, default=0.2, help="Weight decay for text.")
+
+    parser.add_argument("--lr_audio", type=float, default=None, help="Learning rate for audio.")
+    parser.add_argument("--beta1_audio", type=float, default=None, help="Adam beta 1 for audio.")
+    parser.add_argument("--beta2_audio", type=float, default=None, help="Adam beta 2 for audio.")
+    parser.add_argument("--eps_audio", type=float, default=None, help="Adam epsilon for audio.")
+    parser.add_argument("--wd_audio", type=float, default=0.2, help="Weight decay for audio.")
+
     parser.add_argument(
         "--warmup", type=int, default=10000, help="Number of steps to warmup for."
     )
