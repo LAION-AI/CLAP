@@ -257,27 +257,27 @@ def main():
                     args[x+y] = updateifNone(args[x+y], args[x])
 
             gain_or_bias_text_params = [p for n,p in named_parameters if (exclude(n, p) and p.requires_grad) and \
-                n.startswith("transformer") or \
+                (n.startswith("transformer") or \
                 n in ["positional_embedding", "text_projection"] or \
                 n.startswith("token_embedding") or \
                 n.startswith("ln_final") or \
                 n.startswith("text_projection") or \
-                n.startswith("logit_scale_t")]
+                n.startswith("logit_scale_t"))]
             rest_text_params = [p for n, p in named_parameters if (include(n, p) and p.requires_grad) and \
                 n.startswith("transformer") or \
-                n in ["positional_embedding", "text_projection"] or \
+                (n in ["positional_embedding", "text_projection"] or \
                 n.startswith("token_embedding") or \
                 n.startswith("ln_final") or \
                 n.startswith("text_projection") or \
-                n.startswith("logit_scale_t")]
+                n.startswith("logit_scale_t"))]
             gain_or_bias_audio_params = [p for n,p in named_parameters if (exclude(n, p) and p.requires_grad) and \
                 n.startswith("audio_transform") or \
-                n in ["audio_projection"] or \
-                n.startswith("logit_scale_a") ]
+                (n in ["audio_projection"] or \
+                n.startswith("logit_scale_a"))]
             rest_audio_params = [p for n,p in named_parameters if (include(n, p) and p.requires_grad) and \
                 n.startswith("audio_transform") or \
-                n in ["audio_projection"] or \
-                n.startswith("logit_scale_a") ]
+                (n in ["audio_projection"] or \
+                n.startswith("logit_scale_a"))]
 
             text_optimizer = optim.AdamW(
                 [
