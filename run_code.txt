@@ -118,7 +118,7 @@ torchrun --nproc_per_node 8 -m training.main \
     --wd=0.1 \
     --epochs=200  \
     --workers=4 \
-    --freeze-text \ 
+    --freeze-text \
     --use-bn-sync  \
     --model PANN-14 \
     --resample-method="None" \

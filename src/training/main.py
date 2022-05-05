@@ -5,7 +5,6 @@ from datetime import datetime
 import bisect
 import copy
 import numpy as np
-from regex import P
 import torch
 import torch.backends.cudnn as cudnn
 from torch import optim
