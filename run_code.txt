@@ -124,3 +124,29 @@ torchrun --nproc_per_node 8 -m training.main \
     --resample-method="None" \
     --datasetnames "Clotho" "audiocaps" "BBCSoundEffects" \
     --datasetinfos "train" "unbalanced_train" "balanced_train"
+
+
+
+
+# run with wandb
+torchrun --nproc_per_node 8 -m training.main \
+    --save-frequency 100 \
+    --save-top-performance 3  \
+    --save-most-recent \
+    --dataset-type="webdataset" \
+    --precision="fp32" \
+    --pretrained="openai" \
+    --warmup 10000  \
+    --batch-size=96 \
+    --lr=1e-3 \
+    --wd=0.1 \
+    --epochs=200  \
+    --workers=4 \
+    --freeze-text \
+    --use-bn-sync  \
+    --model PANN-14 \
+    --report-to "wandb" \
+    --wandb-notes "Whatever message sent to wb" \
+    --resample-method="None" \
+    --datasetnames "Clotho" "audiocaps" "BBCSoundEffects" \
+    --datasetinfos "train" "unbalanced_train" "balanced_train" \
