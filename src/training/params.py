@@ -25,6 +25,12 @@ def parse_args():
         help="Path to h5 file with validation data",
     )
     parser.add_argument(
+        "--freeze-text",
+        default=False,
+        action='store_true',
+        help="if you need to freeze the text encoder, make this True",
+    )
+    parser.add_argument(
         "--train-ipc",
         type=str,
         default=None,

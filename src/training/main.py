@@ -219,10 +219,25 @@ def main():
     if args.trace:
         assert 'train' not in data, 'Cannot train with traced model'
 
+
+
     exclude = lambda n, p: p.ndim < 2 or "bn" in n or "ln" in n or "bias" in n or 'logit_scale' in n
     include = lambda n, p: not exclude(n, p)
 
+
+
     named_parameters = list(model.named_parameters())
+
+    # freeze text encoder
+    if args.freeze_text:
+        print("Freeze Text!!!!")
+        text_parameters = [p for n,p in named_parameters if n.startswith("transformer") or \
+            n in ["positional_embedding", "text_projection"] or \
+            n.startswith("token_embedding") or \
+            n.startswith("ln_final")]
+        for k in text_parameters:
+            k.requires_grad = False
+    
     gain_or_bias_params = [p for n, p in named_parameters if exclude(n, p) and p.requires_grad]
     rest_params = [p for n, p in named_parameters if include(n, p) and p.requires_grad]
 
