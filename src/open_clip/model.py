@@ -363,7 +363,7 @@ class CLAP(nn.Module):
         act_layer = QuickGELU if quick_gelu else nn.GELU
 
         # audio branch
-
+        # audio branch parameters
         if audio_cfg.model_type == "PANN":
             self.audio_branch = create_pann_model(audio_cfg)
         elif audio_cfg.model_type == "HTSAT":
@@ -373,7 +373,7 @@ class CLAP(nn.Module):
             raise RuntimeError(f'Model config for {audio_cfg.model_type} not found.')
             
         # text branch
-        
+        # text branch parameters
         self.transformer = Transformer(
             width=text_cfg.width,
             layers=text_cfg.layers,
@@ -381,13 +381,16 @@ class CLAP(nn.Module):
             act_layer=act_layer,
         )
 
+        # text branch parameters
         self.text_transform = MLPLayers(
             units=[512,512,512], dropout=0.1
         )
+        # audio branch parameters
         self.audio_transform = MLPLayers(
             units=[512,512,512], dropout=0.1
         )
-        
+
+        # below here is text branch parameters
         self.vocab_size = text_cfg.vocab_size
         self.token_embedding = nn.Embedding(text_cfg.vocab_size, text_cfg.width)
         self.positional_embedding = nn.Parameter(torch.empty(self.context_length, text_cfg.width))
