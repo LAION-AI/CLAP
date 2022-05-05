@@ -346,45 +346,46 @@ def preprocess(
     """
     Preprocess a single sample for wdsdataloader.
     """
-    keys = list(sample.keys())
-    for k in keys:
-        if (audio_ext in k) and (audio_ext!=k): # if the key is not extention of audio, something like 'xxxxx.flac'
-            sample[audio_ext] = sample[k]
-            del sample[k]
+    #keys = list(sample.keys())
+    #for k in keys:
+    #    if (audio_ext in k) and (audio_ext!=k): # if the key is not extention of audio, something like 'xxxxx.flac'
+    #        sample[audio_ext] = sample[k]
+    #        del sample[k]
 
-        if (text_ext in k) and (text_ext!=k): # if the key is not extention of audio, something like 'xxxxx.json'
-            sample[text_ext] = sample[k]
-            del sample[k]
+    #    if (text_ext in k) and (text_ext!=k): # if the key is not extention of audio, something like 'xxxxx.json'
+    #        sample[text_ext] = sample[k]
+    #        del sample[k]
     audio_data, orig_sr = sf.read(io.BytesIO(sample[audio_ext]))
 
-    if samplerate is not None:
-        if resample_method == "TorchAudio_":
-            audio_data = F.resample(
-                torch.tensor(audio_data).unsqueeze(0),
-                orig_sr,
-                32000,
-                lowpass_filter_width=64,
-                rolloff=0.9475937167399596,
-                resampling_method="kaiser_window",
-            ).squeeze(0)
-        elif resample_method == "librosa":
-            audio_data = librosa.resample(
-                audio_data, orig_sr=orig_sr, target_sr=samplerate, res_type=res_type
-            )
-        elif resample_method is None or resample_method == "None" or resample_method == "TorchAudio":
-            pass
-        else:
-            raise ValueError(f"Unknown resample method: {resample_method}")
+   # if samplerate is not None:
+   #     if resample_method == "TorchAudio_":
+   #         audio_data = F.resample(
+   #             torch.tensor(audio_data).unsqueeze(0),
+   #             orig_sr,
+   #             32000,
+   #             lowpass_filter_width=64,
+   #             rolloff=0.9475937167399596,
+   #             resampling_method="kaiser_window",
+   #         ).squeeze(0)
+   #     elif resample_method == "librosa":
+   #         audio_data = librosa.resample(
+   #             audio_data, orig_sr=orig_sr, target_sr=samplerate, res_type=res_type
+   #         )
+   #     elif resample_method is None or resample_method == "None" or resample_method == "TorchAudio":
+   #         pass
+   #     else:
+   #         raise ValueError(f"Unknown resample method: {resample_method}")
 
     if len(audio_data) > max_len:  # random clip if too long
         overflow = len(audio_data) - max_len
         idx = np.random.randint(0, overflow + 1)
-        if np.random.rand() > 0.5:
-            audio_data = audio_data[idx : idx + max_len]
-        else:
-            audio_data = audio_data[
-                len(audio_data) + 1 - idx - max_len : len(audio_data) + 1 - idx
-            ]
+        audio_data = audio_data[idx : idx + max_len]
+        #if np.random.rand() > 0.5:
+        #    audio_data = audio_data[idx : idx + max_len]
+        #else:
+        #    audio_data = audio_data[
+        #        len(audio_data) + 1 - idx - max_len : len(audio_data) + 1 - idx
+        #    ]
     else:  # padding if too short
         audio_data = np.pad(
             audio_data,
@@ -392,10 +393,10 @@ def preprocess(
             mode="constant",
             constant_values=0,
         )
-    if mono:  # convert to mono
-        audio_data = librosa.to_mono(audio_data)
+    #if mono:  # convert to mono
+    #    audio_data = librosa.to_mono(audio_data)
 
-    sample["waveform"] = audio_data
+    sample["waveform"] = torch.tensor(audio_data).float()
     del sample[audio_ext]
     texts = json.loads(sample[text_ext].decode('utf-8'))["text"]
     if isinstance(texts, list) and isinstance(texts[0], str) and len(texts) > 1:
