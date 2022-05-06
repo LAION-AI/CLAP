@@ -87,7 +87,7 @@ torchrun --nproc_per_node 8 -m training.main \
     --report-to "wandb" \
     --wandb-notes "text-audio-diff-lr-1e-3-1e-4-model-pann-14" \
     --resample-method="None" \
-    --datasetnames "Clotho" "audiocaps" "BBCSoundEffects" "audioset" \
+    --datasetnames "Clotho" "audiocaps" "BBCSoundEffects" \
     --datasetinfos "train" "unbalanced_train" "balanced_train" "eval" \
 
 torchrun --nproc_per_node 8 -m training.main \
@@ -98,7 +98,7 @@ torchrun --nproc_per_node 8 -m training.main \
     --precision="fp32" \
     --pretrained="openai" \
     --warmup 10000  \
-    --batch-size=72 \
+    --batch-size=96 \
     --split-opt \
     --lr=1e-3 \
     --lr-new=1e-4 \
@@ -106,9 +106,9 @@ torchrun --nproc_per_node 8 -m training.main \
     --epochs=200  \
     --workers=4 \
     --use-bn-sync  \
-    --model HTSAT-large \
+    --model HTSAT-tiny \
     --report-to "wandb" \
-    --wandb-notes "text-audio-diff-lr-1e-3-1e-4-model-htsat-large" \
+    --wandb-notes "text-audio-diff-lr-1e-3-1e-4-model-htsat-tiny" \
     --resample-method="None" \
     --datasetnames "Clotho" "audiocaps" "BBCSoundEffects" \
     --datasetinfos "train" "unbalanced_train" "balanced_train" "eval" \
