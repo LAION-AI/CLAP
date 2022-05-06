@@ -396,6 +396,7 @@ class CLAP(nn.Module):
         self.positional_embedding = nn.Parameter(torch.empty(self.context_length, text_cfg.width))
         self.ln_final = LayerNorm(text_cfg.width)
 
+        # ============================================================================================================
         self.audio_projection = MLPLayers(units=[embed_dim, 512, 512], dropout=0.1)
         self.text_projection = nn.Parameter(torch.empty(text_cfg.width, 512)) # HARDCORE as 512
         self.logit_scale_a = nn.Parameter(torch.ones([]) * np.log(1 / 0.07))
