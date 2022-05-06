@@ -124,7 +124,7 @@ torchrun --nproc_per_node 8 -m training.main \
     --precision="fp32" \
     --pretrained="openai" \
     --warmup 10000  \
-    --batch-size=72 \
+    --batch-size=96 \
     --lr=1e-3 \
     --wd=0.1 \
     --epochs=200  \
@@ -146,7 +146,7 @@ torchrun --nproc_per_node 8 -m training.main \
     --precision="fp32" \
     --pretrained="openai" \
     --warmup 10000  \
-    --batch-size=72 \
+    --batch-size=96 \
     --lr=1e-3 \
     --wd=0.1 \
     --epochs=200  \
