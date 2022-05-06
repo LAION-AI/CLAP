@@ -108,20 +108,21 @@ def train_one_epoch(model, data, epoch, optimizer, scaler, scheduler, args, tb_w
             audio_features, text_features, audio_features_mlp, text_features_mlp, logit_scale_a, logit_scale_t = model(audios, texts)
             total_loss = loss(audio_features, text_features, audio_features_mlp, text_features_mlp, logit_scale_a, logit_scale_t)
         if isinstance(optimizer, dict):
-            for o_ in optimizer.values():
                 if scaler is not None:
                     scaler.scale(total_loss).backward()
-                    if args.horovod:
-                        o_.synchronize()
-                        scaler.unscale_(o_)
-                        with o_.skip_synchronize():
+                    for o_ in optimizer.values():
+                        if args.horovod:
+                            o_.synchronize()
+                            scaler.unscale_(o_)
+                            with o_.skip_synchronize():
+                                scaler.step(o_)
+                        else:
                             scaler.step(o_)
-                    else:
-                        scaler.step(o_)
                     scaler.update()
                 else:
                     total_loss.backward()
-                    o_.step()
+                    for o_ in optimizer.values():
+                        o_.step()
         else:
             if scaler is not None:
                 scaler.scale(total_loss).backward()

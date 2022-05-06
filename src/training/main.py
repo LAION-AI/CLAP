@@ -1,3 +1,4 @@
+from inspect import getargs
 import logging
 import os
 import random
@@ -78,9 +79,9 @@ def update_top_k_performance(new_metrics_inputs, current_top_k_ckpt_metrics, arg
                     break
             return current_top_k_ckpt_metrics, new_metrics_inputs
 
-def updateifNone(a, b):
-    a = b if None else a
-    return a
+# def updateifNone(a, b):
+#     a = b if None else a
+#     return a
 
 def is_pretrained_params(n):
     return (n.startswith("transformer") or \
@@ -97,7 +98,6 @@ def random_seed(seed=42, rank=0):
 
 def main():
     args = parse_args()
-
     # sanitize model name for filesystem / uri use, easier if we don't use / in name as a rule?
     args.model = args.model.replace('/', '-')
     if args.datasetinfos is None:
@@ -251,6 +251,7 @@ def main():
     gain_or_bias_params = [p for n, p in named_parameters if exclude(n, p) and p.requires_grad]
     rest_params = [p for n, p in named_parameters if include(n, p) and p.requires_grad]
 
+    
     if args.train_data is None:
         optimizer = None
         scheduler = None
@@ -260,7 +261,8 @@ def main():
         if args.split_opt:
             for x in ["lr", "beta1", "beta2", "eps", "wd"]:
                 for y in ["_new", "_pretrained"]:
-                    args[x+y] = updateifNone(args[x+y], args[x])
+                    if getattr(args, x+y) is None:
+                        setattr(args, x+y, getattr(args, x))
 
 
             gain_or_bias_pretrained_params = [p for n,p in named_parameters if (exclude(n, p) and p.requires_grad) and is_pretrained_params(n)]
@@ -399,7 +401,7 @@ def main():
                 filtered_metrics = [v for k,v in metrics.items() if "_R@10" in k] # check all R@10 metrics and use it to update the ckpt
         # Saving checkpoints.
         if args.save_logs:
-            if args.slipt_opt:
+            if args.split_opt:
                 opt_dict = {k+"_"+"optimizer":v.state_dict() for k,v in optimizer.items()}
             else:
                 opt_dict = {"optimizer": optimizer.state_dict()}
