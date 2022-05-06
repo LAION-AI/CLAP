@@ -77,8 +77,8 @@ def train_one_epoch(model, data, epoch, optimizer, scaler, scheduler, args, tb_w
         #     batch = wds_batch_list2dict(batch)
         #     batch["text"] = batch["text"][:,0,:]
         step = num_batches_per_epoch * epoch + i
-        if isinstance(scheduler, list):
-            for s in scheduler:
+        if isinstance(scheduler, dict):
+            for s in scheduler.values():
                 s(step)
         else:
             scheduler(step)
