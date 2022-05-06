@@ -719,8 +719,6 @@ class HTSAT_Swin_Transformer(nn.Module):
         x = self.pos_drop(x)
         for i, layer in enumerate(self.layers):
             x, attn = layer(x)
-
-
         # for x
         x = self.norm(x)
         B, N, C = x.shape
@@ -804,7 +802,6 @@ class HTSAT_Swin_Transformer(nn.Module):
         x = self.spectrogram_extractor(x)   # (batch_size, 1, time_steps, freq_bins)
         x = self.logmel_extractor(x)    # (batch_size, 1, time_steps, mel_bins)
         
-        
         x = x.transpose(1, 3)
         x = self.bn0(x)
         x = x.transpose(1, 3)
@@ -876,7 +873,7 @@ def create_htsat_model(audio_cfg):
                 patch_stride=(4,4),
                 num_classes=audio_cfg.class_num,
                 embed_dim=128,
-                depths=[2,2,18,2],
+                depths=[2,2,12,2],
                 num_heads=[4,8,16,32],
                 window_size=8,
                 config = audio_cfg
@@ -888,8 +885,8 @@ def create_htsat_model(audio_cfg):
                 patch_stride=(4,4),
                 num_classes=audio_cfg.class_num,
                 embed_dim=256,
-                depths=[2,2,18,2],
-                num_heads=[6,12,24,48],
+                depths=[2,2,12,2],
+                num_heads=[4,8,16,32],
                 window_size=8,
                 config = audio_cfg
             )
