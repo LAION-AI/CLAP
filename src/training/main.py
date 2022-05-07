@@ -104,7 +104,7 @@ def main():
         args.datasetinfos = ["train", "unbalanced_train", "balanced_train"]
     if args.dataset_type == "webdataset":
         args.train_data = get_tar_path_from_dataset_name(args.datasetnames, args.datasetinfos, islocal=not args.remotedata, template=args.data_txt_example)
-        args.val_data = get_tar_path_from_dataset_name(args.datasetnames, ["valid", "test"], islocal=not args.remotedata, template=args.data_txt_example)
+        args.val_data = get_tar_path_from_dataset_name(args.datasetnames, ["valid", "test", "eval"], islocal=not args.remotedata, template=args.data_txt_example)
         # args.val_data = get_tar_path_from_dataset_name(args.datasetnames, ["valid"], islocal=not args.remotedata, template=args.data_txt_example)
     # get the name of the experiments
     if args.name is None:
@@ -389,6 +389,10 @@ def main():
         current_top_k_ckpt_metrics = {i:0 for i in range(args.save_top_performance)} # initialize the top-k metric for ckpts to 0
 
     for epoch in range(start_epoch, args.epochs):
+        # freeze the text param after (include) args.freeze_text_after, this is -1 by default
+        if epoch == args.freeze_text_after:
+            for k in text_freeze_parameters:
+                k.requires_grad = False
         if is_master(args):
             logging.info(f'Start epoch {epoch}')
 

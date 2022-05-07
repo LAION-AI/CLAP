@@ -31,6 +31,12 @@ def parse_args():
         help="if you need to freeze the text encoder, make this True",
     )
     parser.add_argument(
+        "--freeze-text-after",
+        type=int,
+        default=-1,
+        help="if you need to freeze the text encoder after (include) epoch x, set this param to x. Set -1 to disable it",
+    )
+    parser.add_argument(
         "--train-ipc",
         type=str,
         default=None,
