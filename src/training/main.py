@@ -243,7 +243,7 @@ def main():
         n in ["positional_embedding", "text_projection"] or \
         n.startswith("token_embedding") or \
         n.startswith("ln_final")]
-        
+
     if args.freeze_text:
         print("Freeze Text!!!!")
         for k in text_freeze_parameters:
@@ -392,6 +392,7 @@ def main():
     for epoch in range(start_epoch, args.epochs):
         # freeze the text param after (include) args.freeze_text_after, this is -1 by default
         if epoch == args.freeze_text_after:
+            print("Text pretrained parameters are freezed since this epoch.")
             for k in text_freeze_parameters:
                 k.requires_grad = False
         if is_master(args):
