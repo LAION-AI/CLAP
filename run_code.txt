@@ -172,14 +172,14 @@ torchrun --nproc_per_node 8 -m training.main \
     --batch-size=96 \
     --lr-new=1e-3 \
     --lr-pretrained=1e-5 \
-    --freeze-text-after=3 \
+    --freeze-text-after=5 \
     --wd=0.1 \
     --epochs=200  \
     --workers=4 \
     --use-bn-sync  \
     --model PANN-14 \
     --report-to "wandb" \
-    --wandb-notes "text-audio-diff-lr-1e-3-1e-5-freeze-after-3-model-pann-14" \
+    --wandb-notes "text-audio-diff-lr-1e-3-1e-5-freeze-after-5-model-pann-14" \
     --resample-method="None" \
     --datasetnames "Clotho" "audiocaps" "BBCSoundEffects"  \
     --datasetinfos "train" "unbalanced_train" "balanced_train" "eval" \
