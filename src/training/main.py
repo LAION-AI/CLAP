@@ -239,12 +239,13 @@ def main():
     named_parameters = list(model.named_parameters())
 
     # freeze text encoder
+    text_freeze_parameters = [p for n,p in named_parameters if n.startswith("transformer") or \
+        n in ["positional_embedding", "text_projection"] or \
+        n.startswith("token_embedding") or \
+        n.startswith("ln_final")]
+        
     if args.freeze_text:
         print("Freeze Text!!!!")
-        text_freeze_parameters = [p for n,p in named_parameters if n.startswith("transformer") or \
-            n in ["positional_embedding", "text_projection"] or \
-            n.startswith("token_embedding") or \
-            n.startswith("ln_final")]
         for k in text_freeze_parameters:
             k.requires_grad = False
     
