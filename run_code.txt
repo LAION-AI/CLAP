@@ -157,7 +157,7 @@ torchrun --nproc_per_node 8 -m training.main \
     --report-to "wandb" \
     --wandb-notes "text-audio-freeze-text-lr-1e-3-model-htsat-tiny" \
     --resample-method="None" \
-    --datasetnames "Clotho" "audiocaps" "BBCSoundEffects"  \
+    --datasetnames "Clotho" "audiocaps" "BBCSoundEffects" "audioset"  \
     --datasetinfos "train" "unbalanced_train" "balanced_train" "eval" \
 
 # freeze text after epoch 3 and make lr-pretrained=1e-5
