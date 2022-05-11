@@ -5,4 +5,4 @@ many thanks to <a href="https://github.com/cfoster0/CLAP">@cfoster0</a> for allo
 
 ⚠️🚧Work in progress🚧⚠️
 
-This code base is currently working in progress. The codebase is adapted from [openClip](https://github.com/mlfoundations/open_clip). This repo is by no means runnable. We will update the ReadME when we release this project to public.
+This code base is currently working in progress. The codebase is adapted from [OpenCLIP](https://github.com/mlfoundations/open_clip). This repo is by no means runnable. We will update the ReadME when we release this project to public.
