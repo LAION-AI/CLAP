@@ -103,8 +103,8 @@ def main():
     if args.datasetinfos is None:
         args.datasetinfos = ["train", "unbalanced_train", "balanced_train"]
     if args.dataset_type == "webdataset":
-        args.train_data = get_tar_path_from_dataset_name(args.datasetnames, args.datasetinfos, islocal=not args.remotedata, template=args.data_txt_example)
-        args.val_data = get_tar_path_from_dataset_name(args.datasetnames, ["valid", "test", "eval"], islocal=not args.remotedata, template=args.data_txt_example)
+        args.train_data = get_tar_path_from_dataset_name(args.datasetnames, args.datasetinfos, islocal=not args.remotedata, template=args.data_txt_example, proportion=args.dataset_proportion)
+        args.val_data = get_tar_path_from_dataset_name(args.datasetnames, ["valid", "test", "eval"], islocal=not args.remotedata, template=args.data_txt_example, proportion=1)
         # args.val_data = get_tar_path_from_dataset_name(args.datasetnames, ["valid"], islocal=not args.remotedata, template=args.data_txt_example)
     # get the name of the experiments
     if args.name is None:

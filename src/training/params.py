@@ -108,6 +108,7 @@ def parse_args():
         default=None,
         help="If loading webdataset, spedify the dataset types to load. Can be some of these: train, test, valid, unbalanced_train, balanced_train, eval",
     )
+    parser.add_argument("--dataset-proportion", type=float, default=1.0, help="How much proportion of dataset we want to train.")
     parser.add_argument(
         "--remotedata",
         default=False,
