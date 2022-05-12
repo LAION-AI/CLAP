@@ -197,3 +197,47 @@ def process_ipc(index_path, classes_num, filename):
     print(ipc)
     np.save(filename, ipc)
     logging.info("Load Data Succeed...............")
+
+
+def save_to_dict(s, o_={}):
+    sp = s.split(": ")
+    o_.update({sp[0]: float(sp[1])})
+    return o_
+
+
+def get_data_from_log(txt_path):
+    """
+    Output dictionary from out.txt log file
+    """
+    with open(txt_path) as f:
+        lines = f.readlines()
+    val_data = {}
+    train_data = {}
+    train_losses = []
+    train_losses_epoch = []
+    for i in range(len(lines)):
+        if "| INFO |" in lines[i]:
+            if "Eval Epoch" in lines[i]:
+                if "val_loss" in lines[i]:
+                    # float(regex.sub("", lines[310].split("	")[-1]).replace(" ", ""))
+                    line = lines[i].split("Eval Epoch: ")[-1]
+                    num_epoch = int(line.split("	")[0].split(" ")[0])
+                    d = {
+                        line.split("	")[0]
+                        .split(" ")[1]
+                        .replace(":", ""): float(line.split("	")[0].split(" ")[-1])
+                    }
+                    for i in range(1, len(line.split("	"))):
+                        d = save_to_dict(line.split("	")[i], d)
+                    val_data[num_epoch] = d
+            elif "Train Epoch" in lines[i]:
+                num_epoch = int(lines[i].split("Train Epoch: ")[1][0])
+                loss = float(lines[i].split("Loss: ")[-1].split(" (")[0])
+                train_losses.append(loss)
+                train_losses_epoch.append(num_epoch)
+    for i in range(len(train_losses)):
+        train_data[i] = {
+            "num_epoch": train_losses_epoch[i],
+            "train_loss": train_losses[i],
+        }
+    return train_data, val_data
