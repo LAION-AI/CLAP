@@ -88,7 +88,7 @@ torchrun --nproc_per_node 8 -m training.main \
     --wandb-notes "text-audio-diff-lr-1e-3-1e-4-model-pann-14" \
     --resample-method="None" \
     --datasetnames "Clotho" "audiocaps" "BBCSoundEffects" \
-    --datasetinfos "train" "unbalanced_train" "balanced_train" "eval" \
+    --datasetinfos "train" "unbalanced_train" "balanced_train" \
 
 torchrun --nproc_per_node 8 -m training.main \
     --save-frequency 100 \
@@ -111,7 +111,7 @@ torchrun --nproc_per_node 8 -m training.main \
     --wandb-notes "text-audio-diff-lr-1e-3-1e-4-model-htsat-tiny" \
     --resample-method="None" \
     --datasetnames "Clotho" "audiocaps" "BBCSoundEffects" \
-    --datasetinfos "train" "unbalanced_train" "balanced_train" "eval" \
+    --datasetinfos "train" "unbalanced_train" "balanced_train" \
 
 
 # tomorrow for yusong
@@ -136,7 +136,7 @@ torchrun --nproc_per_node 8 -m training.main \
     --wandb-notes "text-audio-freeze-text-lr-1e-3-model-pann-14" \
     --resample-method="None" \
     --datasetnames "Clotho" "audiocaps" "BBCSoundEffects" "audioset"  \
-    --datasetinfos "train" "unbalanced_train" "balanced_train" "eval" \
+    --datasetinfos "train" "unbalanced_train" "balanced_train"\
 
 torchrun --nproc_per_node 8 -m training.main \
     --save-frequency 100 \
@@ -158,7 +158,7 @@ torchrun --nproc_per_node 8 -m training.main \
     --wandb-notes "text-audio-freeze-text-lr-1e-3-model-htsat-tiny" \
     --resample-method="None" \
     --datasetnames "Clotho" "audiocaps" "BBCSoundEffects" "audioset"  \
-    --datasetinfos "train" "unbalanced_train" "balanced_train" "eval" \
+    --datasetinfos "train" "unbalanced_train" "balanced_train"\
 
 # freeze text after epoch 3 and make lr-pretrained=1e-5
 torchrun --nproc_per_node 8 -m training.main \
@@ -182,4 +182,4 @@ torchrun --nproc_per_node 8 -m training.main \
     --wandb-notes "text-audio-diff-lr-1e-3-1e-5-freeze-after-5-model-pann-14" \
     --resample-method="None" \
     --datasetnames "Clotho" "audiocaps" "BBCSoundEffects"  \
-    --datasetinfos "train" "unbalanced_train" "balanced_train" "eval" \
+    --datasetinfos "train" "unbalanced_train" "balanced_train" \
