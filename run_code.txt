@@ -88,7 +88,7 @@ torchrun --nproc_per_node 8 -m training.main \
     --wandb-notes "text-audio-diff-lr-1e-3-1e-4-model-pann-14" \
     --resample-method="None" \
     --datasetnames "Clotho" "audiocaps" "BBCSoundEffects" \
-    --datasetinfos "train" "unbalanced_train" "balanced_train" \
+    --datasetinfos "train" "unbalanced_train" "balanced_train" "eval" \
 
 torchrun --nproc_per_node 8 -m training.main \
     --save-frequency 100 \
