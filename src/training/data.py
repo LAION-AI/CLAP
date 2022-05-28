@@ -26,6 +26,7 @@ from pathlib import Path
 import wget
 import random
 from open_clip import tokenize
+from open_clip.utils import dataset_split
 
 try:
     import horovod.torch as hvd
@@ -41,13 +42,14 @@ _AUDIOSET_MAP = np.load(_AUDIOSET_MAP_PATH, allow_pickle=True)
 
 
 def int16_to_float32(x):
-    return (x / 32767.).astype(np.float32)
+    return (x / 32767.0).astype(np.float32)
 
-# For Toy Dataset 
+
+# For Toy Dataset
 class ToyDataset(Dataset):
-    def __init__(self, index_path, ipc, config, eval_mode = False):
+    def __init__(self, index_path, ipc, config, eval_mode=False):
         """Toy Dataset for testing the audioset input with text labels
-        
+
         Parameters
         ----------
             index_path: str
@@ -75,29 +77,31 @@ class ToyDataset(Dataset):
                 if np.sum(target) > 0:
                     self.queue.append(i)
             self.total_size = len(self.queue)
-        logging.info("total dataset size: %d" %(self.total_size))
-        logging.info("class num: %d" %(self.classes_num))
+        logging.info("total dataset size: %d" % (self.total_size))
+        logging.info("class num: %d" % (self.classes_num))
 
     def time_shifting(self, x):
         frame_num = len(x)
         shift_len = random.randint(0, frame_num - 1)
-        new_sample = np.concatenate([x[shift_len:], x[:shift_len]], axis = 0)
-        return new_sample 
+        new_sample = np.concatenate([x[shift_len:], x[:shift_len]], axis=0)
+        return new_sample
 
     def generate_queue(self):
-        self.queue = []      
+        self.queue = []
         while len(self.queue) < self.total_size:
             class_set = [*range(self.classes_num)]
             random.shuffle(class_set)
-            self.queue += [self.ipc[d][random.randint(0, len(self.ipc[d]) - 1)] for d in class_set]
-        self.queue = self.queue[:self.total_size]
-        
-        logging.info("queue regenerated:%s" %(self.queue[-5:]))
+            self.queue += [
+                self.ipc[d][random.randint(0, len(self.ipc[d]) - 1)] for d in class_set
+            ]
+        self.queue = self.queue[: self.total_size]
+
+        logging.info("queue regenerated:%s" % (self.queue[-5:]))
 
     def crop_wav(self, x):
         crop_size = self.audio_cfg["crop_size"]
         crop_pos = random.randint(0, len(x) - crop_size - 1)
-        return x[crop_pos:crop_pos + crop_size]
+        return x[crop_pos : crop_pos + crop_size]
 
     def prompt_text(self, target):
         events = _AUDIOSET_MAP[np.where(target > 0)]
@@ -113,7 +117,7 @@ class ToyDataset(Dataset):
             index: int
                 the index number
         Return
-        ------ 
+        ------
             output: dict {
                 "hdf5_path": str,
                 "index_in_hdf5": int,
@@ -125,16 +129,27 @@ class ToyDataset(Dataset):
                 the output dictionary
         """
         s_index = self.queue[index]
-        
+
         audio_name = self.fp["audio_name"][s_index].decode()
         # Hardcode here CHANGE
-        hdf5_path = self.fp["hdf5_path"][s_index].decode().replace("/home/tiger/DB/knut/data/audioset/hdf5s/waveforms", "/mnt/audio_clip/test/data")
+        hdf5_path = (
+            self.fp["hdf5_path"][s_index]
+            .decode()
+            .replace(
+                "/home/tiger/DB/knut/data/audioset/hdf5s/waveforms",
+                "/mnt/audio_clip/test/data",
+            )
+        )
         r_idx = self.fp["index_in_hdf5"][s_index]
         target = self.fp["target"][s_index].astype(np.float32)
         text = self.prompt_text(target)
         with h5py.File(hdf5_path, "r") as f:
-            waveform = int16_to_float32(f["waveform"][r_idx])[:self.audio_cfg["clip_samples"]]
-        assert len(waveform) == self.audio_cfg["clip_samples"], "The sample length is not match"
+            waveform = int16_to_float32(f["waveform"][r_idx])[
+                : self.audio_cfg["clip_samples"]
+            ]
+        assert (
+            len(waveform) == self.audio_cfg["clip_samples"]
+        ), "The sample length is not match"
         # Time shift
         # if (self.config.enable_time_shift) and (not self.eval_mode):
         #     waveform = self.time_shifting(waveform)
@@ -150,7 +165,7 @@ class ToyDataset(Dataset):
         #         if len(self.class_map[k][2]) > 0:
         #             add_key = random.choice(self.class_map[k][2])
         #             target[add_key] = 1.0
-    
+
         # missing the text input
 
         data_dict = {
@@ -159,7 +174,7 @@ class ToyDataset(Dataset):
             "audio_name": audio_name,
             "waveform": waveform,
             "target": target,
-            "text": text
+            "text": text,
         }
         return data_dict
 
@@ -182,7 +197,7 @@ class CsvDataset(Dataset):
 
     def __getitem__(self, idx):
         images = self.transforms(Image.open(str(self.images[idx])))
-        texts 	= tokenize([str(self.captions[idx])])[0]
+        texts = tokenize([str(self.captions[idx])])[0]
         return images, texts
 
 
@@ -197,35 +212,46 @@ def preprocess_txt(text):
 
 
 def get_dataset_size(shards, sizefilepath_=None, is_local=True):
-    if not is_local:
-        if os.path.exists('sizes.json'):
-            os.remove('sizes.json')
-        if not sizefilepath_ is None:
-            wget.download(sizefilepath_, 'sizes.json')
-        else:
-            wget.download(os.path.join(os.path.dirname(shards[0]), "sizes.json"), 'sizes.json')
-        sizefilepath_ = 'sizes.json'
     if isinstance(shards, list):
         size_list = []
         for s in shards:
-            size_list.append(get_dataset_size(s, sizefilepath_=sizefilepath_, is_local=True)[0])
+            size_list.append(
+                get_dataset_size(s, sizefilepath_=sizefilepath_, is_local=is_local)[0]
+            )
     else:
+        if not is_local:
+            for n in dataset_split.keys():
+                if n in shards:
+                    break
+            for s in dataset_split[n]:
+                if s in shards:
+                    break
+            sizefilepath_ = f"./json_files/{n}/{s}/sizes.json"
         shards_list = list(braceexpand.braceexpand(shards))
         dir_path = os.path.dirname(shards)
-        if not sizefilepath_ is None:
+        if sizefilepath_ is not None:
             sizes = json.load(open(sizefilepath_, "r"))
-            total_size = sum([int(sizes[os.path.basename(shard)]) for shard in shards_list])
+            total_size = sum(
+                [
+                    int(sizes[os.path.basename(shard.replace(".tar -", ".tar"))])
+                    for shard in shards_list
+                ]
+            )
         else:
             sizes_filename = os.path.join(dir_path, "sizes.json")
             len_filename = os.path.join(dir_path, "__len__")
             if os.path.exists(sizes_filename):
                 sizes = json.load(open(sizes_filename, "r"))
-                total_size = sum([int(sizes[os.path.basename(shard)]) for shard in shards_list])
+                total_size = sum(
+                    [int(sizes[os.path.basename(shard)]) for shard in shards_list]
+                )
             elif os.path.exists(len_filename):
                 # FIXME this used to be eval(open(...)) but that seemed rather unsafe
                 total_size = ast.literal_eval(open(len_filename, "r").read())
             else:
-                raise Exception("Cannot find sizes file for dataset. Please specify the path to the file.")
+                raise Exception(
+                    "Cannot find sizes file for dataset. Please specify the path to the file."
+                )
                 # total_size = None  # num samples undefined
                 # some common dataset sizes (at time of authors last download)
                 # cc3m-train: 2905954
@@ -310,26 +336,35 @@ _SHARD_SHUFFLE_INITIAL = 500
 _SAMPLE_SHUFFLE_SIZE = 5000
 _SAMPLE_SHUFFLE_INITIAL = 1000
 
+
 def sample_prop(sizefile, inputs, proportion, is_local=True):
     """
     Sample a proportion of the data.
     """
-    file_path_dict = {os.path.split(inputs[i])[1]:os.path.split(inputs[i])[0] for i in range(len(inputs))}
+    file_path_dict = {
+        os.path.split(inputs[i])[1]: os.path.split(inputs[i])[0]
+        for i in range(len(inputs))
+    }
     sampled_filepath_dict = {}
     sampled_size_dict = {}
     if not is_local:
-        if os.path.exists('sizes.json'):
-            os.remove('sizes.json')
-        wget.download(sizefile, 'sizes.json')
-        sizefile = 'sizes.json'
-    with open(sizefile,'r', encoding='UTF-8') as f:
+        if os.path.exists("sizes.json"):
+            os.remove("sizes.json")
+        wget.download(sizefile, "sizes.json")
+        sizefile = "sizes.json"
+    with open(sizefile, "r", encoding="UTF-8") as f:
         load_dict = json.load(f)
-    L = int(len(file_path_dict)*proportion)
+    L = int(len(file_path_dict) * proportion)
     subkeys = random.sample(file_path_dict.keys(), L)
     for k in subkeys:
         sampled_size_dict[k] = load_dict[k]
         sampled_filepath_dict[k] = file_path_dict[k]
-    return sum(sampled_size_dict.values()), L, [os.path.join(v,k) for k,v in sampled_filepath_dict.items()], sampled_size_dict
+    return (
+        sum(sampled_size_dict.values()),
+        L,
+        [os.path.join(v, k) for k, v in sampled_filepath_dict.items()],
+        sampled_size_dict,
+    )
 
 
 def preprocess(
@@ -346,8 +381,8 @@ def preprocess(
     """
     Preprocess a single sample for wdsdataloader.
     """
-    #keys = list(sample.keys())
-    #for k in keys:
+    # keys = list(sample.keys())
+    # for k in keys:
     #    if (audio_ext in k) and (audio_ext!=k): # if the key is not extention of audio, something like 'xxxxx.flac'
     #        sample[audio_ext] = sample[k]
     #        del sample[k]
@@ -357,32 +392,32 @@ def preprocess(
     #        del sample[k]
     audio_data, orig_sr = sf.read(io.BytesIO(sample[audio_ext]))
 
-   # if samplerate is not None:
-   #     if resample_method == "TorchAudio_":
-   #         audio_data = F.resample(
-   #             torch.tensor(audio_data).unsqueeze(0),
-   #             orig_sr,
-   #             32000,
-   #             lowpass_filter_width=64,
-   #             rolloff=0.9475937167399596,
-   #             resampling_method="kaiser_window",
-   #         ).squeeze(0)
-   #     elif resample_method == "librosa":
-   #         audio_data = librosa.resample(
-   #             audio_data, orig_sr=orig_sr, target_sr=samplerate, res_type=res_type
-   #         )
-   #     elif resample_method is None or resample_method == "None" or resample_method == "TorchAudio":
-   #         pass
-   #     else:
-   #         raise ValueError(f"Unknown resample method: {resample_method}")
+    # if samplerate is not None:
+    #     if resample_method == "TorchAudio_":
+    #         audio_data = F.resample(
+    #             torch.tensor(audio_data).unsqueeze(0),
+    #             orig_sr,
+    #             32000,
+    #             lowpass_filter_width=64,
+    #             rolloff=0.9475937167399596,
+    #             resampling_method="kaiser_window",
+    #         ).squeeze(0)
+    #     elif resample_method == "librosa":
+    #         audio_data = librosa.resample(
+    #             audio_data, orig_sr=orig_sr, target_sr=samplerate, res_type=res_type
+    #         )
+    #     elif resample_method is None or resample_method == "None" or resample_method == "TorchAudio":
+    #         pass
+    #     else:
+    #         raise ValueError(f"Unknown resample method: {resample_method}")
 
     if len(audio_data) > max_len:  # random clip if too long
         overflow = len(audio_data) - max_len
         idx = np.random.randint(0, overflow + 1)
         audio_data = audio_data[idx : idx + max_len]
-        #if np.random.rand() > 0.5:
+        # if np.random.rand() > 0.5:
         #    audio_data = audio_data[idx : idx + max_len]
-        #else:
+        # else:
         #    audio_data = audio_data[
         #        len(audio_data) + 1 - idx - max_len : len(audio_data) + 1 - idx
         #    ]
@@ -393,19 +428,19 @@ def preprocess(
             mode="constant",
             constant_values=0,
         )
-    #if mono:  # convert to mono
+    # if mono:  # convert to mono
     #    audio_data = librosa.to_mono(audio_data)
 
     sample["waveform"] = torch.tensor(audio_data).float()
     del sample[audio_ext]
-    texts = json.loads(sample[text_ext].decode('utf-8'))["text"]
+    texts = json.loads(sample[text_ext].decode("utf-8"))["text"]
     if isinstance(texts, list) and isinstance(texts[0], str) and len(texts) > 1:
         texts = random.choice(texts)
     sample["raw_text"] = texts
     sample["text"] = tokenize(texts)
     del sample[text_ext]
-    sample["audio_name"] = sample["__key__"].split("/")[-1]+"."+audio_ext
-    sample["text_name"] = sample["__key__"].split("/")[-1]+"."+text_ext
+    sample["audio_name"] = sample["__key__"].split("/")[-1] + "." + audio_ext
+    sample["text_name"] = sample["__key__"].split("/")[-1] + "." + text_ext
     sample["audio_orig_sr"] = orig_sr
     return sample
 
@@ -432,7 +467,7 @@ def get_wds_dataset(
     """
     if is_local is None and (not args.remotedata is None):
         is_local = not args.remotedata
-        
+
     input_shards = args.train_data if is_train else args.val_data
     assert input_shards is not None
 
@@ -440,60 +475,87 @@ def get_wds_dataset(
         sizefilepath = sizefilepath_
     else:
         sizefilepath = os.path.join(os.path.dirname(input_shards[0]), "sizes.json")
-    
-    if proportion!=1.0:
-        num_samples, num_shards, input_shards, _ = sample_prop(sizefilepath, input_shards, proportion, is_local=is_local)
+
+    if proportion != 1.0:
+        num_samples, num_shards, input_shards, _ = sample_prop(
+            sizefilepath, input_shards, proportion, is_local=is_local
+        )
     else:
-        num_samples, num_shards = get_dataset_size(input_shards, sizefilepath_=sizefilepath_, is_local=is_local)
+        num_samples, num_shards = get_dataset_size(
+            input_shards, sizefilepath_=sizefilepath_, is_local=is_local
+        )
 
     if not num_samples:
         if is_train:
             num_samples = args.train_num_samples
             if not num_samples:
                 raise RuntimeError(
-                    'Currently, number of dataset samples must be specified for training dataset. '
-                    'Please specify via `--train-num-samples` if no dataset length info present.')
+                    "Currently, number of dataset samples must be specified for training dataset. "
+                    "Please specify via `--train-num-samples` if no dataset length info present."
+                )
         else:
-            num_samples = args.val_num_samples or 0  # eval will just exhaust the iterator if not specified
-    
+            num_samples = (
+                args.val_num_samples or 0
+            )  # eval will just exhaust the iterator if not specified
+
     pipeline = [wds.SimpleShardList(input_shards)]
     # at this point we have an iterator over all the shards
     if is_train:
-        pipeline.extend([
-            wds.detshuffle(bufsize=_SHARD_SHUFFLE_SIZE, initial=_SHARD_SHUFFLE_INITIAL, seed=args.seed),
-            wds.split_by_node,
-            wds.split_by_worker,
-            # at this point, we have an iterator over the shards assigned to each worker at each node
-            wds.tarfile_to_samples(handler=log_and_continue),
-            wds.shuffle(
-                bufsize=_SAMPLE_SHUFFLE_SIZE,
-                initial=_SAMPLE_SHUFFLE_INITIAL,
-                rng=random.Random(args.seed)),
-            #wds.repeatedly,  # FIXME determine if this is beneficial
-        ])
+        pipeline.extend(
+            [
+                wds.detshuffle(
+                    bufsize=_SHARD_SHUFFLE_SIZE,
+                    initial=_SHARD_SHUFFLE_INITIAL,
+                    seed=args.seed,
+                ),
+                wds.split_by_node,
+                wds.split_by_worker,
+                # at this point, we have an iterator over the shards assigned to each worker at each node
+                wds.tarfile_to_samples(handler=log_and_continue),
+                wds.shuffle(
+                    bufsize=_SAMPLE_SHUFFLE_SIZE,
+                    initial=_SAMPLE_SHUFFLE_INITIAL,
+                    rng=random.Random(args.seed),
+                ),
+                # wds.repeatedly,  # FIXME determine if this is beneficial
+            ]
+        )
     else:
-        pipeline.extend([
-            wds.split_by_worker,
-            # at this point, we have an iterator over the shards assigned to each worker
-            wds.tarfile_to_samples(handler=log_and_continue),
-        ])
-    pipeline.extend([
-        wds.map(
-            partial(
-                preprocess,
-                audio_ext=audio_ext,
-                text_ext=text_ext,
-                samplerate=samplerate,
-                mono=mono,
-                max_len=max_len,
-                dtype=dtype,
-                res_type=res_type,
-                resample_method=args.resample_method,
-            )
-        ),
-        wds.to_tuple("__url__", "__key__", "waveform", "text", "raw_text", "audio_name", "text_name", "audio_orig_sr"),
-        wds.batched(args.batch_size, partial=not is_train),
-    ])
+        pipeline.extend(
+            [
+                wds.split_by_worker,
+                # at this point, we have an iterator over the shards assigned to each worker
+                wds.tarfile_to_samples(handler=log_and_continue),
+            ]
+        )
+    pipeline.extend(
+        [
+            wds.map(
+                partial(
+                    preprocess,
+                    audio_ext=audio_ext,
+                    text_ext=text_ext,
+                    samplerate=samplerate,
+                    mono=mono,
+                    max_len=max_len,
+                    dtype=dtype,
+                    res_type=res_type,
+                    resample_method=args.resample_method,
+                )
+            ),
+            wds.to_tuple(
+                "__url__",
+                "__key__",
+                "waveform",
+                "text",
+                "raw_text",
+                "audio_name",
+                "text_name",
+                "audio_orig_sr",
+            ),
+            wds.batched(args.batch_size, partial=not is_train),
+        ]
+    )
 
     dataset = wds.DataPipeline(*pipeline)
     if is_train:
@@ -501,15 +563,21 @@ def get_wds_dataset(
         global_batch_size = args.batch_size * args.world_size
         num_batches = math.ceil(num_samples / global_batch_size)
         num_workers = max(1, args.workers)
-        num_worker_batches = math.ceil(num_batches / num_workers)  # per dataloader worker
+        num_worker_batches = math.ceil(
+            num_batches / num_workers
+        )  # per dataloader worker
         num_batches = num_worker_batches * num_workers
         num_samples = num_batches * global_batch_size
-        dataset = dataset.with_epoch(num_worker_batches)  # each worker is iterating over this
+        dataset = dataset.with_epoch(
+            num_worker_batches
+        )  # each worker is iterating over this
     else:
         # last batches are partial, eval is done on single (master) node
         num_batches = math.ceil(num_samples / args.batch_size)
 
-    dataloader = wds.WebLoader(dataset, batch_size=None, shuffle=False, num_workers=args.workers)
+    dataloader = wds.WebLoader(
+        dataset, batch_size=None, shuffle=False, num_workers=args.workers
+    )
 
     # FIXME not clear which approach is better, with_epoch before vs after dataloader?
     # hoping to resolve via https://github.com/webdataset/webdataset/issues/169
@@ -531,11 +599,26 @@ def get_wds_dataset(
 
     return DataInfo(dataloader, None)
 
-def wds_batch_list2dict(batch, keys=["__url__", "__key__", "waveform", "text", "raw_text", "audio_name", "text_name", "audio_orig_sr"]):
+
+def wds_batch_list2dict(
+    batch,
+    keys=[
+        "__url__",
+        "__key__",
+        "waveform",
+        "text",
+        "raw_text",
+        "audio_name",
+        "text_name",
+        "audio_orig_sr",
+    ],
+):
     """
     Return a dictionary of the batch, with keys as the names of the fields.
     """
-    assert len(keys) == len(batch), "batch must have same number of keys as keys argument"
+    assert len(keys) == len(
+        batch
+    ), "batch must have same number of keys as keys argument"
     return {keys[i]: batch[i] for i in range(len(batch))}
 
 
@@ -547,7 +630,8 @@ def get_csv_dataset(args, preprocess_fn, is_train):
         preprocess_fn,
         img_key=args.csv_img_key,
         caption_key=args.csv_caption_key,
-        sep=args.csv_separator)
+        sep=args.csv_separator,
+    )
     num_samples = len(dataset)
     sampler = DistributedSampler(dataset) if args.distributed and is_train else None
     shuffle = is_train and sampler is None
@@ -572,15 +656,14 @@ def get_toy_dataset(args, model_cfg, is_train):
     ipc_path = args.train_ipc if is_train else args.val_ipc
     assert index_path and ipc_path
     eval_mode = not is_train
-    dataset = ToyDataset(
-        index_path,
-        ipc_path,
-        model_cfg,
-        eval_mode=eval_mode
-    )
+    dataset = ToyDataset(index_path, ipc_path, model_cfg, eval_mode=eval_mode)
 
     num_samples = len(dataset)
-    sampler = DistributedSampler(dataset, shuffle=False) if args.distributed and is_train else None
+    sampler = (
+        DistributedSampler(dataset, shuffle=False)
+        if args.distributed and is_train
+        else None
+    )
 
     dataloader = DataLoader(
         dataset,
@@ -594,6 +677,7 @@ def get_toy_dataset(args, model_cfg, is_train):
     dataloader.num_batches = len(dataloader)
 
     return DataInfo(dataloader, sampler)
+
 
 def get_dataset_fn(data_path, dataset_type):
     if dataset_type == "webdataset":

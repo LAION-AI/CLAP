@@ -1,4 +1,4 @@
-pipe:s3cmd get s3://laion-audio/webdataset_tar/BBCSoundEffects/test/0.tar
-pipe:s3cmd get s3://laion-audio/webdataset_tar/BBCSoundEffects/test/1.tar
-pipe:s3cmd get s3://laion-audio/webdataset_tar/BBCSoundEffects/test/2.tar
-pipe:s3cmd get s3://laion-audio/webdataset_tar/BBCSoundEffects/test/3.tar
+pipe:aws s3 cp s3://laion-audio/webdataset_tar/BBCSoundEffects/test/0.tar
+pipe:aws s3 cp s3://laion-audio/webdataset_tar/BBCSoundEffects/test/1.tar
+pipe:aws s3 cp s3://laion-audio/webdataset_tar/BBCSoundEffects/test/2.tar
+pipe:aws s3 cp s3://laion-audio/webdataset_tar/BBCSoundEffects/test/3.tar

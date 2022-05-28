@@ -8,6 +8,14 @@ from tqdm import tqdm
 import random
 
 
+dataset_split = {
+    "audiocaps": ["train", "valid", "test"],
+    "audioset": ["balanced_train", "unbalanced_train", "eval"],
+    "BBCSoundEffects": ["train", "test"],
+    "Clotho": ["train", "test", "valid"],
+}
+
+
 def freeze_batch_norm_2d(module, module_match={}, name=""):
     """
     Converts all `BatchNorm2d` and `SyncBatchNorm` layers of provided module into `FrozenBatchNorm2d`. If `module` is
@@ -81,20 +89,40 @@ def get_tar_path_from_dataset_name(
     """
     Get tar path from dataset name and type
     """
-    txt_paths = []
-    for i in range(len(dataset_names)):
-        for j in range(len(dataset_types)):
-            if exist(dataset_names[i], dataset_types[j]):
-                txt_loc = template.replace("datasetname", dataset_names[i]).replace(
-                    "datasettype", dataset_types[j]
-                )
-                txt_paths.append(txt_loc)
-            else:
-                print(
-                    "Skipping dataset " + dataset_names[i] + " with " + dataset_types[j]
-                )
-                continue
-    return get_tar_path_from_txts(txt_paths, islocal=islocal, proportion=proportion)
+    if islocal:
+        txt_paths = []
+        for i in range(len(dataset_names)):
+            for j in range(len(dataset_types)):
+                if exist(dataset_names[i], dataset_types[j]):
+                    txt_loc = template.replace("datasetname", dataset_names[i]).replace(
+                        "datasettype", dataset_types[j]
+                    )
+                    txt_paths.append(txt_loc)
+                else:
+                    print(
+                        "Skipping dataset "
+                        + dataset_names[i]
+                        + " with "
+                        + dataset_types[j]
+                    )
+                    continue
+        return get_tar_path_from_txts(txt_paths, islocal=islocal, proportion=proportion)
+    else:
+        import json
+        import os
+
+        output = []
+        for n in dataset_names:
+            for s in dataset_types:
+                sizefilepath_ = f"./json_files/{n}/{s}/sizes.json"
+                if not os.path.exists(sizefilepath_):
+                    continue
+                sizes = json.load(open(sizefilepath_, "r"))
+                for k in sizes:
+                    output.append(
+                        f"pipe:aws s3 cp s3://laion-audio/webdataset_tar/{n}/{s}/{k} -"
+                    )
+        return output
 
 
 def get_tar_path_from_txts(txt_path, islocal, proportion=1):
@@ -118,11 +146,14 @@ def get_tar_path_from_txts(txt_path, islocal, proportion=1):
             lines = [
                 lines[i]
                 .split("\n")[0]
-                .replace("pipe:s3cmd get s3://laion-audio/", "/mnt/audio_clip/")
+                .replace("pipe:aws s3 cp s3://laion-audio/", "/mnt/audio_clip/")
                 for i in range(len(lines))
             ]
         else:
-            lines = [lines[i].split("\n")[0].replace(".tar", ".tar -") for i in range(len(lines))]
+            lines = [
+                lines[i].split("\n")[0].replace(".tar", ".tar -")
+                for i in range(len(lines))
+            ]
         if proportion != 1:
             print("Sampling tars with proportion of {}".format(proportion))
             lines = random.sample(lines, int(proportion * len(lines)))

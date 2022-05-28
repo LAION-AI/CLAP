@@ -1,41 +1,41 @@
-pipe:s3cmd get s3://laion-audio/webdataset_tar/audioset/balanced_train/0.tar
-pipe:s3cmd get s3://laion-audio/webdataset_tar/audioset/balanced_train/1.tar
-pipe:s3cmd get s3://laion-audio/webdataset_tar/audioset/balanced_train/2.tar
-pipe:s3cmd get s3://laion-audio/webdataset_tar/audioset/balanced_train/3.tar
-pipe:s3cmd get s3://laion-audio/webdataset_tar/audioset/balanced_train/4.tar
-pipe:s3cmd get s3://laion-audio/webdataset_tar/audioset/balanced_train/5.tar
-pipe:s3cmd get s3://laion-audio/webdataset_tar/audioset/balanced_train/6.tar
-pipe:s3cmd get s3://laion-audio/webdataset_tar/audioset/balanced_train/7.tar
-pipe:s3cmd get s3://laion-audio/webdataset_tar/audioset/balanced_train/8.tar
-pipe:s3cmd get s3://laion-audio/webdataset_tar/audioset/balanced_train/9.tar
-pipe:s3cmd get s3://laion-audio/webdataset_tar/audioset/balanced_train/10.tar
-pipe:s3cmd get s3://laion-audio/webdataset_tar/audioset/balanced_train/11.tar
-pipe:s3cmd get s3://laion-audio/webdataset_tar/audioset/balanced_train/12.tar
-pipe:s3cmd get s3://laion-audio/webdataset_tar/audioset/balanced_train/13.tar
-pipe:s3cmd get s3://laion-audio/webdataset_tar/audioset/balanced_train/14.tar
-pipe:s3cmd get s3://laion-audio/webdataset_tar/audioset/balanced_train/15.tar
-pipe:s3cmd get s3://laion-audio/webdataset_tar/audioset/balanced_train/16.tar
-pipe:s3cmd get s3://laion-audio/webdataset_tar/audioset/balanced_train/17.tar
-pipe:s3cmd get s3://laion-audio/webdataset_tar/audioset/balanced_train/18.tar
-pipe:s3cmd get s3://laion-audio/webdataset_tar/audioset/balanced_train/19.tar
-pipe:s3cmd get s3://laion-audio/webdataset_tar/audioset/balanced_train/20.tar
-pipe:s3cmd get s3://laion-audio/webdataset_tar/audioset/balanced_train/21.tar
-pipe:s3cmd get s3://laion-audio/webdataset_tar/audioset/balanced_train/22.tar
-pipe:s3cmd get s3://laion-audio/webdataset_tar/audioset/balanced_train/23.tar
-pipe:s3cmd get s3://laion-audio/webdataset_tar/audioset/balanced_train/24.tar
-pipe:s3cmd get s3://laion-audio/webdataset_tar/audioset/balanced_train/25.tar
-pipe:s3cmd get s3://laion-audio/webdataset_tar/audioset/balanced_train/26.tar
-pipe:s3cmd get s3://laion-audio/webdataset_tar/audioset/balanced_train/27.tar
-pipe:s3cmd get s3://laion-audio/webdataset_tar/audioset/balanced_train/28.tar
-pipe:s3cmd get s3://laion-audio/webdataset_tar/audioset/balanced_train/29.tar
-pipe:s3cmd get s3://laion-audio/webdataset_tar/audioset/balanced_train/30.tar
-pipe:s3cmd get s3://laion-audio/webdataset_tar/audioset/balanced_train/31.tar
-pipe:s3cmd get s3://laion-audio/webdataset_tar/audioset/balanced_train/32.tar
-pipe:s3cmd get s3://laion-audio/webdataset_tar/audioset/balanced_train/33.tar
-pipe:s3cmd get s3://laion-audio/webdataset_tar/audioset/balanced_train/34.tar
-pipe:s3cmd get s3://laion-audio/webdataset_tar/audioset/balanced_train/35.tar
-pipe:s3cmd get s3://laion-audio/webdataset_tar/audioset/balanced_train/36.tar
-pipe:s3cmd get s3://laion-audio/webdataset_tar/audioset/balanced_train/37.tar
-pipe:s3cmd get s3://laion-audio/webdataset_tar/audioset/balanced_train/38.tar
-pipe:s3cmd get s3://laion-audio/webdataset_tar/audioset/balanced_train/39.tar
-pipe:s3cmd get s3://laion-audio/webdataset_tar/audioset/balanced_train/40.tar
+pipe:aws s3 cp s3://laion-audio/webdataset_tar/audioset/balanced_train/0.tar
+pipe:aws s3 cp s3://laion-audio/webdataset_tar/audioset/balanced_train/1.tar
+pipe:aws s3 cp s3://laion-audio/webdataset_tar/audioset/balanced_train/2.tar
+pipe:aws s3 cp s3://laion-audio/webdataset_tar/audioset/balanced_train/3.tar
+pipe:aws s3 cp s3://laion-audio/webdataset_tar/audioset/balanced_train/4.tar
+pipe:aws s3 cp s3://laion-audio/webdataset_tar/audioset/balanced_train/5.tar
+pipe:aws s3 cp s3://laion-audio/webdataset_tar/audioset/balanced_train/6.tar
+pipe:aws s3 cp s3://laion-audio/webdataset_tar/audioset/balanced_train/7.tar
+pipe:aws s3 cp s3://laion-audio/webdataset_tar/audioset/balanced_train/8.tar
+pipe:aws s3 cp s3://laion-audio/webdataset_tar/audioset/balanced_train/9.tar
+pipe:aws s3 cp s3://laion-audio/webdataset_tar/audioset/balanced_train/10.tar
+pipe:aws s3 cp s3://laion-audio/webdataset_tar/audioset/balanced_train/11.tar
+pipe:aws s3 cp s3://laion-audio/webdataset_tar/audioset/balanced_train/12.tar
+pipe:aws s3 cp s3://laion-audio/webdataset_tar/audioset/balanced_train/13.tar
+pipe:aws s3 cp s3://laion-audio/webdataset_tar/audioset/balanced_train/14.tar
+pipe:aws s3 cp s3://laion-audio/webdataset_tar/audioset/balanced_train/15.tar
+pipe:aws s3 cp s3://laion-audio/webdataset_tar/audioset/balanced_train/16.tar
+pipe:aws s3 cp s3://laion-audio/webdataset_tar/audioset/balanced_train/17.tar
+pipe:aws s3 cp s3://laion-audio/webdataset_tar/audioset/balanced_train/18.tar
+pipe:aws s3 cp s3://laion-audio/webdataset_tar/audioset/balanced_train/19.tar
+pipe:aws s3 cp s3://laion-audio/webdataset_tar/audioset/balanced_train/20.tar
+pipe:aws s3 cp s3://laion-audio/webdataset_tar/audioset/balanced_train/21.tar
+pipe:aws s3 cp s3://laion-audio/webdataset_tar/audioset/balanced_train/22.tar
+pipe:aws s3 cp s3://laion-audio/webdataset_tar/audioset/balanced_train/23.tar
+pipe:aws s3 cp s3://laion-audio/webdataset_tar/audioset/balanced_train/24.tar
+pipe:aws s3 cp s3://laion-audio/webdataset_tar/audioset/balanced_train/25.tar
+pipe:aws s3 cp s3://laion-audio/webdataset_tar/audioset/balanced_train/26.tar
+pipe:aws s3 cp s3://laion-audio/webdataset_tar/audioset/balanced_train/27.tar
+pipe:aws s3 cp s3://laion-audio/webdataset_tar/audioset/balanced_train/28.tar
+pipe:aws s3 cp s3://laion-audio/webdataset_tar/audioset/balanced_train/29.tar
+pipe:aws s3 cp s3://laion-audio/webdataset_tar/audioset/balanced_train/30.tar
+pipe:aws s3 cp s3://laion-audio/webdataset_tar/audioset/balanced_train/31.tar
+pipe:aws s3 cp s3://laion-audio/webdataset_tar/audioset/balanced_train/32.tar
+pipe:aws s3 cp s3://laion-audio/webdataset_tar/audioset/balanced_train/33.tar
+pipe:aws s3 cp s3://laion-audio/webdataset_tar/audioset/balanced_train/34.tar
+pipe:aws s3 cp s3://laion-audio/webdataset_tar/audioset/balanced_train/35.tar
+pipe:aws s3 cp s3://laion-audio/webdataset_tar/audioset/balanced_train/36.tar
+pipe:aws s3 cp s3://laion-audio/webdataset_tar/audioset/balanced_train/37.tar
+pipe:aws s3 cp s3://laion-audio/webdataset_tar/audioset/balanced_train/38.tar
+pipe:aws s3 cp s3://laion-audio/webdataset_tar/audioset/balanced_train/39.tar
+pipe:aws s3 cp s3://laion-audio/webdataset_tar/audioset/balanced_train/40.tar
