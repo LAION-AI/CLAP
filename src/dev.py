@@ -60,6 +60,8 @@ import os
 import random
 import copy
 from tqdm import tqdm
+import s3fs
+import shutil
 
 def log_and_continue(exn):
     """Call in an exception handler to ignore any exception, isssue a warning, and continue."""
@@ -121,7 +123,7 @@ def preprocess(
 
 for i in tqdm(reversed(range(1226*2,1226*3+1))):
     try:
-        input_shards = ["/mnt/audio_clip/webdataset_tar/audioset/unbalanced_train/"+str(i)+".tar"]
+        input_shards = ["pipe:s3cmd get s3://laion-audio/webdataset_tar/audiocaps/test/0.tar -", "pipe:s3cmd get s3://laion-audio/webdataset_tar/audiocaps/test/1.tar -"]
         # input_shards = ["/mnt/audio_clip/webdataset_tar/audioset/eval/28.tar"]
         pipeline = [wds.SimpleShardList(input_shards)]
         _SHARD_SHUFFLE_SIZE = 2000
@@ -145,9 +147,10 @@ for i in tqdm(reversed(range(1226*2,1226*3+1))):
         dataloader = wds.WebLoader(dataset, batch_size=1, shuffle=False, num_workers=0)
         for k, batch in enumerate(dataloader):
             previous_batch = copy.deepcopy(batch)
+            print(batch)
     except:
-        print(i)
-        print(previous_batch)
+        # print(i)
+        # print(previous_batch)
         pass
 # main training loop
 # generator = iter(dataloader)

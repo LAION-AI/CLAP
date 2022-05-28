@@ -122,7 +122,7 @@ def get_tar_path_from_txts(txt_path, islocal, proportion=1):
                 for i in range(len(lines))
             ]
         else:
-            lines = [lines[i].split("\n")[0] for i in range(len(lines))]
+            lines = [lines[i].split("\n")[0].replace(".tar", ".tar -") for i in range(len(lines))]
         if proportion != 1:
             print("Sampling tars with proportion of {}".format(proportion))
             lines = random.sample(lines, int(proportion * len(lines)))
