@@ -221,10 +221,10 @@ def get_dataset_size(shards, sizefilepath_=None, is_local=True):
     else:
         if not is_local:
             for n in dataset_split.keys():
-                if n in shards:
+                if n in shards.split("/"):
                     break
             for s in dataset_split[n]:
-                if s in shards:
+                if s in shards.split("/"):
                     break
             sizefilepath_ = f"./json_files/{n}/{s}/sizes.json"
         shards_list = list(braceexpand.braceexpand(shards))
