@@ -13,6 +13,10 @@ dataset_split = {
     "audioset": ["balanced_train", "unbalanced_train", "eval"],
     "BBCSoundEffects": ["train", "test"],
     "Clotho": ["train", "test", "valid"],
+    "free_to_use_sounds": ["train", "test"],
+    "paramount_motion": ["train", "test"],
+    "sonniss_game_effects": ["train", "test"],
+    "wesoundeffects": ["train", "test"],
 }
 
 
@@ -61,19 +65,7 @@ def exist(dataset_name, dataset_type):
     """
     Check if dataset exists
     """
-    if dataset_name in ["Clotho", "audiocaps"] and dataset_type in [
-        "train",
-        "test",
-        "valid",
-    ]:
-        return True
-    elif dataset_name == "BBCSoundEffects" and dataset_type in ["train", "test"]:
-        return True
-    elif dataset_name == "audioset" and dataset_type in [
-        "balanced_train",
-        "unbalanced_train",
-        "eval",
-    ]:
+    if dataset_type in dataset_split[dataset_name]:
         return True
     else:
         return False
