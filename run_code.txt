@@ -183,3 +183,49 @@ torchrun --nproc_per_node 8 -m training.main \
     --resample-method="None" \
     --datasetnames "Clotho" "audiocaps" "BBCSoundEffects"  \
     --datasetinfos "train" "unbalanced_train" "balanced_train" \
+
+torchrun --nproc_per_node 8 -m training.main \
+    --save-frequency 100 \
+    --save-top-performance 3  \
+    --save-most-recent \
+    --dataset-type="webdataset" \
+    --precision="fp32" \
+    --pretrained="openai" \
+    --warmup 10000  \
+    --batch-size=192 \
+    --lr=1e-3 \
+    --wd=0.1 \
+    --epochs=400  \
+    --workers=10 \
+    --use-bn-sync  \
+    --freeze-text \
+    --model HTSAT-tiny \
+    --report-to "wandb" \
+    --wandb-notes "text-audio-freeze-text-lr-1e-3-8-dataset-model-htsat-tiny" \
+    --resample-method="None" \
+    --datasetnames "Clotho" "audiocaps" "BBCSoundEffects" "audioset" "free_to_use_sounds" "paramount_motion" "sonniss_game_effects" "wesoundeffects" \
+    --datasetinfos "train" "unbalanced_train" "balanced_train"\
+    --remotedata
+
+torchrun --nproc_per_node 8 -m training.main \
+    --save-frequency 100 \
+    --save-top-performance 3  \
+    --save-most-recent \
+    --dataset-type="webdataset" \
+    --precision="fp32" \
+    --pretrained="openai" \
+    --warmup 10000  \
+    --batch-size=192 \
+    --lr=1e-3 \
+    --wd=0.1 \
+    --epochs=400  \
+    --workers=10 \
+    --use-bn-sync  \
+    --freeze-text \
+    --model HTSAT-tiny \
+    --report-to "wandb" \
+    --wandb-notes "text-audio-freeze-text-lr-1e-3-8-dataset-model-htsat-tiny" \
+    --resample-method="None" \
+    --datasetnames "audioset" \
+    --datasetinfos "train" "unbalanced_train" "balanced_train"\
+    --remotedata

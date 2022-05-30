@@ -106,15 +106,20 @@ def get_tar_path_from_dataset_name(
         output = []
         for n in dataset_names:
             for s in dataset_types:
+                tmp = []
                 sizefilepath_ = f"./json_files/{n}/{s}/sizes.json"
                 if not os.path.exists(sizefilepath_):
                     continue
                 sizes = json.load(open(sizefilepath_, "r"))
-                for k in sizes:
-                    output.append(
+                for k in sizes.keys():
+                    tmp.append(
                         f"pipe:aws s3 --cli-connect-timeout 0 cp s3://laion-audio/webdataset_tar/{n}/{s}/{k} -"
                     )
-        return output
+                if proportion!=1:
+                    print("Including {} of dataset".format(proportion))
+                    tmp = random.sample(tmp, int(proportion * len(tmp)))
+                output.append(tmp)
+        return sum(output, [])
 
 
 def get_tar_path_from_txts(txt_path, islocal, proportion=1):
