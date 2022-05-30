@@ -116,7 +116,6 @@ def get_tar_path_from_dataset_name(
                         f"pipe:aws s3 --cli-connect-timeout 0 cp s3://laion-audio/webdataset_tar/{n}/{s}/{k} -"
                     )
                 if proportion!=1:
-                    print("Including {} of dataset".format(proportion))
                     tmp = random.sample(tmp, int(proportion * len(tmp)))
                 output.append(tmp)
         return sum(output, [])
