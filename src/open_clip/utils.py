@@ -112,7 +112,7 @@ def get_tar_path_from_dataset_name(
                 sizes = json.load(open(sizefilepath_, "r"))
                 for k in sizes:
                     output.append(
-                        f"pipe:aws s3 cp s3://laion-audio/webdataset_tar/{n}/{s}/{k} -"
+                        f"pipe:aws s3 --cli-connect-timeout 0 cp s3://laion-audio/webdataset_tar/{n}/{s}/{k} -"
                     )
         return output
 
