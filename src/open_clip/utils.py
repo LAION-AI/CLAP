@@ -109,7 +109,7 @@ def get_tar_path_from_dataset_name(
                 sizes = json.load(open(sizefilepath_, "r"))
                 for k in sizes.keys():
                     tmp.append(
-                        f"/mnt/audio_clip/webdataset_tar/{n}/{s}/{k}".
+                        f"/mnt/audio_clip/webdataset_tar/{n}/{s}/{k}"
                     )
                 if proportion!=1:
                     tmp = random.sample(tmp, int(proportion * len(tmp)))
