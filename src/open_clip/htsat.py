@@ -730,8 +730,10 @@ class HTSAT_Swin_Transformer(nn.Module):
         c_freq_bin = F // self.freq_ratio
         x = x.reshape(B, C, F // c_freq_bin, c_freq_bin, T)
         x = x.permute(0,1,3,2,4).contiguous().reshape(B, C, c_freq_bin, -1)
-
         # get latent_output
+        fine_grained_latent_output = torch.mean(x, dim = 2)
+        fine_grained_latent_output = interpolate(fine_grained_latent_output.permute(0,2,1).contiguous(), 8 * self.patch_stride[1]) 
+        
         latent_output = self.avgpool(torch.flatten(x,2))
         latent_output = torch.flatten(latent_output, 1)
 
@@ -748,6 +750,7 @@ class HTSAT_Swin_Transformer(nn.Module):
         output_dict = {
             'framewise_output': fpx, # already sigmoided
             'clipwise_output': torch.sigmoid(x),
+            'fine_grained_embedding': fine_grained_latent_output,
             'embedding': latent_output
         }
 
