@@ -4,6 +4,7 @@ import math
 import os
 import time
 from contextlib import suppress
+from tkinter import N
 
 import numpy as np
 import torch
@@ -227,8 +228,10 @@ def evaluate(model, data, epoch, args, tb_writer=None):
 
         # FIXME this does not scale past small eval datasets
         # all_audio_features @ all_text_features will blow up memory and compute very quickly
-        cumulative_loss = 0.0
-        all_audio_features, all_text_features, all_audio_features_mlp, all_text_features_mlp = [], [], [], []
+        eval_info = {}
+        eval_info["all"] = {"cumulative_loss":0.0, "num_samples":0, "all_audio_features": [], "all_text_features": [], "all_audio_features_mlp": [], "all_text_features_mlp": []}
+        # cumulative_loss = 0.0
+        # all_audio_features, all_text_features, all_audio_features_mlp, all_text_features_mlp = [], [], [], []
         with torch.no_grad():
             for i, batch in enumerate(dataloader):
                 # if args.dataset_type == 'webdataset':
@@ -251,25 +254,23 @@ def evaluate(model, data, epoch, args, tb_writer=None):
                 texts = batch[3][:, 0, :]
                 audios = audios.to(device=device, non_blocking=True)
                 texts = texts.to(device=device, non_blocking=True)
+                name = "-".join(batch[0][0].split("/")[-3:-1])
+                if name not in eval_info.keys():
+                    eval_info[name] = {"cumulative_loss":0.0, "num_samples":0, "all_audio_features": [], "all_text_features": [], "all_audio_features_mlp": [], "all_text_features_mlp": []}
 
                 with autocast():
                     audio_features, text_features, audio_features_mlp, text_features_mlp, logit_scale_a, logit_scale_t = model(audios, texts)
                     # features are accumulated in CPU tensors, otherwise GPU memory exhausted quickly
                     # however, system RAM is easily exceeded and compute time becomes problematic
-                    all_audio_features.append(audio_features.cpu())
-                    all_text_features.append(text_features.cpu())
-                    all_audio_features_mlp.append(audio_features_mlp.cpu())
-                    all_text_features_mlp.append(text_features_mlp.cpu())
                     logit_scale_a = logit_scale_a.mean()
                     a_logits_per_audio = logit_scale_a * audio_features @ text_features_mlp.t()
                     a_logits_per_text = a_logits_per_audio.t()
                     logit_scale_t = logit_scale_t.mean()
                     t_logits_per_audio = logit_scale_t * audio_features_mlp @ text_features.t()
                     t_logits_per_text = t_logits_per_audio.t()
-
-
                     batch_size = audios.shape[0]
                     labels = torch.arange(batch_size, device=device).long()
+
                     total_loss = (
                         F.cross_entropy(a_logits_per_audio, labels) +
                         F.cross_entropy(a_logits_per_text, labels) +
@@ -277,26 +278,40 @@ def evaluate(model, data, epoch, args, tb_writer=None):
                         F.cross_entropy(t_logits_per_text, labels)
                     ) / 4
 
-                cumulative_loss += total_loss * batch_size
-                num_samples += batch_size
-                if is_master(args) and (i % 100) == 0:
-                    logging.info(
-                        f"Eval Epoch: {epoch} [{num_samples} / {samples_per_val}]\t"
-                        f"Loss: {cumulative_loss / num_samples:.6f}\t")
+                    for n in [name, "all"]:
+                        eval_info[n]["all_audio_features"].append(audio_features.cpu())
+                        eval_info[n]["all_text_features"].append(text_features.cpu())
+                        eval_info[n]["all_audio_features_mlp"].append(audio_features_mlp.cpu())
+                        eval_info[n]["all_text_features_mlp"].append(text_features_mlp.cpu())
+                        eval_info[n]["cumulative_loss"] += total_loss * batch_size
+                        eval_info[n]["num_samples"] += batch_size
 
-            val_metrics = get_metrics(
-                audio_features=torch.cat(all_audio_features),
-                text_features=torch.cat(all_text_features),
-                audio_features_mlp=torch.cat(all_audio_features_mlp),
-                text_features_mlp=torch.cat(all_text_features_mlp),
-                logit_scale_a=logit_scale_a.cpu(),
-                logit_scale_t=logit_scale_t.cpu(),
+                # cumulative_loss += total_loss * batch_size
+                # num_samples += batch_size
+                if is_master(args) and (i % 100) == 0 and i != 0:
+                    for n in eval_info.keys():
+                        num_samples = eval_info[n]["num_samples"]
+                        cumulative_loss = eval_info[n]["cumulative_loss"]
+                        logging.info(
+                            f"{n} Eval Epoch: {epoch} [{num_samples} / {samples_per_val}]\t"
+                            f"{n} Loss: {cumulative_loss / num_samples:.6f}\t")
+            val_metrics_s = {}
+            for n in eval_info.keys():
+                val_metrics_s[n] = get_metrics(
+                    audio_features=torch.cat(eval_info[n]["all_audio_features"]),
+                    text_features=torch.cat(eval_info[n]["all_text_features"]),
+                    audio_features_mlp=torch.cat(eval_info[n]["all_audio_features_mlp"]),
+                    text_features_mlp=torch.cat(eval_info[n]["all_text_features_mlp"]),
+                    logit_scale_a=logit_scale_a.cpu(),
+                    logit_scale_t=logit_scale_t.cpu(),
+                )
                 
-            )
-            loss = cumulative_loss / num_samples
-            metrics.update(
-                {**val_metrics, "val_loss": loss.item(), "epoch": epoch, "num_samples": num_samples}
-            )
+                loss = eval_info[n]["cumulative_loss"] / eval_info[n]["num_samples"]
+                metrics.update(
+                    {**val_metrics_s[n], f"{n}_val_loss": loss.item(), f"{n}_num_samples": eval_info[n]["num_samples"]}
+                )
+                if "epoch" not in metrics.keys():
+                    metrics.update({"epoch": epoch})
 
     if not metrics:
         return metrics
