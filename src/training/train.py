@@ -229,75 +229,49 @@ def evaluate(model, data, epoch, args, tb_writer=None):
         # FIXME this does not scale past small eval datasets
         # all_audio_features @ all_text_features will blow up memory and compute very quickly
         eval_info = {}
-        eval_info["all"] = {"cumulative_loss":0.0, "num_samples":0, "all_audio_features": [], "all_text_features": [], "all_audio_features_mlp": [], "all_text_features_mlp": []}
-        # cumulative_loss = 0.0
+        eval_info["all"] = {"cumulative_loss": 0.0, "num_samples": 0, "all_audio_features": [], "all_text_features": [],
+                            "all_audio_features_mlp": [], "all_text_features_mlp": []}        # cumulative_loss = 0.0
         # all_audio_features, all_text_features, all_audio_features_mlp, all_text_features_mlp = [], [], [], []
         with torch.no_grad():
             for i, batch in enumerate(dataloader):
-                # if args.dataset_type == 'webdataset':
-                #     batch = wds_batch_list2dict(batch)
-                #     batch["text"] = batch["text"][:,0,:]
-                #
-                # audios = batch["waveform"].float()
-                # if args.resample_method=="TorchAudio":
-                #     # kaiser_best
-                #     audios = audioF.resample(
-                #         audios,
-                #         batch["audio_orig_sr"][0],
-                #         32000,
-                #         lowpass_filter_width=64,
-                #         rolloff=0.9475937167399596,
-                #         resampling_method="kaiser_window",
-                #     )
-                # texts = batch["text"].long()
                 audios = batch[2]  # (yusong) todo:  change to retrieve from index for now.
                 texts = batch[3][:, 0, :]
                 audios = audios.to(device=device, non_blocking=True)
                 texts = texts.to(device=device, non_blocking=True)
-                name = "-".join(batch[0][0].split("/")[-3:-1])
-                if name not in eval_info.keys():
-                    eval_info[name] = {"cumulative_loss":0.0, "num_samples":0, "all_audio_features": [], "all_text_features": [], "all_audio_features_mlp": [], "all_text_features_mlp": []}
+                all_names = list(set(["-".join(b.split("/")[-3:-1]) for b in batch[0]]))
+                for name in all_names:
+                    if name not in eval_info.keys():
+                        eval_info[name] = {"cumulative_loss": 0.0, "num_samples": 0, "all_audio_features": [],
+                                           "all_text_features": [], "all_audio_features_mlp": [],
+                                           "all_text_features_mlp": []}
 
                 with autocast():
                     audio_features, text_features, audio_features_mlp, text_features_mlp, logit_scale_a, logit_scale_t = model(audios, texts)
-                    # features are accumulated in CPU tensors, otherwise GPU memory exhausted quickly
-                    # however, system RAM is easily exceeded and compute time becomes problematic
-                    logit_scale_a = logit_scale_a.mean()
-                    a_logits_per_audio = logit_scale_a * audio_features @ text_features_mlp.t()
-                    a_logits_per_text = a_logits_per_audio.t()
-                    logit_scale_t = logit_scale_t.mean()
-                    t_logits_per_audio = logit_scale_t * audio_features_mlp @ text_features.t()
-                    t_logits_per_text = t_logits_per_audio.t()
-                    batch_size = audios.shape[0]
-                    labels = torch.arange(batch_size, device=device).long()
 
-                    total_loss = (
-                        F.cross_entropy(a_logits_per_audio, labels) +
-                        F.cross_entropy(a_logits_per_text, labels) +
-                        F.cross_entropy(t_logits_per_audio, labels) +
-                        F.cross_entropy(t_logits_per_text, labels)
-                    ) / 4
+                    num_samples += audio_features.shape[0]
 
-                    for n in [name, "all"]:
-                        eval_info[n]["all_audio_features"].append(audio_features.cpu())
-                        eval_info[n]["all_text_features"].append(text_features.cpu())
-                        eval_info[n]["all_audio_features_mlp"].append(audio_features_mlp.cpu())
-                        eval_info[n]["all_text_features_mlp"].append(text_features_mlp.cpu())
-                        eval_info[n]["cumulative_loss"] += total_loss * batch_size
-                        eval_info[n]["num_samples"] += batch_size
+                    for n in [*all_names, "all"]:
+                        if n == 'all':
+                            idx = list(range(len(batch[0])))
+                        else:
+                            idx = np.where(np.array(["-".join(b.split("/")[-3:-1]) for b in batch[0]]) == n)[0]
+                        eval_info[n]["all_audio_features"].append(
+                            audio_features.cpu().index_select(0, torch.tensor(idx).long()))
+                        eval_info[n]["all_text_features"].append(
+                            text_features.cpu().index_select(0, torch.tensor(idx).long()))
+                        eval_info[n]["all_audio_features_mlp"].append(
+                            audio_features_mlp.cpu().index_select(0, torch.tensor(idx).long()))
+                        eval_info[n]["all_text_features_mlp"].append(
+                            text_features_mlp.cpu().index_select(0, torch.tensor(idx).long()))
 
                 # cumulative_loss += total_loss * batch_size
                 # num_samples += batch_size
                 if is_master(args) and (i % 100) == 0 and i != 0:
-                    for n in eval_info.keys():
-                        num_samples = eval_info[n]["num_samples"]
-                        cumulative_loss = eval_info[n]["cumulative_loss"]
-                        logging.info(
-                            f"{n} Eval Epoch: {epoch} [{num_samples} / {samples_per_val}]\t"
-                            f"{n} Loss: {cumulative_loss / num_samples:.6f}\t")
+                    logging.info(
+                        f"Eval Epoch: {epoch} [{num_samples} / {samples_per_val}]")
             val_metrics_s = {}
             for n in eval_info.keys():
-                val_metrics_s[n] = get_metrics(
+                metrics_single_dataset = get_metrics(
                     audio_features=torch.cat(eval_info[n]["all_audio_features"]),
                     text_features=torch.cat(eval_info[n]["all_text_features"]),
                     audio_features_mlp=torch.cat(eval_info[n]["all_audio_features_mlp"]),
@@ -305,11 +279,8 @@ def evaluate(model, data, epoch, args, tb_writer=None):
                     logit_scale_a=logit_scale_a.cpu(),
                     logit_scale_t=logit_scale_t.cpu(),
                 )
-                
-                loss = eval_info[n]["cumulative_loss"] / eval_info[n]["num_samples"]
-                metrics.update(
-                    {**val_metrics_s[n], f"{n}_val_loss": loss.item(), f"{n}_num_samples": eval_info[n]["num_samples"]}
-                )
+                val_metrics_s[n] = {n+'/'+k: v for k, v in metrics_single_dataset.items()}
+                metrics.update(val_metrics_s[n])
                 if "epoch" not in metrics.keys():
                     metrics.update({"epoch": epoch})
 
@@ -337,19 +308,32 @@ def evaluate(model, data, epoch, args, tb_writer=None):
 
     return metrics
 
-# CHANGE here 
+# CHANGE here
 def get_metrics(audio_features, text_features, audio_features_mlp, text_features_mlp, logit_scale_a, logit_scale_t):
     metrics = {}
     a_logits_per_audio = (logit_scale_a * audio_features @ text_features_mlp.t()).detach().cpu()
     a_logits_per_text = a_logits_per_audio.t().detach().cpu()
     t_logits_per_audio = (logit_scale_t * audio_features_mlp @ text_features.t()).detach().cpu()
     t_logits_per_text = t_logits_per_audio.t().detach().cpu()
+
+    labels = torch.arange(audio_features.shape[0]).long()
+
+    total_loss = (
+                 F.cross_entropy(a_logits_per_audio, labels) +
+                 F.cross_entropy(a_logits_per_text, labels) +
+                 F.cross_entropy(t_logits_per_audio, labels) +
+                 F.cross_entropy(t_logits_per_text, labels)
+                 ) / 4
+
+    metrics[f"cumulative_loss"] = total_loss.item()
+    metrics[f"num_samples"] = audio_features.shape[0]
+
     logits = {"audio_to_text": (a_logits_per_audio + t_logits_per_audio) / 2, "text_to_audio": (a_logits_per_text + t_logits_per_text) / 2}
     ground_truth = torch.arange(len(text_features)).view(-1, 1)
 
     for name, logit in logits.items():
         ranking = torch.argsort(logit, descending=True)
-        preds = torch.where(ranking == ground_truth)[1]  # (yusong) todo: this line is slow as uses single thread
+        preds = torch.where(ranking == ground_truth)[1]  # (yusong) this line is slow because it uses single thread
         preds = preds.detach().cpu().numpy()
         metrics[f"{name}_mean_rank"] = preds.mean() + 1
         metrics[f"{name}_median_rank"] = np.floor(np.median(preds)) + 1

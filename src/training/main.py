@@ -514,8 +514,8 @@ def main():
             metrics = evaluate(model, data, completed_epoch, args, writer)
             if args.save_top_performance:
                 filtered_metrics = [
-                    v for k, v in metrics.items() if "_R@10" in k
-                ]  # check all R@10 metrics and use it to update the ckpt
+                    v for k, v in metrics.items() if "_R@10" in k and "Clotho" in k  # (yusong): todo: change here to whatever dataset we want
+                ]  # check all R@10 metrics (all dataset) and use it to update the ckpt
         # Saving checkpoints.
         if args.save_logs:
             if args.split_opt:
