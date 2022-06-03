@@ -252,17 +252,20 @@ def evaluate(model, data, epoch, args, tb_writer=None):
 
                     for n in [*all_names, "all"]:
                         if n == 'all':
-                            idx = list(range(len(batch[0])))
+                            eval_info[n]["all_audio_features"].append(audio_features.cpu())
+                            eval_info[n]["all_text_features"].append(text_features.cpu())
+                            eval_info[n]["all_audio_features_mlp"].append(audio_features_mlp.cpu())
+                            eval_info[n]["all_text_features_mlp"].append(text_features_mlp.cpu())
                         else:
                             idx = np.where(np.array(["-".join(b.split("/")[-3:-1]) for b in batch[0]]) == n)[0]
-                        eval_info[n]["all_audio_features"].append(
-                            audio_features.cpu().index_select(0, torch.tensor(idx).long()))
-                        eval_info[n]["all_text_features"].append(
-                            text_features.cpu().index_select(0, torch.tensor(idx).long()))
-                        eval_info[n]["all_audio_features_mlp"].append(
-                            audio_features_mlp.cpu().index_select(0, torch.tensor(idx).long()))
-                        eval_info[n]["all_text_features_mlp"].append(
-                            text_features_mlp.cpu().index_select(0, torch.tensor(idx).long()))
+                            eval_info[n]["all_audio_features"].append(
+                                audio_features.cpu().index_select(0, torch.tensor(idx).long()))
+                            eval_info[n]["all_text_features"].append(
+                                text_features.cpu().index_select(0, torch.tensor(idx).long()))
+                            eval_info[n]["all_audio_features_mlp"].append(
+                                audio_features_mlp.cpu().index_select(0, torch.tensor(idx).long()))
+                            eval_info[n]["all_text_features_mlp"].append(
+                                text_features_mlp.cpu().index_select(0, torch.tensor(idx).long()))
 
                 # cumulative_loss += total_loss * batch_size
                 # num_samples += batch_size
@@ -289,7 +292,7 @@ def evaluate(model, data, epoch, args, tb_writer=None):
 
     logging.info(
         f"Eval Epoch: {epoch} "
-        + "\t".join([f"{k}: {round(v, 4):.4f}" for k, v in metrics.items()])
+        + "\n".join(["\t".join([f"{k}: {round(v, 4):.4f}" for k, v in m.items()]) for m in val_metrics_s.values()])
     )
 
     if args.save_logs:
