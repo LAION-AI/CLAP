@@ -229,8 +229,8 @@ def evaluate(model, data, epoch, args, tb_writer=None):
         # FIXME this does not scale past small eval datasets
         # all_audio_features @ all_text_features will blow up memory and compute very quickly
         eval_info = {}
-        eval_info["all"] = {"cumulative_loss":0.0, "num_samples":0, "all_audio_features": [], "all_text_features": [], "all_audio_features_mlp": [], "all_text_features_mlp": []}
-        # cumulative_loss = 0.0
+        eval_info["all"] = {"cumulative_loss": 0.0, "num_samples": 0, "all_audio_features": [], "all_text_features": [],
+                            "all_audio_features_mlp": [], "all_text_features_mlp": []}        # cumulative_loss = 0.0
         # all_audio_features, all_text_features, all_audio_features_mlp, all_text_features_mlp = [], [], [], []
         with torch.no_grad():
             for i, batch in enumerate(dataloader):
@@ -279,7 +279,7 @@ def evaluate(model, data, epoch, args, tb_writer=None):
                     logit_scale_a=logit_scale_a.cpu(),
                     logit_scale_t=logit_scale_t.cpu(),
                 )
-                val_metrics_s[n] = {n+'_'+k: v for k, v in metrics_single_dataset.items()}
+                val_metrics_s[n] = {n+'/'+k: v for k, v in metrics_single_dataset.items()}
                 metrics.update(val_metrics_s[n])
                 if "epoch" not in metrics.keys():
                     metrics.update({"epoch": epoch})
