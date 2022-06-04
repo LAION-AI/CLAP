@@ -342,5 +342,8 @@ def get_metrics(audio_features, text_features, audio_features_mlp, text_features
         metrics[f"{name}_median_rank"] = np.floor(np.median(preds)) + 1
         for k in [1, 5, 10]:
             metrics[f"{name}_R@{k}"] = np.mean(preds < k)
+        # map@10
+        metrics[f"{name}_mAP@10"] = np.mean(np.where(preds < 10, 1 / (preds + 1), 0.0))
+
 
     return metrics
