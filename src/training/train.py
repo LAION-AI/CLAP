@@ -340,7 +340,7 @@ def get_metrics(audio_features, text_features, audio_features_mlp, text_features
         for k in [1, 5, 10]:
             metrics[f"{name}_R@{k}"] = np.mean(preds < k)
         # map@10
-        metrics[f"{name}_R@10"] = np.mean(np.where(preds < 10, 1 / (preds + 1), 0.0))
+        metrics[f"{name}_mAP@10"] = np.mean(np.where(preds < 10, 1 / (preds + 1), 0.0))
 
 
     return metrics
