@@ -6,6 +6,8 @@ import logging
 import h5py
 from tqdm import tqdm
 import random
+import json
+import os
 
 
 dataset_split = {
@@ -116,8 +118,6 @@ def get_tar_path_from_dataset_name(
                 output.append(tmp)
         return sum(output, [])
     else:
-        import json
-        import os
 
         output = []
         for n in dataset_names:
