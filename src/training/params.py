@@ -347,6 +347,15 @@ def parse_args():
     parser.add_argument(
         "--seed", type=int, default=4242, help="Default random seed."
     )
+
+    parser.add_argument(
+        "--top-k-checkpoint-select-dataset", type=str, default='all', help="The dataset of selecting top-k checkpoint."
+    )
+
+    # @R10, @R@5, @R1, mAP@10
+    parser.add_argument(
+        "--top-k-checkpoint-select-metric", type=str, default='_R@10', help="The metric for selecting top-k checkpoint."
+    )
     args = parser.parse_args()
 
     # If some params are not passed, we use the default values based on model name.

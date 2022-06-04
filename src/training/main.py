@@ -513,8 +513,10 @@ def main():
         if any(v in data for v in ("val", "imagenet-val", "imagenet-v2")):
             metrics = evaluate(model, data, completed_epoch, args, writer)
             if args.save_top_performance:
+                top_k_dataset = args.top_k_checkpoint_select_dataset
+                top_k_metric = args.top_k_checkpoint_select_metric
                 filtered_metrics = [
-                    v for k, v in metrics.items() if "_R@10" in k and "Clotho" in k  # (yusong): todo: change here to whatever dataset we want
+                    v for k, v in metrics.items() if top_k_metric in k and top_k_dataset in k
                 ]  # check all R@10 metrics (all dataset) and use it to update the ckpt
         # Saving checkpoints.
         if args.save_logs:
