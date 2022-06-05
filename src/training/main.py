@@ -456,6 +456,10 @@ def main():
                 logging.info(
                     f"=> loaded checkpoint '{args.resume}' (epoch {start_epoch})"
                 )
+            if args.freeze_text:
+                print("Freeze Text!!!!")
+                for k in text_freeze_parameters:
+                    k.requires_grad = False
         else:
             logging.info("=> no checkpoint found at '{}'".format(args.resume))
 
