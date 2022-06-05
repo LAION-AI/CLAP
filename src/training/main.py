@@ -35,7 +35,6 @@ from training.scheduler import cosine_lr
 from training.train import train_one_epoch, evaluate
 from open_clip.utils import get_tar_path_from_dataset_name, dataset_split
 
-
 def maintain_ckpts(args, startidx, all_idx_len):
     for i in reversed(range(startidx, all_idx_len)):
         if os.path.exists(os.path.join(args.checkpoint_path, f"epoch_top_{i}.pt")):
@@ -130,6 +129,13 @@ def main():
     # sanitize model name for filesystem / uri use, easier if we don't use / in name as a rule?
     args.model = args.model.replace("/", "-")
     # download sizes.json file
+    
+    random.seed(args.seed)
+    torch.manual_seed(args.seed)
+    torch.cuda.manual_seed(args.seed)
+    torch.cuda.manual_seed_all(args.seed)
+    np.random.seed(args.seed)
+
     if args.remotedata:
         for dataset_name in args.datasetnames:
             for split in dataset_split[dataset_name]:
