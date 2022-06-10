@@ -320,7 +320,7 @@ class CLAPVisionCfg:
 class CLAPAudioCfp:
     model_type: str = "PANN"
     model_name: str = "Cnn14"
-    sample_rate: int = 32000
+    sample_rate: int = 48000
     # Param
     audio_length: int = 1024
     window_size: int = 1024
@@ -329,7 +329,7 @@ class CLAPAudioCfp:
     fmax: int = 14000
     class_num: int = 527
     mel_bins: int = 64
-    clip_samples: int = 320000
+    clip_samples: int = 480000
 
 
 @dataclass
@@ -354,6 +354,9 @@ class CLAP(nn.Module):
             audio_cfg = CLAPAudioCfp(**audio_cfg)
         if isinstance(text_cfg, dict):
             text_cfg = CLAPTextCfg(**text_cfg)
+
+        self.audio_cfg = audio_cfg
+        self.text_cfg = text_cfg
 
         self.context_length = text_cfg.context_length
 
@@ -483,6 +486,59 @@ class CLAP(nn.Module):
         audio_features_mlp = self.audio_transform(audio_features)
         text_features_mlp = self.text_transform(text_features)
         return audio_features, text_features, audio_features_mlp, text_features_mlp, self.logit_scale_a.exp(), self.logit_scale_t.exp()
+
+    def audio_infer(self, audio, hopsize = None, key = "embedding"):
+        """Forward one audio and produce the audio embedding
+        
+        Parameters
+        ----------
+        audio: torch.Tensor (audio_length)
+            the time-domain audio input, notice that it must be only one input
+        hopsize: int 
+            the overlap hopsize as the sliding window
+        key: str 
+            the key string to extract the latant code (e.g. embedding, fine_grained_embedding)
+
+        Returns
+        ----------
+        output_dict: {
+            key: [n, (embedding_shape)] if "HTS-AT"
+            or 
+            key: [(embedding_shape)] if "PANN"
+        }
+            the list of key values of the audio branch 
+
+        """
+
+        assert not self.training, "the inference mode must be run at eval stage"
+        output_dict = {}
+        # PANN
+        if self.audio_cfg.model_type == "PANN":
+            audio_input = audio.unsqueeze(dim = 0)
+            output_dict[key] = self.encode_audio(audio_input)[key].squeeze(dim = 0)
+        elif self.audio_cfg.model_type == "HTSAT":
+            # repeat
+            audio_len = len(audio)
+            k = self.audio_cfg.clip_samples // audio_len
+            if k > 1:
+                audio = audio.repeat(k)
+                audio_len = len(audio)
+            
+            if hopsize is None:
+                hopsize = min(hopsize, audio_len)
+
+            if audio_len > self.audio_cfg.clip_samples:
+                audio_input = [audio[pos:pos + self.audio_cfg.clip_samples].clone() for pos in range(0, audio_len - self.audio_cfg.clip_samples, hopsize)]
+                audio_input.append(audio[-self.audio_cfg.clip_samples:].clone())
+                audio_input = torch.stack(audio_input)
+                output_dict[key] = self.encode_audio(audio_input)[key]
+            else:
+                audio_input = audio.unsqueeze(dim = 0)
+                output_dict[key] = self.encode_audio(audio_input)[key].squeeze(dim = 0)
+        
+        return output_dict
+            
+
 
 
 def convert_weights_to_fp16(model: nn.Module):
