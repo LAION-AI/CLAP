@@ -135,12 +135,12 @@ for dataset_name in ["audiocaps", "audioset", "BBCSoundEffects", "Clotho"]:
         if not os.path.exists(f"./json_files/{dataset_name}/{split}"):
             os.makedirs(f"./json_files/{dataset_name}/{split}")
         os.system(
-            f"aws s3 cp s3://laion-audio/webdataset_tar/{dataset_name}/{split}/sizes.json ./json_files/{dataset_name}/{split}/sizes.json"
+            f"aws s3 cp s3://s-laion-audio/webdataset_tar/{dataset_name}/{split}/sizes.json ./json_files/{dataset_name}/{split}/sizes.json"
         )
 
 try:
     input_shards = [
-        f"pipe:aws s3 cp s3://laion-audio/webdataset_tar/audioset/unbalanced_train/{i}.tar -"
+        f"pipe:aws s3 cp s3://s-laion-audio/webdataset_tar/audioset/unbalanced_train/{i}.tar -"
         for i in range(0, 3734)
     ]
     # input_shards = ["/mnt/audio_clip/webdataset_tar/audioset/eval/28.tar"]
@@ -186,7 +186,7 @@ except:
 # for i in tqdm(reversed(range(1226 * 2, 1226 * 3 + 1))):
 #     try:
 #         input_shards = [
-#             f"pipe:aws s3 cp s3://laion-audio/webdataset_tar/audiocaps/test/{i}.tar -",
+#             f"pipe:aws s3 cp s3://s-laion-audio/webdataset_tar/audiocaps/test/{i}.tar -",
 #         ]
 #         # input_shards = ["/mnt/audio_clip/webdataset_tar/audioset/eval/28.tar"]
 #         pipeline = [wds.SimpleShardList(input_shards)]

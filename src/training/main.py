@@ -142,7 +142,7 @@ def main():
                 if not os.path.exists(f"./json_files/{dataset_name}/{split}"):
                     os.makedirs(f"./json_files/{dataset_name}/{split}")
                 os.system(
-                    f"aws s3 cp s3://laion-audio/webdataset_tar/{dataset_name}/{split}/sizes.json ./json_files/{dataset_name}/{split}/sizes.json"
+                    f"aws s3 cp s3://s-laion-audio/webdataset_tar/{dataset_name}/{split}/sizes.json ./json_files/{dataset_name}/{split}/sizes.json"
                 )
 
     if args.datasetinfos is None:

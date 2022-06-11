@@ -129,7 +129,7 @@ def get_tar_path_from_dataset_name(
                 sizes = json.load(open(sizefilepath_, "r"))
                 for k in sizes.keys():
                     tmp.append(
-                        f"pipe:aws s3 --cli-connect-timeout 0 cp s3://laion-audio/webdataset_tar/{n}/{s}/{k} -"
+                        f"pipe:aws s3 --cli-connect-timeout 0 cp s3://s-laion-audio/webdataset_tar/{n}/{s}/{k} -"
                     )
                 if proportion!=1:
                     tmp = random.sample(tmp, int(proportion * len(tmp)))
@@ -158,7 +158,7 @@ def get_tar_path_from_txts(txt_path, islocal, proportion=1):
             lines = [
                 lines[i]
                 .split("\n")[0]
-                .replace("pipe:aws s3 cp s3://laion-audio/", "/mnt/audio_clip/")
+                .replace("pipe:aws s3 cp s3://s-laion-audio/", "/mnt/audio_clip/")
                 for i in range(len(lines))
             ]
         else:
