@@ -24,7 +24,6 @@ import torchaudio
 import torchaudio.functional as F
 from pathlib import Path
 import wget
-import random
 from open_clip import tokenize
 from open_clip.utils import dataset_split
 
@@ -39,7 +38,6 @@ from open_clip import tokenize
 # initizlied the audioset map
 _AUDIOSET_MAP_PATH = os.path.join(Path(__file__).parent, "audioset_textmap.npy")
 _AUDIOSET_MAP = np.load(_AUDIOSET_MAP_PATH, allow_pickle=True)
-
 
 def int16_to_float32(x):
     return (x / 32767.0).astype(np.float32)
