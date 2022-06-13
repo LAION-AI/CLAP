@@ -426,6 +426,10 @@ def preprocess(
             mode="constant",
             constant_values=0,
         )
+
+    # TODO: (yusong) add a key of "original audio"
+    # TODO: (yusong) also return "original data"
+
     # if mono:  # convert to mono
     #    audio_data = librosa.to_mono(audio_data)
 
@@ -442,7 +446,7 @@ def preprocess(
     sample["audio_orig_sr"] = orig_sr
     return sample
 
-
+# TODO: Yusong: clear unused arguments
 # def get_wds_dataset(args, preprocess_img, is_train):
 def get_wds_dataset(
     args,
@@ -541,6 +545,7 @@ def get_wds_dataset(
                     resample_method=args.resample_method,
                 )
             ),
+            # TODO: (yusong) use wds.to_dict instead?
             wds.to_tuple(
                 "__url__",
                 "__key__",
