@@ -116,10 +116,10 @@ def parse_args():
         help="if the dataset is remote, set this flag",
     )
     parser.add_argument(
-        "--data-txt-example",
+        "--dataset_path",
         type=str,
-        default='/mnt/audio_clip/code/CLAP/src/data/datasetname/datasettype.txt',
-        help="An example of the path to the txt file for the dataset",
+        default='/mnt/audio_clip/webdataset_tar',
+        help="The path to the dataset",
     )
     parser.add_argument(
         "--logs",
