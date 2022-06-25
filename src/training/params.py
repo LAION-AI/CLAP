@@ -116,7 +116,7 @@ def parse_args():
         help="if the dataset is remote, set this flag",
     )
     parser.add_argument(
-        "--dataset_path",
+        "--datasetpath",
         type=str,
         default='/mnt/audio_clip/webdataset_tar',
         help="The path to the dataset",
