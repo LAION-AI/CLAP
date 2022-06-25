@@ -152,14 +152,13 @@ def main():
             args.datasetnames,
             args.datasetinfos,
             islocal=not args.remotedata,
-            template=args.data_txt_example,
             proportion=args.dataset_proportion,
+            path=args.dataset_path,
         )
         args.val_data = get_tar_path_from_dataset_name(
             args.datasetnames,
             ["valid", "test", "eval"],
             islocal=not args.remotedata,
-            template=args.data_txt_example,
             proportion=1,
         )
         # args.val_data = get_tar_path_from_dataset_name(args.datasetnames, ["valid"], islocal=not args.remotedata, template=args.data_txt_example)
