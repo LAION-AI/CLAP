@@ -35,6 +35,7 @@ from training.scheduler import cosine_lr
 from training.train import train_one_epoch, evaluate
 from open_clip.utils import get_tar_path_from_dataset_name, dataset_split
 
+
 def maintain_ckpts(args, startidx, all_idx_len):
     for i in reversed(range(startidx, all_idx_len)):
         if os.path.exists(os.path.join(args.checkpoint_path, f"epoch_top_{i}.pt")):
@@ -129,7 +130,7 @@ def main():
     # sanitize model name for filesystem / uri use, easier if we don't use / in name as a rule?
     args.model = args.model.replace("/", "-")
     # download sizes.json file
-    
+
     random.seed(args.seed)
     torch.manual_seed(args.seed)
     torch.cuda.manual_seed(args.seed)
@@ -526,7 +527,9 @@ def main():
                 top_k_dataset = args.top_k_checkpoint_select_dataset
                 top_k_metric = args.top_k_checkpoint_select_metric
                 filtered_metrics = [
-                    v for k, v in metrics.items() if top_k_metric in k and top_k_dataset in k
+                    v
+                    for k, v in metrics.items()
+                    if top_k_metric in k and top_k_dataset in k
                 ]  # check all R@10 metrics (all dataset) and use it to update the ckpt
         # Saving checkpoints.
         if args.save_logs:

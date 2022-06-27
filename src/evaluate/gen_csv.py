@@ -64,11 +64,45 @@ if __name__ == "__main__":
     captions = list(df["caption"])
 
     model_path_all = [
-        "/mnt/audio_clip/code/CLAP/src/logs/2022_06_05-17_53_56-model_HTSAT-tiny-lr_0.001-b_184-j_10-p_fp32/checkpoints/epoch_top_0.pt",
-        "/mnt/audio_clip/code/CLAP/src/logs/2022_05_31-02_55_14-model_HTSAT-tiny-lr_0.001-b_184-j_10-p_fp32/checkpoints/epoch_top_0.pt",
+        "/mnt/audio_clip/dcase_submission_systems/2022_05_07-19_16_07-model_HTSAT-tiny-lr_0.001-b_96-j_4-p_fp32/checkpoints/epoch_top_0.pt",
+        "/mnt/audio_clip/dcase_submission_systems/2022_05_07-19_16_07-model_HTSAT-tiny-lr_0.001-b_96-j_4-p_fp32/checkpoints/epoch_top_1.pt",
+        "/mnt/audio_clip/dcase_submission_systems/2022_05_07-19_16_07-model_HTSAT-tiny-lr_0.001-b_96-j_4-p_fp32/checkpoints/epoch_top_2.pt",
+        "/mnt/audio_clip/dcase_submission_systems/2022_06_05-17_53_56-model_HTSAT-tiny-lr_0.001-b_184-j_10-p_fp32/checkpoints/epoch_top_0.pt",
+        "/mnt/audio_clip/dcase_submission_systems/2022_06_05-17_53_56-model_HTSAT-tiny-lr_0.001-b_184-j_10-p_fp32/checkpoints/epoch_top_1.pt",
+        "/mnt/audio_clip/dcase_submission_systems/2022_06_05-17_53_56-model_HTSAT-tiny-lr_0.001-b_184-j_10-p_fp32/checkpoints/epoch_top_2.pt",
+        "/mnt/audio_clip/dcase_submission_systems/2022_05_31-02_55_14-model_HTSAT-tiny-lr_0.001-b_184-j_10-p_fp32/checkpoints/epoch_top_0.pt",
+        "/mnt/audio_clip/dcase_submission_systems/2022_05_31-02_55_14-model_HTSAT-tiny-lr_0.001-b_184-j_10-p_fp32/checkpoints/epoch_top_1.pt",
+        "/mnt/audio_clip/dcase_submission_systems/2022_05_31-02_55_14-model_HTSAT-tiny-lr_0.001-b_184-j_10-p_fp32/checkpoints/epoch_top_2.pt",
+        "/mnt/audio_clip/dcase_submission_systems/2022_06_11-02_55_57-model_HTSAT-tiny-lr_0.001-b_184-j_10-p_fp32/checkpoints/epoch_top_0.pt",
+        "/mnt/audio_clip/dcase_submission_systems/2022_06_11-02_55_57-model_HTSAT-tiny-lr_0.001-b_184-j_10-p_fp32/checkpoints/epoch_top_1.pt",
+        "/mnt/audio_clip/dcase_submission_systems/2022_06_11-02_55_57-model_HTSAT-tiny-lr_0.001-b_184-j_10-p_fp32/checkpoints/epoch_top_2.pt",
+        "/mnt/audio_clip/dcase_submission_systems/2022_06_04-05_56_46-model_PANN-14-lr_0.001-b_184-j_6-p_fp32/checkpoints/epoch_top_0.pt",
+        "/mnt/audio_clip/dcase_submission_systems/2022_06_04-05_56_46-model_PANN-14-lr_0.001-b_184-j_6-p_fp32/checkpoints/epoch_top_1.pt",
+        "/mnt/audio_clip/dcase_submission_systems/2022_06_04-05_56_46-model_PANN-14-lr_0.001-b_184-j_6-p_fp32/checkpoints/epoch_top_2.pt",
+        "/mnt/audio_clip/dcase_submission_systems/2022_06_11-21_01_57-model_PANN-14-lr_0.001-b_184-j_10-p_fp32/checkpoints/epoch_top_0.pt",
+        "/mnt/audio_clip/dcase_submission_systems/2022_06_11-21_01_57-model_PANN-14-lr_0.001-b_184-j_10-p_fp32/checkpoints/epoch_top_1.pt",
+        "/mnt/audio_clip/dcase_submission_systems/2022_06_11-21_01_57-model_PANN-14-lr_0.001-b_184-j_10-p_fp32/checkpoints/epoch_top_2.pt",
     ]
-
-    model_type_all = ["HTSAT-tiny", "HTSAT-tiny", "HTSAT-tiny"]
+    model_type_all = [
+        "HTSAT-tiny",
+        "HTSAT-tiny",
+        "HTSAT-tiny",
+        "HTSAT-tiny",
+        "HTSAT-tiny",
+        "HTSAT-tiny",
+        "HTSAT-tiny",
+        "HTSAT-tiny",
+        "HTSAT-tiny",
+        "HTSAT-tiny",
+        "HTSAT-tiny",
+        "HTSAT-tiny",
+        "PANN-14",
+        "PANN-14",
+        "PANN-14",
+        "PANN-14",
+        "PANN-14",
+        "PANN-14",
+    ]
 
     clotho_test_preprocessed_dir = "/mnt/audio_clip/processed_datasets/Clotho/test"
 

@@ -1,0 +1,303 @@
+# Submission information for task 6 - subtask B
+submission:
+  # Submission label
+  # Label is used to index submissions.
+  # Generate your label following way to avoid
+  # overlapping codes among submissions:
+  # [Last name of corresponding author]_[Abbreviation of institute of the corresponding author]_task[task number]_[index number of your submission (1-4)]
+  label: Wu_Mila_task6b_1
+  #
+  # Submission name
+  # This name will be used in the results tables when space permits
+  name: DCASE2022 baseline system
+  #
+  # Submission name abbreviated
+  # This abbreviated name will be used in the result table when space is tight.
+  # Use maximum 10 characters.
+abbreviation: CLAP
+
+  # Authors of the submitted system. Mark authors in
+  # the order you want them to appear in submission lists.
+  # One of the authors has to be marked as corresponding author,
+  # this will be listed next to the submission in the results tables.
+  authors:
+    # First author
+    - lastname: Wu
+      firstname: Yusong
+      email: wu.yusong@mila.quebec                    # Contact email address
+      corresponding: true                         # Mark true for one of the authors
+
+      # Affiliation information for the author
+      affiliation:
+        abbreviation: Mila
+        institute: Mila, University of Montreal
+        department: DIRO            # Optional
+        location: Quebec, Canada
+
+    # Second author
+    - lastname: Zhang
+      firstname: Tianyu
+      email: tianyu.zhang@mila.quebec                # Contact email address
+
+      # Affiliation information for the author
+      affiliation:
+        abbreviation: Mila
+        institute: Mila, University of Montreal
+        department: DIRO            # Optional
+        location: Quebec, Canada
+
+    # Third author
+    - lastname: Chen
+      firstname: Ke
+      email: knutchen@ucsd.edu
+
+      # Affiliation information for the author
+      affiliation:
+        abbreviation: UCSD
+        institute: University of California San Diego
+        department: Music
+        location: San Diego, United States
+
+# System information
+system:
+  # System description, meta-data provided here will be used to do
+  # meta analysis of the submitted system.
+  # Use general level tags, when possible use the tags provided in comments.
+  # If information field is not applicable to the system, use "!!null".
+  description:
+    # Audio input / sampling rate
+    # e.g. 16kHz, 22.05kHz, 44.1kHz, 48.0kHz
+    input_sampling_rate: 48.0kHz
+
+    # Acoustic representation
+    # Here you should indicate what can or audio representation
+    # you used. If your system used hand-crafted features (e.g.
+    # mel band energies), then you can do:
+    #
+    # `acoustic_features: mel energies`
+    #
+    # Else, if you used some pre-trained audio feature extractor, 
+    # you can indicate the name of the system, for example:
+    #
+    # `acoustic_features: audioset`
+    acoustic_features: log-mel energies
+
+    # Word embeddings
+    # Here you can indicate how you treated word embeddings.
+    # If your method learned its own word embeddings (i.e. you
+    # did not use any pre-trained word embeddings) then you can
+    # do:
+    #
+    # `word_embeddings: learned`
+    #  
+    # Else, specify the pre-trained word embeddings that you used
+    # (e.g. Word2Vec, BERT, etc).
+    word_embeddings: learned
+
+    # Data augmentation methods
+    # e.g. mixup, time stretching, block mixing, pitch shifting, ...
+    data_augmentation: spec-augmentation
+
+    # Method scheme
+    # Here you should indicate the scheme of the method that you
+    # used. For example:
+    machine_learning_method: cross-modal alignment
+
+    # Learning scheme
+    # Here you should indicate the learning scheme. 
+    # For example, you could specify either
+    # supervised, self-supervised, or even 
+    # reinforcement learning. 
+    learning_scheme: self-supervised
+
+    # Ensemble
+    # Here you should indicate if you used ensemble
+    # of systems or not.
+    ensemble: Yes
+
+    # Audio modelling
+    # Here you should indicate the type of system used for
+    # audio modelling. For example, if you used some stacked CNNs, then
+    # you could do:
+    #
+    # audio_modelling: cnn
+    #
+    # If you used some pre-trained system for audio modelling,
+    # then you should indicate the system used (e.g. COALA, COLA,
+    # transformer).
+    audio_modelling: HTSAT-tiny, PANN-14
+
+    # Word modelling
+    # Similarly, here you should indicate the type of system used
+    # for word modelling. For example, if you used some RNNs,
+    # then you could do: 
+    #
+    # word_modelling: rnn
+    #
+    # If you used some pre-trained system for word modelling,
+    # then you should indicate the system used (e.g. transformer).
+    word_modelling: Transformer
+
+    # Loss function
+    # Here you should indicate the loss function that you employed.
+    loss_function: Contrastive Loss
+
+    # Optimizer
+    # Here you should indicate the name of the optimizer that you
+    # used. 
+    optimizer: AdamW
+
+    # Learning rate
+    # Here you should indicate the learning rate of the optimizer
+    # that you used.
+    learning_rate: 1e-3
+
+    # Gradient clipping
+    # Here you should indicate if you used any gradient clipping. 
+    # You do this by indicating the value used for clipping. Use
+    # 0 for no clipping.
+    gradient_clipping: 0
+
+    # Gradient norm
+    # Here you should indicate the norm of the gradient that you
+    # used for gradient clipping. This field is used only when 
+    # gradient clipping has been employed.
+    gradient_norm: !!null
+
+    # Metric monitored
+    # Here you should report the monitored metric
+    # for optimizing your method. For example, did you
+    # monitored the loss on the validation data (i.e. validation
+    # loss)? Or you monitored the SPIDEr metric? Maybe the training
+    # loss?
+    metric_monitored: text-to-audio-mAP@10
+
+  # System complexity, meta-data provided here will be used to evaluate
+  # submitted systems from the computational load perspective.
+  complexity:
+    # Total amount of parameters used in the acoustic model.
+    # For neural networks, this information is usually given before training process
+    # in the network summary.
+    # For other than neural networks, if parameter count information is not directly
+    # available, try estimating the count as accurately as possible.
+    # In case of ensemble approaches, add up parameters for all subsystems.
+    # In case embeddings are used, add up parameter count of the embedding
+    # extraction networks and classification network
+    # Use numerical value (do not use comma for thousands-separator).
+    total_parameters: 244087786
+
+  # List of datasets used for training the system.
+  # Development-training data is used here only as example.
+  training_datasets:
+    - name: BBC_Sound_Effects, Clotho, AudioCaps, AudioSet, Free_To_Use_Sounds, We_Sound_Effects, We_Sound_Effects, Sonniss_Game_Audio_Effects
+
+      # Dataset access url
+      url: see_report
+
+      # Has audio:
+      has_audio: Yes
+
+      # Has images
+      has_images: No
+
+      # Has video
+      has_video: No
+
+      # Has captions
+      has_captions: Yes
+
+      # Number of captions per audio
+      nb_captions_per_audio: 1
+
+      # Number of audio clips per caption
+      nb_clips_per_caption: 1
+
+      # Total amount durations (in seconds) of audio used
+      total_audio_length: 22159224
+
+      # Total amount of captions used
+      total_captions: 2012395
+
+  # List of datasets used for validating the system, for example, optimizing hyperparameter.
+  # Development-validation data is used here only as example.
+  validation_datasets:
+    - name: Clotho-evaluation
+
+      # Dataset access url
+      url: https://doi.org/10.5281/zenodo.4783391
+
+      # Has audio:
+      has_audio: Yes
+
+      # Has images
+      has_images: No
+
+      # Has video
+      has_video: No
+
+      # Has captions
+      has_captions: Yes
+
+      # Number of captions per audio
+      nb_captions_per_audio: 5
+
+      # Number of audio clips per caption
+      nb_clips_per_caption: 1
+
+      # Total amount durations (in seconds) of audio used
+      total_audio_length: 23636
+
+      # Total amount of captions used
+      total_captions: 1045
+
+  # List of external datasets used in the submission.
+  # Development dataset is used here only as example, list only external datasets
+  external_datasets:
+    # Dataset name
+    - name: BBC_Sound_Effects, AudioCaps, AudioSet, Free_To_Use_Sounds, We_Sound_Effects, We_Sound_Effects, Sonniss_Game_Audio_Effects
+
+      # Dataset access url
+      url: see_report
+
+      # Has audio:
+      has_audio: Yes
+
+      # Has images
+      has_images: No
+
+      # Has video
+      has_video: No
+
+      # Has captions
+      has_captions: Yes
+
+      # Number of captions per audio
+      nb_captions_per_audio: 1
+
+      # Number of audio clips per caption
+      nb_clips_per_caption: 1
+
+      # Total amount durations (in seconds) of audio used
+      total_audio_length: 22072860
+
+      # Total amount of captions used
+      total_captions: 1993200
+
+      # Used for (e.g. audio_modelling, word_modelling, audio_and_word_modelling)
+      used_for: audio_and_word_modelling
+
+      # URL to the source code of the system [optional]
+      source_code: see_report
+
+# System results
+results:
+  development_testing:
+    # System results for development testing split.
+    # Full results are not mandatory, however, they are highly recommended
+    # as they are needed for through analysis of the challenge submissions.
+    # If you are unable to provide all results, also incomplete
+    # results can be reported.
+    R@1: 0.12555023923444977
+    R@5: 0.33454545454545453
+    R@10: 0.4520574162679426
+    mAP@10: 0.21422305764411026

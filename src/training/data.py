@@ -18,9 +18,7 @@ from torch.utils.data import Dataset, DataLoader, SubsetRandomSampler
 from torch.utils.data.distributed import DistributedSampler
 from functools import partial
 import soundfile as sf
-import librosa
 import io
-import torchaudio
 import torchaudio.functional as F
 from pathlib import Path
 import wget
@@ -38,6 +36,7 @@ from open_clip import tokenize
 # initizlied the audioset map
 _AUDIOSET_MAP_PATH = os.path.join(Path(__file__).parent, "audioset_textmap.npy")
 _AUDIOSET_MAP = np.load(_AUDIOSET_MAP_PATH, allow_pickle=True)
+
 
 def int16_to_float32(x):
     return (x / 32767.0).astype(np.float32)
@@ -379,35 +378,7 @@ def preprocess(
     """
     Preprocess a single sample for wdsdataloader.
     """
-    # keys = list(sample.keys())
-    # for k in keys:
-    #    if (audio_ext in k) and (audio_ext!=k): # if the key is not extention of audio, something like 'xxxxx.flac'
-    #        sample[audio_ext] = sample[k]
-    #        del sample[k]
-
-    #    if (text_ext in k) and (text_ext!=k): # if the key is not extention of audio, something like 'xxxxx.json'
-    #        sample[text_ext] = sample[k]
-    #        del sample[k]
     audio_data, orig_sr = sf.read(io.BytesIO(sample[audio_ext]))
-
-    # if samplerate is not None:
-    #     if resample_method == "TorchAudio_":
-    #         audio_data = F.resample(
-    #             torch.tensor(audio_data).unsqueeze(0),
-    #             orig_sr,
-    #             32000,
-    #             lowpass_filter_width=64,
-    #             rolloff=0.9475937167399596,
-    #             resampling_method="kaiser_window",
-    #         ).squeeze(0)
-    #     elif resample_method == "librosa":
-    #         audio_data = librosa.resample(
-    #             audio_data, orig_sr=orig_sr, target_sr=samplerate, res_type=res_type
-    #         )
-    #     elif resample_method is None or resample_method == "None" or resample_method == "TorchAudio":
-    #         pass
-    #     else:
-    #         raise ValueError(f"Unknown resample method: {resample_method}")
 
     if len(audio_data) > max_len:  # random clip if too long
         overflow = len(audio_data) - max_len
@@ -430,9 +401,6 @@ def preprocess(
     # TODO: (yusong) add a key of "original audio"
     # TODO: (yusong) also return "original data"
 
-    # if mono:  # convert to mono
-    #    audio_data = librosa.to_mono(audio_data)
-
     sample["waveform"] = torch.tensor(audio_data).float()
     del sample[audio_ext]
     texts = json.loads(sample[text_ext].decode("utf-8"))["text"]
@@ -446,8 +414,8 @@ def preprocess(
     sample["audio_orig_sr"] = orig_sr
     return sample
 
+
 # TODO: Yusong: clear unused arguments
-# def get_wds_dataset(args, preprocess_img, is_train):
 def get_wds_dataset(
     args,
     model_cfg,
