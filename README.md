@@ -15,6 +15,11 @@ git clone https://github.com/LAION-AI/CLAP.git
 cd CLAP
 pip install -r requirements.txt
 ```
+## Dataset format
+TODO
+
+## Sample dataset downloads
+TODO
 
 ## How to train the model?
 To train on a single GPU machine, please run the following command. 
