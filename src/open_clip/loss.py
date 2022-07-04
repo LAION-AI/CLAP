@@ -25,7 +25,7 @@ def gather_features(
         if gather_with_grad:
             all_audio_features = hvd.allgather(audio_features)
             all_text_features = hvd.allgather(text_features)
-            all_audio_features_= hvd.allgather(audio_features_mlp)
+            all_audio_features_mlp = hvd.allgather(audio_features_mlp)
             all_text_features_mlp = hvd.allgather(text_features_mlp)
         else:
             with torch.no_grad():
