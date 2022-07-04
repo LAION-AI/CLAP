@@ -28,6 +28,11 @@ pip install -r requirements.txt
 We use training data in webdataset format. For details of our dataset please see https://github.com/LAION-AI/audio-dataset.
 
 ## Training
+Firstly, please direct to the **src** folder:
+```
+cd src
+```
+
 To train on a single GPU machine, please run the following command. 
 ```
 CUDA_VISIBLE_DEVICES=0 python -m training.main \
@@ -53,6 +58,11 @@ CUDA_VISIBLE_DEVICES=0 python -m training.main \
     --datasetinfos "train" "unbalanced_train" "balanced_train" \
     --datasetpath <webdataset_tar_path>
 ```
+
+Here, ``model`` is set to choose the model from src/open_clip/model_configs/. Note that only 'PANN' and 'HTS-AT' models are supported, while others are image encoder models for previous CLIP.
+
+And ``wandb-notes`` is set to report the log into the [wandb](https://github.com/wandb/client); ``datasetnames`` and ``datasetinfors`` are set to configure the dataset training and evalutaion specifications. Further information can be refered in ``src/training/params.py``
+
 To train on a multi-GPU machine, please run the following command. Please feel checkout the help documentation in the argparse in ``params.py``.
 ```
 torchrun --nproc_per_node 8  -m training.main \
@@ -85,5 +95,5 @@ Please refer to the ``evaluation()`` function in the ``train.py`` and `audio_inf
 ## How to get audio_text_rank?
 Please refer to the ``get_metrics()`` function in the ``train.py``.
 
-## Pre-trained check point download and load
+## Link to Pretrained Models
 TODO
