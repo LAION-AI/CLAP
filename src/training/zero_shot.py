@@ -1,3 +1,4 @@
+# NOTE: This script is currently not supported for CLAP.
 import logging
 from contextlib import suppress
 
