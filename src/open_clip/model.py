@@ -315,7 +315,7 @@ class CLAPVisionCfg:
     timm_pool: str = 'avg'  # feature pooling for timm model ('abs_attn', 'rot_attn', 'avg', '')
     timm_proj: str = 'linear'  # linear projection for timm model output ('linear', 'mlp', '')
 
-
+# Audio Config Class
 @dataclass
 class CLAPAudioCfp:
     model_type: str = "PANN"
@@ -438,13 +438,6 @@ class CLAP(nn.Module):
         mask.triu_(1)  # zero out the lower diagonal
         return mask
 
-    # def lock_image_tower(self, unlocked_groups=0, freeze_bn_stats=False):
-    #     # lock image tower as per LiT - https://arxiv.org/abs/2111.07991
-    #     self.visual.lock(unlocked_groups=unlocked_groups, freeze_bn_stats=freeze_bn_stats)
-
-    # def encode_image(self, image):
-        # return self.visual(image)
-
     def encode_audio(self, audio):
         return self.audio_branch(audio, None) # mix lambda needs to add
 
@@ -482,9 +475,10 @@ class CLAP(nn.Module):
         text_features = self.encode_text(text)
         text_features = F.normalize(text_features, dim=-1)
 
-        # CHANGE: before normalize or after
+        
         audio_features_mlp = self.audio_transform(audio_features)
         text_features_mlp = self.text_transform(text_features)
+        # Four outputs: audio features (basic & MLP), text features (basic & MLP)
         return audio_features, text_features, audio_features_mlp, text_features_mlp, self.logit_scale_a.exp(), self.logit_scale_t.exp()
 
     def audio_infer(self, audio, hopsize = None, key = "embedding"):
@@ -568,24 +562,6 @@ def convert_weights_to_fp16(model: nn.Module):
 
 # Ignore the state dict of the vision part  
 def build_model_from_openai_state_dict(state_dict: dict, model_cfg):
-    # vit = "visual.proj" in state_dict
-
-    # if vit:
-    #     vision_width = state_dict["visual.conv1.weight"].shape[0]
-    #     vision_layers = len(
-    #         [k for k in state_dict.keys() if k.startswith("visual.") and k.endswith(".attn.in_proj_weight")])
-    #     vision_patch_size = state_dict["visual.conv1.weight"].shape[-1]
-    #     grid_size = round((state_dict["visual.positional_embedding"].shape[0] - 1) ** 0.5)
-    #     image_size = vision_patch_size * grid_size
-    # else:
-    #     counts: list = [
-    #         len(set(k.split(".")[2] for k in state_dict if k.startswith(f"visual.layer{b}"))) for b in [1, 2, 3, 4]]
-    #     vision_layers = tuple(counts)
-    #     vision_width = state_dict["visual.layer1.0.conv1.weight"].shape[0]
-    #     output_width = round((state_dict["visual.attnpool.positional_embedding"].shape[0] - 1) ** 0.5)
-    #     vision_patch_size = None
-    #     assert output_width ** 2 + 1 == state_dict["visual.attnpool.positional_embedding"].shape[0]
-    #     image_size = output_width * 32
 
     embed_dim = model_cfg["embed_dim"]
     audio_cfg = model_cfg["audio_cfg"]
