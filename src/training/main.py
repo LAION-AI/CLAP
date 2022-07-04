@@ -239,16 +239,6 @@ def main():
     else:
         logging.info(f"Running with a single process. Device {args.device}.")
 
-    # don't need the transform
-    # model, preprocess_train, preprocess_val = create_model_and_transforms(
-    #     args.model,
-    #     args.pretrained,
-    #     precision=args.precision,
-    #     device=device,
-    #     jit=args.torchscript,
-    #     force_quick_gelu=args.force_quick_gelu,
-    #     # pretrained_image=args.pretrained_image,
-    # )
     model, model_cfg = create_model(
         args.model,
         args.pretrained,
@@ -260,13 +250,6 @@ def main():
 
     if args.trace:
         model = trace_model(model, batch_size=args.batch_size, device=device)
-
-    # Not work in audio
-    # if args.lock_image:
-    #     # lock image tower as per LiT - https://arxiv.org/abs/2111.07991
-    #     model.lock_image_tower(
-    #         unlocked_groups=args.lock_image_unlocked_groups,
-    #         freeze_bn_stats=args.lock_image_freeze_bn_stats)
 
     if is_master(args):
         logging.info("Model:")
