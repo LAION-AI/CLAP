@@ -204,13 +204,6 @@ def main():
     if args.trace:
         model = trace_model(model, batch_size=args.batch_size, device=device)
 
-    # Not work in audio
-    # if args.lock_image:
-    #     # lock image tower as per LiT - https://arxiv.org/abs/2111.07991
-    #     model.lock_image_tower(
-    #         unlocked_groups=args.lock_image_unlocked_groups,
-    #         freeze_bn_stats=args.lock_image_freeze_bn_stats)
-
     if is_master(args):
         logging.info("Model:")
         logging.info(f"{str(model)}")
