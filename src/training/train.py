@@ -375,7 +375,6 @@ def evaluate(model, data, epoch, args, tb_writer=None):
     return metrics
 
 
-# CHANGE here
 def get_metrics(
     audio_features,
     text_features,
@@ -385,6 +384,7 @@ def get_metrics(
     logit_scale_t,
 ):
     metrics = {}
+    # Set up audio to text & text to audio similary matrice
     a_logits_per_audio = (
         (logit_scale_a * audio_features @ text_features_mlp.t()).detach().cpu()
     )
@@ -395,7 +395,7 @@ def get_metrics(
     t_logits_per_text = t_logits_per_audio.t().detach().cpu()
 
     labels = torch.arange(audio_features.shape[0]).long()
-
+    # Change the loss from two terms into four terms with 2x2 combined CE loss
     total_loss = (
         F.cross_entropy(a_logits_per_audio, labels)
         + F.cross_entropy(a_logits_per_text, labels)
