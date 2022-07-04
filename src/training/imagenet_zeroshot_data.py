@@ -1,4 +1,4 @@
-
+# NOTE: This script is currently not supported for CLAP.
 
 imagenet_classnames = ["tench", "goldfish", "great white shark", "tiger shark", "hammerhead shark", "electric ray",
                         "stingray", "rooster", "hen", "ostrich", "brambling", "goldfinch", "house finch", "junco",
