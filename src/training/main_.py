@@ -130,13 +130,6 @@ def main():
     # sanitize model name for filesystem / uri use, easier if we don't use / in name as a rule?
     args.model = args.model.replace("/", "-")
     # download sizes.json file
-
-    random.seed(args.seed)
-    torch.manual_seed(args.seed)
-    torch.cuda.manual_seed(args.seed)
-    torch.cuda.manual_seed_all(args.seed)
-    np.random.seed(args.seed)
-
     if args.remotedata:
         for dataset_name in args.datasetnames:
             for split in dataset_split[dataset_name]:
@@ -153,15 +146,15 @@ def main():
             args.datasetnames,
             args.datasetinfos,
             islocal=not args.remotedata,
+            template=args.data_txt_example,
             proportion=args.dataset_proportion,
-            dataset_path=args.datasetpath,
         )
         args.val_data = get_tar_path_from_dataset_name(
             args.datasetnames,
             ["valid", "test", "eval"],
             islocal=not args.remotedata,
+            template=args.data_txt_example,
             proportion=1,
-            dataset_path=args.datasetpath,
         )
         # args.val_data = get_tar_path_from_dataset_name(args.datasetnames, ["valid"], islocal=not args.remotedata, template=args.data_txt_example)
     # get the name of the experiments
@@ -239,6 +232,16 @@ def main():
     else:
         logging.info(f"Running with a single process. Device {args.device}.")
 
+    # don't need the transform
+    # model, preprocess_train, preprocess_val = create_model_and_transforms(
+    #     args.model,
+    #     args.pretrained,
+    #     precision=args.precision,
+    #     device=device,
+    #     jit=args.torchscript,
+    #     force_quick_gelu=args.force_quick_gelu,
+    #     # pretrained_image=args.pretrained_image,
+    # )
     model, model_cfg = create_model(
         args.model,
         args.pretrained,
@@ -250,6 +253,13 @@ def main():
 
     if args.trace:
         model = trace_model(model, batch_size=args.batch_size, device=device)
+
+    # Not work in audio
+    # if args.lock_image:
+    #     # lock image tower as per LiT - https://arxiv.org/abs/2111.07991
+    #     model.lock_image_tower(
+    #         unlocked_groups=args.lock_image_unlocked_groups,
+    #         freeze_bn_stats=args.lock_image_freeze_bn_stats)
 
     if is_master(args):
         logging.info("Model:")
@@ -446,10 +456,6 @@ def main():
                 logging.info(
                     f"=> loaded checkpoint '{args.resume}' (epoch {start_epoch})"
                 )
-            if args.freeze_text:
-                print("Freeze Text!!!!")
-                for k in text_freeze_parameters:
-                    k.requires_grad = False
         else:
             logging.info("=> no checkpoint found at '{}'".format(args.resume))
 
@@ -481,12 +487,12 @@ def main():
         wandb.save(params_file)
         logging.debug("Finished loading wandb.")
 
-    if "train" not in data:
-        evaluate(model, data, start_epoch, args, writer)
-        return
-    elif start_epoch == 0 and "val" in data:
-        evaluate(model, data, 0, args, writer)
-        # pass
+    # if "train" not in data:
+    #     evaluate(model, data, start_epoch, args, writer)
+    #     return
+    # elif start_epoch == 0 and "val" in data:
+    #     evaluate(model, data, 0, args, writer)
+    #     # pass
     if args.save_top_performance:
         current_top_k_ckpt_metrics = {
             i: 0 for i in range(args.save_top_performance)
@@ -504,53 +510,50 @@ def main():
         train_one_epoch(model, data, epoch, optimizer, scaler, scheduler, args, writer)
         completed_epoch = epoch + 1
 
-        if any(v in data for v in ("val", "imagenet-val", "imagenet-v2")):
-            metrics = evaluate(model, data, completed_epoch, args, writer)
-            if args.save_top_performance:
-                top_k_dataset = args.top_k_checkpoint_select_dataset
-                top_k_metric = args.top_k_checkpoint_select_metric
-                filtered_metrics = [
-                    v
-                    for k, v in metrics.items()
-                    if top_k_metric in k and top_k_dataset in k
-                ]  # check all R@10 metrics (all dataset) and use it to update the ckpt
-        # Saving checkpoints.
-        if args.save_logs:
-            if args.split_opt:
-                opt_dict = {
-                    k + "_" + "optimizer": v.state_dict() for k, v in optimizer.items()
-                }
-            else:
-                opt_dict = {"optimizer": optimizer.state_dict()}
-            checkpoint_dict = {
-                "epoch": completed_epoch,
-                "name": args.name,
-                "state_dict": model.state_dict(),
-            }
-            checkpoint_dict.update(opt_dict)
-            if scaler is not None:
-                checkpoint_dict["scaler"] = scaler.state_dict()
+        print("epoch", epoch)
+        # if any(v in data for v in ("val", "imagenet-val", "imagenet-v2")):
+        #     metrics = evaluate(model, data, completed_epoch, args, writer)
+        #     if args.save_top_performance:
+        #         filtered_metrics = [
+        #             v for k, v in metrics.items() if "_R@10" in k
+        #         ]  # check all R@10 metrics and use it to update the ckpt
+        # # Saving checkpoints.
+        # if args.save_logs:
+        #     if args.split_opt:
+        #         opt_dict = {
+        #             k + "_" + "optimizer": v.state_dict() for k, v in optimizer.items()
+        #         }
+        #     else:
+        #         opt_dict = {"optimizer": optimizer.state_dict()}
+        #     checkpoint_dict = {
+        #         "epoch": completed_epoch,
+        #         "name": args.name,
+        #         "state_dict": model.state_dict(),
+        #     }
+        #     checkpoint_dict.update(opt_dict)
+        #     if scaler is not None:
+        #         checkpoint_dict["scaler"] = scaler.state_dict()
 
-            if completed_epoch == args.epochs or (
-                args.save_frequency > 0 and (completed_epoch % args.save_frequency) == 0
-            ):
-                torch.save(
-                    checkpoint_dict,
-                    os.path.join(args.checkpoint_path, f"epoch_{completed_epoch}.pt"),
-                )
-            if args.save_most_recent:
-                torch.save(
-                    checkpoint_dict,
-                    os.path.join(args.checkpoint_path, f"epoch_latest.pt"),
-                )
-            if args.save_top_performance:
-                update_top_k_performance(
-                    filtered_metrics,
-                    current_top_k_ckpt_metrics,
-                    args,
-                    checkpoint_dict,
-                    bignumbetter=True,
-                )
+        #     if completed_epoch == args.epochs or (
+        #         args.save_frequency > 0 and (completed_epoch % args.save_frequency) == 0
+        #     ):
+        #         torch.save(
+        #             checkpoint_dict,
+        #             os.path.join(args.checkpoint_path, f"epoch_{completed_epoch}.pt"),
+        #         )
+        #     if args.save_most_recent:
+        #         torch.save(
+        #             checkpoint_dict,
+        #             os.path.join(args.checkpoint_path, f"epoch_latest.pt"),
+        #         )
+        #     if args.save_top_performance:
+        #         update_top_k_performance(
+        #             filtered_metrics,
+        #             current_top_k_ckpt_metrics,
+        #             args,
+        #             checkpoint_dict,
+        #             bignumbetter=True,
+        #         )
 
     if args.wandb and is_master(args):
         wandb.finish()

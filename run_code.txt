@@ -1,91 +1,6 @@
 # Single Card toy dataset
 
 CUDA_VISIBLE_DEVICES=0 python -m training.main \
-    --save-frequency 1 \
-    --zeroshot-frequency 1 \
-    --dataset-type="toy" \
-    --train-data="/mnt/audio_clip/test/data/indexes/balanced_train.h5"  \
-    --val-data="/mnt/audio_clip/test/data/indexes/eval.h5"  \
-    --train-ipc="/mnt/audio_clip/test/data/train_ipc.npy" \
-    --val-ipc="/mnt/audio_clip/test/data/val_ipc.npy" \
-    --precision="fp32" \
-    --pretrained="openai" \
-    --warmup 10000 \
-    --batch-size=32 \
-    --lr=1e-3 \
-    --wd=0.1 \
-    --epochs=30 \
-    --workers=1 \
-    --model PANN-14 \
-    --resample-method="TorchAudio"
-
-# Multiple Cards toy dataset
-
-torchrun --nproc_per_node 4 -m training.main \
-    --save-frequency 1 \
-    --zeroshot-frequency 1 \
-    --dataset-type="toy" \
-    --train-data="/mnt/audio_clip/test/data/indexes/balanced_train.h5"  \
-    --val-data="/mnt/audio_clip/test/data/indexes/eval.h5"  \
-    --train-ipc="/mnt/audio_clip/test/data/train_ipc.npy" \
-    --val-ipc="/mnt/audio_clip/test/data/val_ipc.npy" \
-    --precision="fp32" \
-    --pretrained="openai" \
-    --warmup 10000 \
-    --batch-size=32 \
-    --lr=1e-3 \
-    --wd=0.1 \
-    --epochs=30 \
-    --workers=1 \
-    --use-bn-sync \
-    --model PANN-14 \
-    --resample-method="TorchAudio"
-
-
-CUDA_VISIBLE_DEVICES=0 python -m training.main \
-    --save-frequency 100 \
-    --save-top-performance 3 \
-    --save-most-recent \
-    --zeroshot-frequency 1 \
-    --dataset-type="webdataset" \
-    --datasetnames "Clotho" "audioset" "audiocaps" "BBCSoundEffects"\
-    --datasetinfos "train" "unbalanced_train" "balanced_train"\
-    --precision="fp32" \
-    --pretrained="openai" \
-    --warmup 10000 \
-    --batch-size=32 \
-    --lr=1e-3 \
-    --wd=0.1 \
-    --epochs=30 \
-    --workers=1 \
-    --use-bn-sync \
-    --model PANN-14 \
-    --resample-method="None" \
-   # --remotedata # if not remote dataset, please uncomment
-
-# Muitiple Card WDS train on "Clotho" "audioset" "audiocaps" "BBCSoundEffects" with types: "train" "unbalanced_train" "balanced_train"
-torchrun --nproc_per_node 8 -m training.main \
-    --save-frequency 100 \
-    --save-top-performance 3 \
-    --save-most-recent \
-    --dataset-type="webdataset" \
-    --precision="fp32" \
-    --pretrained="openai" \
-    --warmup 10000 \
-    --batch-size=96 \
-    --lr=1e-3 \
-    --wd=0.1 \
-    --epochs=200 \
-    --workers=1 \
-    --use-bn-sync \
-    --model PANN-14 \
-    --resample-method="None" \
-    --datasetnames "Clotho" "audioset" "audiocaps" "BBCSoundEffects" \
-    --datasetinfos "train" "unbalanced_train" "balanced_train"\
-
-
-
-CUDA_VISIBLE_DEVICES=0 python -m training.main \
     --save-frequency 100 \
     --save-top-performance 3  \
     --save-most-recent \
@@ -138,15 +53,233 @@ torchrun --nproc_per_node 8 -m training.main \
     --pretrained="openai" \
     --warmup 10000  \
     --batch-size=96 \
+    --split-opt \
+    --lr=1e-3 \
+    --lr-new=1e-4 \
+    --wd=0.1 \
+    --epochs=200  \
+    --workers=4 \
+    --use-bn-sync  \
+    --model PANN-14 \
+    --report-to "wandb" \
+    --wandb-notes "text-audio-diff-lr-1e-3-1e-4-model-pann-14" \
+    --resample-method="None" \
+    --datasetnames "Clotho" "audiocaps" "BBCSoundEffects" \
+    --datasetinfos "train" "unbalanced_train" "balanced_train" \
+
+torchrun --nproc_per_node 8 -m training.main \
+    --save-frequency 100 \
+    --save-top-performance 3  \
+    --save-most-recent \
+    --dataset-type="webdataset" \
+    --precision="fp32" \
+    --pretrained="openai" \
+    --warmup 10000  \
+    --batch-size=96 \
+    --split-opt \
+    --lr=1e-3 \
+    --lr-new=1e-4 \
+    --wd=0.1 \
+    --epochs=200  \
+    --workers=4 \
+    --use-bn-sync  \
+    --model PANN-14 \
+    --report-to "wandb" \
+    --wandb-notes "text-audio-diff-lr-1e-3-1e-4-model-pann-14" \
+    --resample-method="None" \
+    --datasetnames "Clotho" "audiocaps" "BBCSoundEffects" \
+    --datasetinfos "train" "unbalanced_train" "balanced_train" "eval" \
+
+torchrun --nproc_per_node 8 -m training.main \
+    --save-frequency 100 \
+    --save-top-performance 3  \
+    --save-most-recent \
+    --dataset-type="webdataset" \
+    --precision="fp32" \
+    --pretrained="openai" \
+    --warmup 10000  \
+    --batch-size=96 \
+    --split-opt \
+    --lr=1e-3 \
+    --lr-new=1e-4 \
+    --wd=0.1 \
+    --epochs=200  \
+    --workers=4 \
+    --use-bn-sync  \
+    --model HTSAT-tiny \
+    --report-to "wandb" \
+    --wandb-notes "text-audio-diff-lr-1e-3-1e-4-model-htsat-tiny" \
+    --resample-method="None" \
+    --datasetnames "Clotho" "audiocaps" "BBCSoundEffects" \
+    --datasetinfos "train" "unbalanced_train" "balanced_train" \
+
+
+# tomorrow for yusong
+
+torchrun --nproc_per_node 8 -m training.main \
+    --save-frequency 100 \
+    --save-top-performance 3  \
+    --save-most-recent \
+    --dataset-type="webdataset" \
+    --precision="fp32" \
+    --pretrained="openai" \
+    --warmup 10000  \
+    --batch-size=96 \
     --lr=1e-3 \
     --wd=0.1 \
     --epochs=200  \
     --workers=4 \
+    --use-bn-sync  \
     --freeze-text \
+    --model PANN-14 \
+    --report-to "wandb" \
+    --wandb-notes "text-audio-freeze-text-lr-1e-3-model-pann-14" \
+    --resample-method="None" \
+    --datasetnames "Clotho" "audiocaps" "BBCSoundEffects" "audioset"  \
+    --datasetinfos "train" "unbalanced_train" "balanced_train"\
+
+torchrun --nproc_per_node 8 -m training.main \
+    --save-frequency 100 \
+    --save-top-performance 3  \
+    --save-most-recent \
+    --dataset-type="webdataset" \
+    --precision="fp32" \
+    --pretrained="openai" \
+    --warmup 10000  \
+    --batch-size=96 \
+    --lr=1e-3 \
+    --wd=0.1 \
+    --epochs=200  \
+    --workers=4 \
+    --use-bn-sync  \
+    --freeze-text \
+    --model HTSAT-tiny \
+    --report-to "wandb" \
+    --wandb-notes "text-audio-freeze-text-lr-1e-3-model-htsat-tiny" \
+    --resample-method="None" \
+    --datasetnames "Clotho" "audiocaps" "BBCSoundEffects" "audioset"  \
+    --datasetinfos "train" "unbalanced_train" "balanced_train"\
+
+# freeze text after epoch 3 and make lr-pretrained=1e-5
+torchrun --nproc_per_node 8 -m training.main \
+    --save-frequency 100 \
+    --save-top-performance 3  \
+    --save-most-recent \
+    --dataset-type="webdataset" \
+    --precision="fp32" \
+    --pretrained="openai" \
+    --warmup 10000  \
+    --batch-size=96 \
+    --lr-new=1e-3 \
+    --lr-pretrained=1e-5 \
+    --freeze-text-after=5 \
+    --wd=0.1 \
+    --epochs=200  \
+    --workers=4 \
     --use-bn-sync  \
     --model PANN-14 \
     --report-to "wandb" \
-    --wandb-notes "Whatever message sent to wb" \
+    --wandb-notes "text-audio-diff-lr-1e-3-1e-5-freeze-after-5-model-pann-14" \
     --resample-method="None" \
-    --datasetnames "Clotho" "audiocaps" "BBCSoundEffects" \
+    --datasetnames "Clotho" "audiocaps" "BBCSoundEffects"  \
     --datasetinfos "train" "unbalanced_train" "balanced_train" \
+
+torchrun --nproc_per_node 8 -m training.main \
+    --save-frequency 100 \
+    --save-top-performance 3  \
+    --save-most-recent \
+    --dataset-type="webdataset" \
+    --precision="fp32" \
+    --pretrained="openai" \
+    --warmup 10000  \
+    --batch-size=192 \
+    --lr=1e-3 \
+    --wd=0.1 \
+    --epochs=400  \
+    --workers=10 \
+    --use-bn-sync  \
+    --freeze-text \
+    --model HTSAT-tiny \
+    --report-to "wandb" \
+    --wandb-notes "text-audio-freeze-text-lr-1e-3-8-dataset-model-htsat-tiny" \
+    --resample-method="None" \
+    --datasetnames "Clotho" "audiocaps" "BBCSoundEffects" "audioset" "free_to_use_sounds" "paramount_motion" "sonniss_game_effects" "wesoundeffects" \
+    --datasetinfos "train" "unbalanced_train" "balanced_train"\
+    --remotedata
+
+torchrun --nproc_per_node 8 -m training.main \
+    --save-frequency 100 \
+    --save-top-performance 3  \
+    --save-most-recent \
+    --dataset-type="webdataset" \
+    --precision="fp32" \
+    --pretrained="openai" \
+    --warmup 10000  \
+    --batch-size=192 \
+    --lr=1e-3 \
+    --wd=0.1 \
+    --epochs=400  \
+    --workers=10 \
+    --use-bn-sync  \
+    --freeze-text \
+    --model HTSAT-tiny \
+    --report-to "wandb" \
+    --wandb-notes "text-audio-freeze-text-lr-1e-3-8-dataset-model-htsat-tiny" \
+    --resample-method="None" \
+    --datasetnames "audioset" \
+    --datasetinfos "train" "unbalanced_train" "balanced_train"\
+    --remotedata
+
+# HTSAT-tiny max batch size: 184
+# PANN-14 max batch size: 184
+
+torchrun --nproc_per_node 8  -m training.main \
+    --save-frequency 50 \
+    --save-top-performance 3 \
+    --save-most-recent \
+    --dataset-type="webdataset" \
+    --precision="fp32" \
+    --pretrained="openai" \
+    --warmup 10000 \
+    --batch-size=184 \
+    --lr=1e-3 \
+    --wd=0.1 \
+    --epochs=400 \
+    --workers=10 \
+    --use-bn-sync \
+    --freeze-text \
+    --model HTSAT-tiny \
+    --report-to "wandb" \
+    --wandb-notes "text-audio-freeze-text-lr-1e-3-8-dataset-model-htsat-tiny" \
+    --resample-method="None" \
+    --datasetnames "Clotho" "audiocaps" "BBCSoundEffects" "audioset" "free_to_use_sounds" "paramount_motion" "sonniss_game_effects" "wesoundeffects" \
+    --datasetinfos "train" "unbalanced_train" "balanced_train" "valid" \
+    --top-k-checkpoint-select-dataset="Clotho-test" \
+    --top-k-checkpoint-select-metric="mAP@10" \
+    --seed 3407
+
+torchrun --nproc_per_node 8  -m training.main \
+    --save-frequency 50 \
+    --save-top-performance 3 \
+    --save-most-recent \
+    --dataset-type="webdataset" \
+    --precision="fp32" \
+    --pretrained="openai" \
+    --warmup 10000 \
+    --batch-size=184 \
+    --lr=1e-3 \
+    --wd=0.1 \
+    --epochs=400 \
+    --workers=10 \
+    --use-bn-sync \
+    --freeze-text \
+    --model PANN-14 \
+    --report-to "wandb" \
+    --wandb-notes "text-audio-freeze-text-lr-1e-3-8-dataset-model-pann-14" \
+    --resample-method="None" \
+    --datasetnames "Clotho" "audiocaps" "BBCSoundEffects" "audioset" "free_to_use_sounds" "paramount_motion" "sonniss_game_effects" "wesoundeffects" \
+    --datasetinfos "train" "unbalanced_train" "balanced_train" "valid" \
+    --top-k-checkpoint-select-dataset="Clotho-test" \
+    --top-k-checkpoint-select-metric="mAP@10" \
+    --seed 3407 \
+    --remotedata

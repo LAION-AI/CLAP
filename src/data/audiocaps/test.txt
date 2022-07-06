@@ -1,9 +1,9 @@
-pipe:s3cmd get s3://laion-audio/webdataset_tar/audiocaps/test/0.tar
-pipe:s3cmd get s3://laion-audio/webdataset_tar/audiocaps/test/1.tar
-pipe:s3cmd get s3://laion-audio/webdataset_tar/audiocaps/test/2.tar
-pipe:s3cmd get s3://laion-audio/webdataset_tar/audiocaps/test/3.tar
-pipe:s3cmd get s3://laion-audio/webdataset_tar/audiocaps/test/4.tar
-pipe:s3cmd get s3://laion-audio/webdataset_tar/audiocaps/test/5.tar
-pipe:s3cmd get s3://laion-audio/webdataset_tar/audiocaps/test/6.tar
-pipe:s3cmd get s3://laion-audio/webdataset_tar/audiocaps/test/7.tar
-pipe:s3cmd get s3://laion-audio/webdataset_tar/audiocaps/test/8.tar
+pipe:aws s3 cp s3://s-laion-audio/webdataset_tar/audiocaps/test/0.tar
+pipe:aws s3 cp s3://s-laion-audio/webdataset_tar/audiocaps/test/1.tar
+pipe:aws s3 cp s3://s-laion-audio/webdataset_tar/audiocaps/test/2.tar
+pipe:aws s3 cp s3://s-laion-audio/webdataset_tar/audiocaps/test/3.tar
+pipe:aws s3 cp s3://s-laion-audio/webdataset_tar/audiocaps/test/4.tar
+pipe:aws s3 cp s3://s-laion-audio/webdataset_tar/audiocaps/test/5.tar
+pipe:aws s3 cp s3://s-laion-audio/webdataset_tar/audiocaps/test/6.tar
+pipe:aws s3 cp s3://s-laion-audio/webdataset_tar/audiocaps/test/7.tar
+pipe:aws s3 cp s3://s-laion-audio/webdataset_tar/audiocaps/test/8.tar

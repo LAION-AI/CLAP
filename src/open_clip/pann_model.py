@@ -1,3 +1,7 @@
+# PANNs: Large-Scale Pretrained Audio Neural Networks for Audio Pattern Recognition
+# Reference from https://github.com/qiuqiangkong/audioset_tagging_cnn
+# Some layers are re-designed for CLAP
+
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -213,6 +217,14 @@ class Cnn14(nn.Module):
         x = F.dropout(x, p=0.2, training=self.training)
         x = torch.mean(x, dim=3)
         
+        latent_x1 = F.max_pool1d(x, kernel_size=3, stride=1, padding=1)
+        latent_x2 = F.avg_pool1d(x, kernel_size=3, stride=1, padding=1)
+        latent_x = latent_x1 + latent_x2
+        latent_x = latent_x.transpose(1, 2)
+        latent_x = F.relu_(self.fc1(latent_x))
+        latent_output = interpolate(latent_x, 32)
+        
+        
         (x1, _) = torch.max(x, dim=2)
         x2 = torch.mean(x, dim=2)
         x = x1 + x2
@@ -221,7 +233,7 @@ class Cnn14(nn.Module):
         embedding = F.dropout(x, p=0.5, training=self.training)
         clipwise_output = torch.sigmoid(self.fc_audioset(x))
         
-        output_dict = {'clipwise_output': clipwise_output, 'embedding': embedding}
+        output_dict = {'clipwise_output': clipwise_output, 'embedding': embedding, 'fine_grained_embedding': latent_output}
         return output_dict
 
 
@@ -297,6 +309,13 @@ class Cnn6(nn.Module):
         x = F.dropout(x, p=0.2, training=self.training)
         x = torch.mean(x, dim=3)
         
+        latent_x1 = F.max_pool1d(x, kernel_size=3, stride=1, padding=1)
+        latent_x2 = F.avg_pool1d(x, kernel_size=3, stride=1, padding=1)
+        latent_x = latent_x1 + latent_x2
+        latent_x = latent_x.transpose(1, 2)
+        latent_x = F.relu_(self.fc1(latent_x))
+        latent_output = interpolate(latent_x, 16)
+        
         (x1, _) = torch.max(x, dim=2)
         x2 = torch.mean(x, dim=2)
         x = x1 + x2
@@ -305,7 +324,7 @@ class Cnn6(nn.Module):
         embedding = F.dropout(x, p=0.5, training=self.training)
         clipwise_output = torch.sigmoid(self.fc_audioset(x))
         
-        output_dict = {'clipwise_output': clipwise_output, 'embedding': embedding}
+        output_dict = {'clipwise_output': clipwise_output, 'embedding': embedding, 'fine_grained_embedding': latent_output}
 
         return output_dict
 
@@ -385,6 +404,13 @@ class Cnn10(nn.Module):
         x = F.dropout(x, p=0.2, training=self.training)
         x = torch.mean(x, dim=3)
         
+        latent_x1 = F.max_pool1d(x, kernel_size=3, stride=1, padding=1)
+        latent_x2 = F.avg_pool1d(x, kernel_size=3, stride=1, padding=1)
+        latent_x = latent_x1 + latent_x2
+        latent_x = latent_x.transpose(1, 2)
+        latent_x = F.relu_(self.fc1(latent_x))
+        latent_output = interpolate(latent_x, 32)
+        
         (x1, _) = torch.max(x, dim=2)
         x2 = torch.mean(x, dim=2)
         x = x1 + x2
@@ -393,7 +419,7 @@ class Cnn10(nn.Module):
         embedding = F.dropout(x, p=0.5, training=self.training)
         clipwise_output = torch.sigmoid(self.fc_audioset(x))
         
-        output_dict = {'clipwise_output': clipwise_output, 'embedding': embedding}
+        output_dict = {'clipwise_output': clipwise_output, 'embedding': embedding, 'fine_grained_embedding': latent_output}
 
         return output_dict
 

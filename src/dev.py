@@ -32,7 +32,7 @@
 #     jit=args.torchscript,
 #     force_quick_gelu=args.force_quick_gelu
 # )
-    
+
 # data = get_wds_dataset(args, model_cfg, is_train=True)
 
 # dl = data.dataloader
@@ -60,11 +60,15 @@ import os
 import random
 import copy
 from tqdm import tqdm
+import s3fs
+import shutil
+
 
 def log_and_continue(exn):
     """Call in an exception handler to ignore any exception, isssue a warning, and continue."""
     logging.warning(f"Handling webdataset error ({repr(exn)}). Ignoring.")
     return True
+
 
 def preprocess(
     sample,
@@ -77,7 +81,6 @@ def preprocess(
     audio_data, orig_sr = sf.read(io.BytesIO(sample[audio_ext]))
     sample["waveform"] = audio_data
     return sample
-
 
 
 # def check(j):
@@ -119,16 +122,35 @@ def preprocess(
 #         pass
 # print(errors)
 
-for i in tqdm(reversed(range(1226*2,1226*3+1))):
-    try:
-        input_shards = ["/mnt/audio_clip/webdataset_tar/audioset/unbalanced_train/"+str(i)+".tar"]
-        # input_shards = ["/mnt/audio_clip/webdataset_tar/audioset/eval/28.tar"]
-        pipeline = [wds.SimpleShardList(input_shards)]
-        _SHARD_SHUFFLE_SIZE = 2000
-        _SHARD_SHUFFLE_INITIAL = 500
-        _SAMPLE_SHUFFLE_SIZE = 5000
-        _SAMPLE_SHUFFLE_INITIAL = 1000
-        pipeline.extend([
+
+# 假设有数据集dataset_all = [‘aaa’, ‘bbb’, ‘ccc’]和他们的split
+dataset_split = {
+    "audiocaps": ["train", "valid", "test"],
+    "audioset": ["balanced_train", "unbalanced_train", "eval"],
+    "BBCSoundEffects": ["train", "test"],
+    "Clotho": ["train", "test", "valid"],
+}
+for dataset_name in ["audiocaps", "audioset", "BBCSoundEffects", "Clotho"]:
+    for split in dataset_split[dataset_name]:
+        if not os.path.exists(f"./json_files/{dataset_name}/{split}"):
+            os.makedirs(f"./json_files/{dataset_name}/{split}")
+        os.system(
+            f"aws s3 cp s3://s-laion-audio/webdataset_tar/{dataset_name}/{split}/sizes.json ./json_files/{dataset_name}/{split}/sizes.json"
+        )
+
+try:
+    input_shards = [
+        f"pipe:aws s3 cp s3://s-laion-audio/webdataset_tar/audioset/unbalanced_train/{i}.tar -"
+        for i in range(0, 3734)
+    ]
+    # input_shards = ["/mnt/audio_clip/webdataset_tar/audioset/eval/28.tar"]
+    pipeline = [wds.SimpleShardList(input_shards)]
+    _SHARD_SHUFFLE_SIZE = 2000
+    _SHARD_SHUFFLE_INITIAL = 500
+    _SAMPLE_SHUFFLE_SIZE = 5000
+    _SAMPLE_SHUFFLE_INITIAL = 1000
+    pipeline.extend(
+        [
             # wds.detshuffle(bufsize=_SHARD_SHUFFLE_SIZE, initial=_SHARD_SHUFFLE_INITIAL),
             wds.split_by_node,
             wds.split_by_worker,
@@ -138,17 +160,71 @@ for i in tqdm(reversed(range(1226*2,1226*3+1))):
             #     bufsize=_SAMPLE_SHUFFLE_SIZE,
             #     initial=_SAMPLE_SHUFFLE_INITIAL,
             #     rng=random.Random(1)),
-            #wds.repeatedly,  # FIXME determine if this is beneficial
-        ])
-        pipeline.extend([wds.map(preprocess),wds.to_tuple("__url__", "__key__", "waveform"),wds.batched(1)])
-        dataset = wds.DataPipeline(*pipeline)
-        dataloader = wds.WebLoader(dataset, batch_size=1, shuffle=False, num_workers=0)
-        for k, batch in enumerate(dataloader):
-            previous_batch = copy.deepcopy(batch)
-    except:
-        print(i)
-        print(previous_batch)
-        pass
+            # wds.repeatedly,  # FIXME determine if this is beneficial
+        ]
+    )
+    pipeline.extend(
+        [
+            wds.map(preprocess),
+            wds.to_tuple("__url__", "__key__", "waveform"),
+            wds.batched(1),
+        ]
+    )
+    dataset = wds.DataPipeline(*pipeline)
+    dataloader = wds.WebLoader(dataset, batch_size=2, shuffle=False, num_workers=0)
+    old_k = 0
+    old_batch = None
+    for k, batch in tqdm(enumerate(dataloader)):
+        print(k)
+        old_k = k
+        old_batch = copy.deepcopy(batch)
+        # print(batch)
+except:
+    print(old_k)
+    print(old_batch)
+    pass
+# for i in tqdm(reversed(range(1226 * 2, 1226 * 3 + 1))):
+#     try:
+#         input_shards = [
+#             f"pipe:aws s3 cp s3://s-laion-audio/webdataset_tar/audiocaps/test/{i}.tar -",
+#         ]
+#         # input_shards = ["/mnt/audio_clip/webdataset_tar/audioset/eval/28.tar"]
+#         pipeline = [wds.SimpleShardList(input_shards)]
+#         _SHARD_SHUFFLE_SIZE = 2000
+#         _SHARD_SHUFFLE_INITIAL = 500
+#         _SAMPLE_SHUFFLE_SIZE = 5000
+#         _SAMPLE_SHUFFLE_INITIAL = 1000
+#         pipeline.extend(
+#             [
+#                 # wds.detshuffle(bufsize=_SHARD_SHUFFLE_SIZE, initial=_SHARD_SHUFFLE_INITIAL),
+#                 wds.split_by_node,
+#                 wds.split_by_worker,
+#                 # at this point, we have an iterator over the shards assigned to each worker at each node
+#                 wds.tarfile_to_samples(handler=log_and_continue),
+#                 # wds.shuffle(
+#                 #     bufsize=_SAMPLE_SHUFFLE_SIZE,
+#                 #     initial=_SAMPLE_SHUFFLE_INITIAL,
+#                 #     rng=random.Random(1)),
+#                 # wds.repeatedly,  # FIXME determine if this is beneficial
+#             ]
+#         )
+#         pipeline.extend(
+#             [
+#                 wds.map(preprocess),
+#                 wds.to_tuple("__url__", "__key__", "waveform"),
+#                 wds.batched(1),
+#             ]
+#         )
+#         dataset = wds.DataPipeline(*pipeline)
+#         dataloader = wds.WebLoader(dataset, batch_size=1, shuffle=False, num_workers=0)
+#         for k, batch in enumerate(dataloader):
+#             previous_batch = copy.deepcopy(batch)
+#             print(batch)
+#     except:
+#         # print(i)
+#         # print(previous_batch)
+#         pass
+
 # main training loop
 # generator = iter(dataloader)
 # for i in range(9999999999999):

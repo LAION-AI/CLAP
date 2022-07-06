@@ -153,3 +153,4 @@ src/dev.ipynb
 src/sizes.json
 *.pt
 dev.ipynb
+src/json_files/*

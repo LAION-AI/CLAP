@@ -39,7 +39,6 @@ to_3tuple = _ntuple(3)
 to_4tuple = _ntuple(4)
 to_ntuple = _ntuple
 
-
 def drop_path(x, drop_prob: float = 0., training: bool = False):
     """Drop paths (Stochastic Depth) per sample (when applied in main path of residual blocks).
     This is the same as the DropConnect impl I created for EfficientNet, etc networks, however,
@@ -719,8 +718,6 @@ class HTSAT_Swin_Transformer(nn.Module):
         x = self.pos_drop(x)
         for i, layer in enumerate(self.layers):
             x, attn = layer(x)
-
-
         # for x
         x = self.norm(x)
         B, N, C = x.shape
@@ -732,8 +729,10 @@ class HTSAT_Swin_Transformer(nn.Module):
         c_freq_bin = F // self.freq_ratio
         x = x.reshape(B, C, F // c_freq_bin, c_freq_bin, T)
         x = x.permute(0,1,3,2,4).contiguous().reshape(B, C, c_freq_bin, -1)
-
         # get latent_output
+        fine_grained_latent_output = torch.mean(x, dim = 2)
+        fine_grained_latent_output = interpolate(fine_grained_latent_output.permute(0,2,1).contiguous(), 8 * self.patch_stride[1]) 
+        
         latent_output = self.avgpool(torch.flatten(x,2))
         latent_output = torch.flatten(latent_output, 1)
 
@@ -750,6 +749,7 @@ class HTSAT_Swin_Transformer(nn.Module):
         output_dict = {
             'framewise_output': fpx, # already sigmoided
             'clipwise_output': torch.sigmoid(x),
+            'fine_grained_embedding': fine_grained_latent_output,
             'embedding': latent_output
         }
 
@@ -803,8 +803,7 @@ class HTSAT_Swin_Transformer(nn.Module):
     def forward(self, x: torch.Tensor, mixup_lambda = None, infer_mode = False):# out_feat_keys: List[str] = None):
         x = self.spectrogram_extractor(x)   # (batch_size, 1, time_steps, freq_bins)
         x = self.logmel_extractor(x)    # (batch_size, 1, time_steps, mel_bins)
-        
-        
+
         x = x.transpose(1, 3)
         x = self.bn0(x)
         x = x.transpose(1, 3)
@@ -876,7 +875,7 @@ def create_htsat_model(audio_cfg):
                 patch_stride=(4,4),
                 num_classes=audio_cfg.class_num,
                 embed_dim=128,
-                depths=[2,2,18,2],
+                depths=[2,2,12,2],
                 num_heads=[4,8,16,32],
                 window_size=8,
                 config = audio_cfg
@@ -888,8 +887,8 @@ def create_htsat_model(audio_cfg):
                 patch_stride=(4,4),
                 num_classes=audio_cfg.class_num,
                 embed_dim=256,
-                depths=[2,2,18,2],
-                num_heads=[6,12,24,48],
+                depths=[2,2,12,2],
+                num_heads=[4,8,16,32],
                 window_size=8,
                 config = audio_cfg
             )

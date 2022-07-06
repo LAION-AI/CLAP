@@ -1,3 +1,3 @@
-pipe:s3cmd get s3://laion-audio/webdataset_tar/Clotho/test/0.tar
-pipe:s3cmd get s3://laion-audio/webdataset_tar/Clotho/test/1.tar
-pipe:s3cmd get s3://laion-audio/webdataset_tar/Clotho/test/2.tar
+pipe:aws s3 cp s3://s-laion-audio/webdataset_tar/Clotho/test/0.tar
+pipe:aws s3 cp s3://s-laion-audio/webdataset_tar/Clotho/test/1.tar
+pipe:aws s3 cp s3://s-laion-audio/webdataset_tar/Clotho/test/2.tar

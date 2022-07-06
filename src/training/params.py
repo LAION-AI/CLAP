@@ -31,6 +31,12 @@ def parse_args():
         help="if you need to freeze the text encoder, make this True",
     )
     parser.add_argument(
+        "--freeze-text-after",
+        type=int,
+        default=-1,
+        help="if you need to freeze the text encoder after (include) epoch x, set this param to x. Set -1 to disable it",
+    )
+    parser.add_argument(
         "--train-ipc",
         type=str,
         default=None,
@@ -102,6 +108,7 @@ def parse_args():
         default=None,
         help="If loading webdataset, spedify the dataset types to load. Can be some of these: train, test, valid, unbalanced_train, balanced_train, eval",
     )
+    parser.add_argument("--dataset-proportion", type=float, default=1.0, help="How much proportion of dataset we want to train.")
     parser.add_argument(
         "--remotedata",
         default=False,
@@ -109,10 +116,10 @@ def parse_args():
         help="if the dataset is remote, set this flag",
     )
     parser.add_argument(
-        "--data-txt-example",
+        "--datasetpath",
         type=str,
-        default='/mnt/audio_clip/code/CLAP/src/data/datasetname/datasettype.txt',
-        help="An example of the path to the txt file for the dataset",
+        default='/mnt/audio_clip/webdataset_tar',
+        help="The path to the dataset",
     )
     parser.add_argument(
         "--logs",
@@ -146,6 +153,25 @@ def parse_args():
     parser.add_argument("--beta2", type=float, default=None, help="Adam beta 2.")
     parser.add_argument("--eps", type=float, default=None, help="Adam epsilon.")
     parser.add_argument("--wd", type=float, default=0.2, help="Weight decay.")
+
+    parser.add_argument(
+        "--split-opt",
+        action="store_true",
+        default=False,
+        help="Use this flag to skip the learning rate decay.",
+    )
+    parser.add_argument("--lr-pretrained", type=float, default=None, help="Learning rate for text.")
+    parser.add_argument("--beta1-pretrained", type=float, default=None, help="Adam beta 1 for text.")
+    parser.add_argument("--beta2-pretrained", type=float, default=None, help="Adam beta 2 for text.")
+    parser.add_argument("--eps-pretrained", type=float, default=None, help="Adam epsilon for text.")
+    parser.add_argument("--wd-pretrained", type=float, default=0.2, help="Weight decay for text.")
+
+    parser.add_argument("--lr-new", type=float, default=None, help="Learning rate for audio.")
+    parser.add_argument("--beta1-new", type=float, default=None, help="Adam beta 1 for audio.")
+    parser.add_argument("--beta2-new", type=float, default=None, help="Adam beta 2 for audio.")
+    parser.add_argument("--eps-new", type=float, default=None, help="Adam epsilon for audio.")
+    parser.add_argument("--wd-new", type=float, default=0.2, help="Weight decay for audio.")
+
     parser.add_argument(
         "--warmup", type=int, default=10000, help="Number of steps to warmup for."
     )
@@ -320,6 +346,15 @@ def parse_args():
     )
     parser.add_argument(
         "--seed", type=int, default=4242, help="Default random seed."
+    )
+
+    parser.add_argument(
+        "--top-k-checkpoint-select-dataset", type=str, default='all', help="The dataset of selecting top-k checkpoint."
+    )
+
+    # @R10, @R@5, @R1, mAP@10
+    parser.add_argument(
+        "--top-k-checkpoint-select-metric", type=str, default='_R@10', help="The metric for selecting top-k checkpoint."
     )
     args = parser.parse_args()
 
