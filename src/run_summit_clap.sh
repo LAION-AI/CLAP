@@ -1,6 +1,9 @@
 # set log path as the date and time
 LOG="/gpfs/alpine/scratch/wuyusong/csc499/clap_data/audio_clip_logs/clap_log_$(date +%Y%m%d_%H%M%S).log"
 unset CUDA_VISIBLE_DEVICES
+
+pwd
+
 source ${BERT_ROOT}/bootstrap_pytorch_dist_env.sh
 
 python -m training.main \
