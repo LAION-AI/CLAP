@@ -18,7 +18,7 @@ python -m training.main \
     --lr=1e-3 \
     --wd=0.1 \
     --epochs=400 \
-    --workers=4 \
+    --workers=2 \
     --use-bn-sync \
     --freeze-text \
     --model HTSAT-tiny \
