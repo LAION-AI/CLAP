@@ -8,6 +8,8 @@ export NUMBA_CACHE_DIR='/tmp/'
 
 export OMP_NUM_THREADS=7
 
+export HOROVOD_CACHE_CAPACITY=4096
+
 python -m training.main \
     --save-frequency 50 \
     --save-top-performance 3 \
