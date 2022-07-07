@@ -14,7 +14,7 @@ python -m training.main \
     --precision="fp32" \
     --pretrained="openai" \
     --warmup 10000 \
-    --batch-size=32 \
+    --batch-size=64 \
     --lr=1e-3 \
     --wd=0.1 \
     --epochs=400 \
