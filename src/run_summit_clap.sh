@@ -26,8 +26,6 @@ python -m training.main \
     --use-bn-sync \
     --freeze-text \
     --model HTSAT-tiny \
-    --report-to "wandb" \
-    --wandb-notes "text-audio-freeze-text-lr-1e-3-8-dataset-model-pann-14" \
     --datasetnames "audiocaps" "BBCSoundEffects" "audioset" "free_to_use_sounds" "paramount_motion" "sonniss_game_effects" "wesoundeffects" \
     --datasetinfos "train" "unbalanced_train" "balanced_train" \
     --resample-method="None" \
@@ -39,3 +37,5 @@ python -m training.main \
 #    --gather-with-grad
 
 #2>&1 > $LOG
+#    --report-to "wandb" \
+#    --wandb-notes "text-audio-freeze-text-lr-1e-3-8-dataset-model" \
