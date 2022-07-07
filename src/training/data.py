@@ -549,6 +549,7 @@ def get_wds_dataset(
         num_batches = math.ceil(num_samples / args.batch_size)
 
     # sampler = DistributedSampler(dataset) if args.distributed and is_train else None
+    sampler = None
     dataloader = wds.WebLoader(
         dataset, batch_size=None, shuffle=False, num_workers=args.workers, sampler=sampler
     )
