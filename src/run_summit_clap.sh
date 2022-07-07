@@ -4,9 +4,7 @@ unset CUDA_VISIBLE_DEVICES
 
 pwd
 
-ls
-
-source ${BERT_ROOT}/bootstrap_pytorch_dist_env.sh
+source ./bootstrap_pytorch_dist_env.sh
 
 python -m training.main \
     --save-frequency 50 \
