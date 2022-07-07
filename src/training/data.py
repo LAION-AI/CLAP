@@ -19,7 +19,6 @@ from torch.utils.data.distributed import DistributedSampler
 from functools import partial
 import soundfile as sf
 import io
-import torchaudio.functional as F
 from pathlib import Path
 import wget
 from open_clip import tokenize
