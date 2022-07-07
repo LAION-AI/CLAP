@@ -2,11 +2,11 @@
 LOG="/gpfs/alpine/scratch/wuyusong/csc499/clap_data/audio_clip_logs/clap_log_$(date +%Y%m%d_%H%M%S).log"
 unset CUDA_VISIBLE_DEVICES
 
-source ./src/bootstrap_pytorch_dist_env.sh
+source ./bootstrap_pytorch_dist_env.sh
 
 export NUMBA_CACHE_DIR='/tmp/'
 
-python -u src/training/main.py \
+python -m training.main \
     --save-frequency 50 \
     --save-top-performance 3 \
     --save-most-recent \
