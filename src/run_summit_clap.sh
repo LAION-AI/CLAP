@@ -18,7 +18,7 @@ python -m training.main \
     --lr=1e-3 \
     --wd=0.1 \
     --epochs=400 \
-    --workers=48 \
+    --workers=4 \
     --use-bn-sync \
     --freeze-text \
     --model HTSAT-tiny \
@@ -30,6 +30,7 @@ python -m training.main \
     --logs /gpfs/alpine/scratch/wuyusong/csc499/clap_data/audio_clip_logs \
     --openai-model-cache-dir /gpfs/alpine/scratch/wuyusong/csc499/clap_data/.cache/clip \
     --horovod \
+    --local-loss \
     --gather-with-grad
 
 #2>&1 > $LOG
