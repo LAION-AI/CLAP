@@ -6,7 +6,7 @@ source ./bootstrap_pytorch_dist_env.sh
 
 export NUMBA_CACHE_DIR='/tmp/'
 
-python -u training/main.py \
+python -u src/training/main.py \
     --save-frequency 50 \
     --save-top-performance 3 \
     --save-most-recent \
