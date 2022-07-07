@@ -531,10 +531,11 @@ def get_wds_dataset(
         ]
     )
 
-    dataset = wds.DataPipeline(*pipeline)
     # multi-node training
     if args.horovod:
-        dataset = dataset.epoch(10000)
+        dataset = wds.DataPipeline(*pipeline).epoch(10000)
+    else:
+        dataset = wds.DataPipeline(*pipeline)
     if is_train:
         # roll over and repeat a few samples to get same number of full batches on each node
         global_batch_size = args.batch_size * args.world_size
