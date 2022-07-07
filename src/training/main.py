@@ -251,6 +251,11 @@ def main():
         openai_model_cache_dir=os.path.expanduser(args.openai_model_cache_dir),
     )
 
+    if args.horovod:
+        with torch.no_grad():
+            for param in model.parameters():
+                param.set_(param.contiguous())
+
     if args.trace:
         model = trace_model(model, batch_size=args.batch_size, device=device)
 
