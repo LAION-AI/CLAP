@@ -4,6 +4,8 @@ unset CUDA_VISIBLE_DEVICES
 
 pwd
 
+ls
+
 source ./bootstrap_pytorch_dist_env.sh
 
 python -m training.main \
