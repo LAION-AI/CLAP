@@ -26,7 +26,7 @@ python -m training.main \
     --use-bn-sync \
     --freeze-text \
     --model HTSAT-tiny \
-    --datasetnames "audiocaps" "BBCSoundEffects" "audioset" "free_to_use_sounds" "paramount_motion" "sonniss_game_effects" "wesoundeffects" \
+    --datasetnames "audiocaps" "BBCSoundEffects" "audioset" \
     --datasetinfos "train" "unbalanced_train" "balanced_train" \
     --resample-method="None" \
     --datasetpath /gpfs/alpine/scratch/wuyusong/csc499/clap_data/webdataset_tar \
@@ -39,3 +39,5 @@ python -m training.main \
 #2>&1 > $LOG
 #    --report-to "wandb" \
 #    --wandb-notes "text-audio-freeze-text-lr-1e-3-8-dataset-model" \
+
+#     --datasetnames "audiocaps" "BBCSoundEffects" "audioset" "free_to_use_sounds" "paramount_motion" "sonniss_game_effects" "wesoundeffects" \
