@@ -546,7 +546,7 @@ def get_wds_dataset(
         num_batches = math.ceil(num_samples / args.batch_size)
 
     kwargs = {}
-    if args.horovod:
+    if args.horovod:  # multi-node training on summit
         kwargs['multiprocessing_context'] = 'forkserver'
 
     dataloader = wds.WebLoader(

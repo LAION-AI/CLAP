@@ -6,6 +6,8 @@ source ./bootstrap_pytorch_dist_env.sh
 
 export NUMBA_CACHE_DIR='/tmp/'
 
+export OMP_NUM_THREADS=7
+
 python -m training.main \
     --save-frequency 50 \
     --save-top-performance 3 \
