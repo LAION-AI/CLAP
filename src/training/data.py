@@ -545,8 +545,12 @@ def get_wds_dataset(
         # last batches are partial, eval is done on single (master) node
         num_batches = math.ceil(num_samples / args.batch_size)
 
+    kwargs = {}
+    if args.horovod:
+        kwargs['multiprocessing_context'] = 'forkserver'
+
     dataloader = wds.WebLoader(
-        dataset, batch_size=None, shuffle=False, num_workers=args.workers
+        dataset, batch_size=None, shuffle=False, num_workers=args.workers, **kwargs
     )
 
     # FIXME not clear which approach is better, with_epoch before vs after dataloader?
