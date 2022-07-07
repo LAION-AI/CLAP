@@ -1,6 +1,8 @@
 # PANNs: Large-Scale Pretrained Audio Neural Networks for Audio Pattern Recognition
 # Reference from https://github.com/qiuqiangkong/audioset_tagging_cnn
 # Some layers are re-designed for CLAP
+import os
+os.environ['NUMBA_CACHE_DIR'] = '/tmp/'
 
 import torch
 import torch.nn as nn
