@@ -239,6 +239,8 @@ def main():
     else:
         logging.info(f"Running with a single process. Device {args.device}.")
 
+    logging.info(f'openai cache dir: {os.path.expanduser(args.openai_model_cache_dir)}')
+
     model, model_cfg = create_model(
         args.model,
         args.pretrained,
