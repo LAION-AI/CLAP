@@ -4,6 +4,8 @@ unset CUDA_VISIBLE_DEVICES
 
 source ./bootstrap_pytorch_dist_env.sh
 
+
+
 export NUMBA_CACHE_DIR='/tmp/'
 
 python -m training.main \
