@@ -2,7 +2,7 @@
 LOG="/gpfs/alpine/scratch/wuyusong/csc499/clap_data/audio_clip_logs/clap_log_$(date +%Y%m%d_%H%M%S).log"
 unset CUDA_VISIBLE_DEVICES
 
-source ./bootstrap_pytorch_dist_env.sh
+source ./src/bootstrap_pytorch_dist_env.sh
 
 export NUMBA_CACHE_DIR='/tmp/'
 
