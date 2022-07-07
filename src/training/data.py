@@ -467,7 +467,6 @@ def get_wds_dataset(
                 args.val_num_samples or 0
             )  # eval will just exhaust the iterator if not specified
 
-    # multi-node training
     pipeline = [wds.SimpleShardList(input_shards)]
     # at this point we have an iterator over all the shards
     if is_train:
@@ -493,7 +492,6 @@ def get_wds_dataset(
     else:
         pipeline.extend(
             [
-                wds.split_by_node, # multi-node training
                 wds.split_by_worker,
                 # at this point, we have an iterator over the shards assigned to each worker
                 wds.tarfile_to_samples(handler=log_and_continue),
@@ -529,7 +527,6 @@ def get_wds_dataset(
         ]
     )
 
-    # multi-node training
     dataset = wds.DataPipeline(*pipeline)
     if is_train:
         # roll over and repeat a few samples to get same number of full batches on each node
@@ -548,10 +545,8 @@ def get_wds_dataset(
         # last batches are partial, eval is done on single (master) node
         num_batches = math.ceil(num_samples / args.batch_size)
 
-    # sampler = DistributedSampler(dataset) if args.distributed and is_train else None
-    sampler = None
     dataloader = wds.WebLoader(
-        dataset, batch_size=None, shuffle=False, num_workers=args.workers, sampler=sampler
+        dataset, batch_size=None, shuffle=False, num_workers=args.workers
     )
 
     # FIXME not clear which approach is better, with_epoch before vs after dataloader?
