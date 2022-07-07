@@ -532,6 +532,7 @@ def get_wds_dataset(
         ]
     )
 
+    print('HEREEEEEEEEEEEEEEEEE!!!!!!!!!!!!!! \n !!!!!!! \n !!!!!!!')
     # multi-node training
     if args.horovod:
         dataset = wds.DataPipeline(*pipeline).with_epoch(10000)
