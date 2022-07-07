@@ -547,7 +547,6 @@ def get_wds_dataset(
 
     kwargs = {}
     if args.horovod:  # multi-node training on summit
-        print('Using forkserver for multi-node training')
         kwargs['multiprocessing_context'] = 'forkserver'
 
     dataloader = wds.WebLoader(
