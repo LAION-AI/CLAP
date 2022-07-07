@@ -468,7 +468,7 @@ def get_wds_dataset(
             )  # eval will just exhaust the iterator if not specified
 
     # multi-node training
-    if args.horovod:
+    if args.horovod and is_train:
         pipeline = [wds.ResampledShards(input_shards)]
     else:
         pipeline = [wds.SimpleShardList(input_shards)]
@@ -533,10 +533,7 @@ def get_wds_dataset(
     )
 
     # multi-node training
-    if args.horovod:
-        dataset = wds.DataPipeline(*pipeline).with_epoch(10000)
-    else:
-        dataset = wds.DataPipeline(*pipeline)
+    dataset = wds.DataPipeline(*pipeline)
     if is_train:
         # roll over and repeat a few samples to get same number of full batches on each node
         global_batch_size = args.batch_size * args.world_size
