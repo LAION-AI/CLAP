@@ -3,8 +3,6 @@
 nodes=($(cat ${LSB_DJOB_HOSTFILE} | sort | uniq | grep -v login | grep -v batch))
 head=${nodes[0]}
 
-
-
 export RANK=$OMPI_COMM_WORLD_RANK
 export LOCAL_RANK=$OMPI_COMM_WORLD_LOCAL_RANK
 export WORLD_SIZE=$OMPI_COMM_WORLD_SIZE

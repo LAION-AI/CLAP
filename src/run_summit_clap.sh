@@ -21,12 +21,10 @@ python -m training.main \
     --workers=4 \
     --use-bn-sync \
     --freeze-text \
-    --model PANN-14 \
+    --model HTSAT-tiny \
     --resample-method="None" \
-    --datasetnames "audiocaps" \
+    --datasetnames "audiocaps" "audioset" \
     --datasetinfos "train" "unbalanced_train" "balanced_train" \
-    --top-k-checkpoint-select-dataset="Clotho-test" \
-    --top-k-checkpoint-select-metric="mAP@10" \
     --seed 3407 \
     --datasetpath /gpfs/alpine/scratch/wuyusong/csc499/clap_data/webdataset_tar \
     --logs /gpfs/alpine/scratch/wuyusong/csc499/clap_data/audio_clip_logs \
