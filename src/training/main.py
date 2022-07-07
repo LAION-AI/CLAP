@@ -246,6 +246,7 @@ def main():
         device=device,
         jit=args.torchscript,
         force_quick_gelu=args.force_quick_gelu,
+        openai_model_cache_dir=os.path.expanduser(args.openai_model_cache_dir),
     )
 
     if args.trace:

@@ -25,6 +25,7 @@ def load_openai_model(
         model_cfg,
         device: Union[str, torch.device] = "cuda" if torch.cuda.is_available() else "cpu",
         jit=True,
+        cache_dir=os.path.expanduser("~/.cache/clip"),
 ):
     """Load a CLIP model, preserve its text pretrained part, and set in the CLAP model
 
@@ -45,7 +46,7 @@ def load_openai_model(
         A torchvision transform that converts a PIL image into a tensor that the returned model can take as its input
     """
     if get_pretrained_url(name, 'openai'):
-        model_path = download_pretrained(get_pretrained_url(name, 'openai'))
+        model_path = download_pretrained(get_pretrained_url(name, 'openai'), root=cache_dir)
     elif os.path.isfile(name):
         model_path = name
     else:
