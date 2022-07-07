@@ -496,6 +496,7 @@ def get_wds_dataset(
     else:
         pipeline.extend(
             [
+                wds.split_by_node,
                 wds.split_by_worker,
                 # at this point, we have an iterator over the shards assigned to each worker
                 wds.tarfile_to_samples(handler=log_and_continue),
