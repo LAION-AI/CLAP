@@ -492,9 +492,9 @@ def main():
     if "train" not in data:
         evaluate(model, data, start_epoch, args, writer)
         return
-    elif start_epoch == 0 and "val" in data:
-        evaluate(model, data, 0, args, writer)
-        print('Start First Evaluation')
+    # elif start_epoch == 0 and "val" in data:
+    #     evaluate(model, data, 0, args, writer)
+    #     print('Start First Evaluation')
     if args.save_top_performance:
         current_top_k_ckpt_metrics = {
             i: 0 for i in range(args.save_top_performance)
