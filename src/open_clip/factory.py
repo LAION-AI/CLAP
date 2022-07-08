@@ -63,6 +63,7 @@ def create_model(
         device: torch.device = torch.device('cpu'),
         jit: bool = False,
         force_quick_gelu: bool = False,
+        openai_model_cache_dir: str = os.path.expanduser("~/.cache/clip"),
         # pretrained_image: bool = False,
 ):
     model_name = model_name.replace('/', '-')  # for callers using old naming with / in ViT names
@@ -77,7 +78,7 @@ def create_model(
 
         logging.info(f'Loading pretrained ViT-B-16 text encoder from OpenAI.')
         # Hard Code in model name
-        model = load_openai_model("ViT-B-16", model_cfg, device=device, jit=jit)
+        model = load_openai_model("ViT-B-16", model_cfg, device=device, jit=jit, cache_dir=openai_model_cache_dir)
         # See https://discuss.pytorch.org/t/valueerror-attemting-to-unscale-fp16-gradients/81372
         if precision == "amp" or precision == "fp32":
             model = model.float()
@@ -107,7 +108,7 @@ def create_model(
             checkpoint_path = ''
             url = get_pretrained_url(model_name, pretrained)
             if url:
-                checkpoint_path = download_pretrained(url)
+                checkpoint_path = download_pretrained(url, root=openai_model_cache_dir)
             elif os.path.exists(pretrained):
                 checkpoint_path = pretrained
 
