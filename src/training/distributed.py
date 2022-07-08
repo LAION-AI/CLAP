@@ -69,13 +69,20 @@ def init_distributed_device(args):
     if args.horovod:
         assert hvd is not None, "Horovod is not installed"
         hvd.init()
-        args.local_rank = int(hvd.local_rank())
-        args.rank = hvd.rank()
-        args.world_size = hvd.size()
+        world_size = int(os.environ['OMPI_COMM_WORLD_SIZE'])
+        world_rank = int(os.environ['OMPI_COMM_WORLD_RANK'])
+        local_rank = int(os.environ['OMPI_COMM_WORLD_LOCAL_RANK'])
+        args.local_rank = local_rank
+        args.rank = world_rank
+        args.world_size = world_size
+        # args.local_rank = int(hvd.local_rank())
+        # args.rank = hvd.rank()
+        # args.world_size = hvd.size()
         args.distributed = True
         os.environ['LOCAL_RANK'] = str(args.local_rank)
         os.environ['RANK'] = str(args.rank)
         os.environ['WORLD_SIZE'] = str(args.world_size)
+        print("Distributed training: local_rank={}, rank={}, world_size={}".format(args.local_rank, args.rank, args.world_size))
     elif is_using_distributed():
         if 'SLURM_PROCID' in os.environ:
             # DDP via SLURM

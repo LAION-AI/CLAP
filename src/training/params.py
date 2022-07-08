@@ -356,6 +356,9 @@ def parse_args():
     parser.add_argument(
         "--top-k-checkpoint-select-metric", type=str, default='_R@10', help="The metric for selecting top-k checkpoint."
     )
+    parser.add_argument(
+        "--openai-model-cache-dir", type=str, default='~/.cache/clip', help="Directory to download OpenAI models."
+    )
     args = parser.parse_args()
 
     # If some params are not passed, we use the default values based on model name.

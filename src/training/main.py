@@ -239,6 +239,8 @@ def main():
     else:
         logging.info(f"Running with a single process. Device {args.device}.")
 
+    logging.info(f'openai cache dir: {os.path.expanduser(args.openai_model_cache_dir)}')
+
     model, model_cfg = create_model(
         args.model,
         args.pretrained,
@@ -246,7 +248,13 @@ def main():
         device=device,
         jit=args.torchscript,
         force_quick_gelu=args.force_quick_gelu,
+        openai_model_cache_dir=os.path.expanduser(args.openai_model_cache_dir),
     )
+
+    if args.horovod:
+        with torch.no_grad():
+            for param in model.parameters():
+                param.set_(param.contiguous())
 
     if args.trace:
         model = trace_model(model, batch_size=args.batch_size, device=device)
@@ -483,6 +491,7 @@ def main():
 
     if "train" not in data:
         evaluate(model, data, start_epoch, args, writer)
+        print('Start First Evaluation')
         return
     elif start_epoch == 0 and "val" in data:
         evaluate(model, data, 0, args, writer)
@@ -492,6 +501,7 @@ def main():
             i: 0 for i in range(args.save_top_performance)
         }  # initialize the top-k metric for ckpts to 0
 
+    print('Start Training')
     for epoch in range(start_epoch, args.epochs):
         # freeze the text param after (include) args.freeze_text_after, this is -1 by default
         if epoch == args.freeze_text_after:
