@@ -553,14 +553,14 @@ def main():
                     checkpoint_dict,
                     os.path.join(args.checkpoint_path, f"epoch_latest.pt"),
                 )
-            if args.save_top_performance:
-                update_top_k_performance(
-                    filtered_metrics,
-                    current_top_k_ckpt_metrics,
-                    args,
-                    checkpoint_dict,
-                    bignumbetter=True,
-                )
+            # if args.save_top_performance: # TODO: (yusong) changed for multi-node debug
+            #     update_top_k_performance(
+            #         filtered_metrics,
+            #         current_top_k_ckpt_metrics,
+            #         args,
+            #         checkpoint_dict,
+            #         bignumbetter=True,
+            #     )
 
     if args.wandb and is_master(args):
         wandb.finish()
