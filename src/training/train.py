@@ -223,6 +223,7 @@ def evaluate(model, data, epoch, args, tb_writer=None):
     # zero_shot_metrics = zero_shot_eval(model, data, epoch, args)
     # metrics.update(zero_shot_metrics)
 
+    print('Evaluating...')  # for multi-node debug
     autocast = torch.cuda.amp.autocast if args.precision == "amp" else suppress
     if "val" in data and (
         args.val_frequency
