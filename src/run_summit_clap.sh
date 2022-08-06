@@ -10,6 +10,8 @@ export OMP_NUM_THREADS=7
 
 export HOROVOD_CACHE_CAPACITY=0
 
+wandb off
+
 python -m training.main \
     --save-frequency 50 \
     --save-top-performance 3 \
@@ -38,6 +40,11 @@ python -m training.main \
     --horovod \
     --local-loss \
     --gather-with-grad
+
+# TODO: delete
+#    --report-to "wandb" \
+#    --wandb-notes "text-audio-freeze-text-lr-1e-3-8-dataset-model" \
+#    --dataset-proportion 0.1 \
 
 #2>&1 > $LOG
 #    --report-to "wandb" \
