@@ -4,15 +4,15 @@ unset CUDA_VISIBLE_DEVICES
 
 source ./bootstrap_pytorch_dist_env.sh
 
-export NUMBA_CACHE_DIR='/tmp/'
+export NUMBA_CACHE_DIR=/tmp/
 
 export OMP_NUM_THREADS=7
 
 export HOROVOD_CACHE_CAPACITY=0
 
 wandb offline
-export WANDB_DIR='/gpfs/alpine/scratch/wuyusong/csc499/clap_data/audio_clip_logs_wandb'
-export WANDB_CONFIG_DIR='/gpfs/alpine/scratch/wuyusong/csc499/clap_data/audio_clip_logs_wandb'
+export WANDB_DIR=/gpfs/alpine/scratch/wuyusong/csc499/clap_data/audio_clip_logs_wandb
+export WANDB_CONFIG_DIR=/gpfs/alpine/scratch/wuyusong/csc499/clap_data/audio_clip_logs_wandb
 
 python -m training.main \
     --save-frequency 50 \
