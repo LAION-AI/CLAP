@@ -10,7 +10,7 @@ export OMP_NUM_THREADS=7
 
 export HOROVOD_CACHE_CAPACITY=0
 
-wandb off
+wandb offline
 
 python -m training.main \
     --save-frequency 50 \
