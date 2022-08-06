@@ -10,7 +10,9 @@ export HOROVOD_CACHE_CAPACITY=0
 
 export WANDB_DIR=/gpfs/alpine/scratch/wuyusong/csc499/clap_data/audio_clip_logs_wandb
 export WANDB_CONFIG_DIR=/gpfs/alpine/scratch/wuyusong/csc499/clap_data/audio_clip_logs_wandb
+export WANDB_MODE=offline
 wandb offline
+# Export need to be strictly before than wandb offline
 
 source ./bootstrap_pytorch_dist_env.sh
 
