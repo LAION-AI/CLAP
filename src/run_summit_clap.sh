@@ -34,7 +34,6 @@ python -m training.main \
     --resample-method="None" \
     --report-to "wandb" \
     --wandb-notes "text-audio-freeze-text-lr-1e-3-8-dataset-model" \
-    --dataset-proportion 0.5 \
     --datasetpath /gpfs/alpine/scratch/wuyusong/csc499/clap_data/webdataset_tar \
     --logs /gpfs/alpine/scratch/wuyusong/csc499/clap_data/audio_clip_logs \
     --openai-model-cache-dir /gpfs/alpine/scratch/wuyusong/csc499/clap_data/.cache/clip \
