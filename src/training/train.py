@@ -210,7 +210,7 @@ def train_one_epoch(
             batch_time_m.reset()
             data_time_m.reset()
 
-        print(f'batch_count: {batch_count}')
+    print(f'batch_count: {batch_count}')
     # end for
 
 
