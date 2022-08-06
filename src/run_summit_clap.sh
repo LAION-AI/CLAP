@@ -12,6 +12,7 @@ export HOROVOD_CACHE_CAPACITY=0
 
 wandb offline
 export WANDB_DIR='/gpfs/alpine/scratch/wuyusong/csc499/clap_data/audio_clip_logs_wandb'
+export WANDB_CONFIG_DIR='/gpfs/alpine/scratch/wuyusong/csc499/clap_data/audio_clip_logs_wandb'
 
 python -m training.main \
     --save-frequency 50 \
