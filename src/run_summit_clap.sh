@@ -32,7 +32,7 @@ python -m training.main \
     --use-bn-sync \
     --freeze-text \
     --model HTSAT-tiny \
-    --datasetnames "audiocaps" "BBCSoundEffects" "audioset" \
+    --datasetnames "audiocaps" "BBCSoundEffects" "audioset" "free_to_use_sounds" "paramount_motion" "sonniss_game_effects" "wesoundeffects" \
     --datasetinfos "train" "unbalanced_train" "balanced_train" \
     --resample-method="None" \
     --report-to "wandb" \
