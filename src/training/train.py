@@ -223,8 +223,8 @@ def evaluate(model, data, epoch, args, tb_writer=None):
     # CHANGE
     # zero_shot_metrics = zero_shot_eval(model, data, epoch, args)
     # metrics.update(zero_shot_metrics)
-
-    print('Evaluating...')  # for multi-node debug
+    if is_master(args):
+        print('Evaluating...')
     autocast = torch.cuda.amp.autocast if args.precision == "amp" else suppress
     if "val" in data and (
         args.val_frequency
@@ -338,6 +338,7 @@ def evaluate(model, data, epoch, args, tb_writer=None):
                                         0, torch.tensor(idx).long()
                                     )
                                 )
+                        print(f'eval step {i}')
 
                 # cumulative_loss += total_loss * batch_size
                 # num_samples += batch_size
@@ -345,53 +346,56 @@ def evaluate(model, data, epoch, args, tb_writer=None):
                     logging.info(
                         f"Eval Epoch: {epoch} [{num_samples} / {samples_per_val}]"
                     )
-            val_metrics_s = {}
-            for n in eval_info.keys():
-                metrics_single_dataset = get_metrics(
-                    audio_features=torch.cat(eval_info[n]["all_audio_features"]),
-                    text_features=torch.cat(eval_info[n]["all_text_features"]),
-                    audio_features_mlp=torch.cat(
-                        eval_info[n]["all_audio_features_mlp"]
-                    ),
-                    text_features_mlp=torch.cat(eval_info[n]["all_text_features_mlp"]),
-                    logit_scale_a=logit_scale_a.cpu(),
-                    logit_scale_t=logit_scale_t.cpu(),
-                )
-                val_metrics_s[n] = {
-                    n + "/" + k: v for k, v in metrics_single_dataset.items()
-                }
-                metrics.update(val_metrics_s[n])
-                if "epoch" not in metrics.keys():
-                    metrics.update({"epoch": epoch})
+            if is_master(args):
+                val_metrics_s = {}
+                for n in eval_info.keys():
+                    metrics_single_dataset = get_metrics(
+                        audio_features=torch.cat(eval_info[n]["all_audio_features"]),
+                        text_features=torch.cat(eval_info[n]["all_text_features"]),
+                        audio_features_mlp=torch.cat(
+                            eval_info[n]["all_audio_features_mlp"]
+                        ),
+                        text_features_mlp=torch.cat(eval_info[n]["all_text_features_mlp"]),
+                        logit_scale_a=logit_scale_a.cpu(),
+                        logit_scale_t=logit_scale_t.cpu(),
+                    )
+                    val_metrics_s[n] = {
+                        n + "/" + k: v for k, v in metrics_single_dataset.items()
+                    }
+                    metrics.update(val_metrics_s[n])
+                    if "epoch" not in metrics.keys():
+                        metrics.update({"epoch": epoch})
+    if is_master(args):
+        if not metrics:
+            return metrics
 
-    if not metrics:
-        return metrics
-
-    logging.info(
-        f"Eval Epoch: {epoch} "
-        + "\n".join(
-            [
-                "\t".join([f"{k}: {round(v, 4):.4f}" for k, v in m.items()])
-                for m in val_metrics_s.values()
-            ]
+        logging.info(
+            f"Eval Epoch: {epoch} "
+            + "\n".join(
+                [
+                    "\t".join([f"{k}: {round(v, 4):.4f}" for k, v in m.items()])
+                    for m in val_metrics_s.values()
+                ]
+            )
         )
-    )
 
-    if args.save_logs:
-        for name, val in metrics.items():
-            if tb_writer is not None:
-                tb_writer.add_scalar(f"val/{name}", val, epoch)
+        if args.save_logs:
+            for name, val in metrics.items():
+                if tb_writer is not None:
+                    tb_writer.add_scalar(f"val/{name}", val, epoch)
 
-        with open(os.path.join(args.checkpoint_path, "results.jsonl"), "a+") as f:
-            f.write(json.dumps(metrics))
-            f.write("\n")
+            with open(os.path.join(args.checkpoint_path, "results.jsonl"), "a+") as f:
+                f.write(json.dumps(metrics))
+                f.write("\n")
 
-    if args.wandb:
-        assert wandb is not None, "Please install wandb."
-        for name, val in metrics.items():
-            wandb.log({f"val/{name}": val, "epoch": epoch})
+        if args.wandb:
+            assert wandb is not None, "Please install wandb."
+            for name, val in metrics.items():
+                wandb.log({f"val/{name}": val, "epoch": epoch})
 
-    return metrics
+        return metrics
+    else:
+        return None
 
 
 def get_metrics(
