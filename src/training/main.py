@@ -10,6 +10,7 @@ import torch
 import torch.backends.cudnn as cudnn
 from torch import optim
 from torch.cuda.amp import GradScaler
+import faulthandler
 
 try:
     import wandb
@@ -130,6 +131,9 @@ def main():
     # sanitize model name for filesystem / uri use, easier if we don't use / in name as a rule?
     args.model = args.model.replace("/", "-")
     # download sizes.json file
+
+    print("setting up faulthandler")
+    faulthandler.register(10)
 
     random.seed(args.seed)
     torch.manual_seed(args.seed)

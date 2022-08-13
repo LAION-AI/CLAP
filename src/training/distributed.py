@@ -1,6 +1,7 @@
 import os
 
 import torch
+import socket
 
 try:
     import horovod.torch as hvd
@@ -82,7 +83,7 @@ def init_distributed_device(args):
         os.environ['LOCAL_RANK'] = str(args.local_rank)
         os.environ['RANK'] = str(args.rank)
         os.environ['WORLD_SIZE'] = str(args.world_size)
-        print("Distributed training: local_rank={}, rank={}, world_size={}".format(args.local_rank, args.rank, args.world_size))
+        print("Distributed training: local_rank={}, rank={}, world_size={}, hostname={}, pid={}".format(args.local_rank, args.rank, args.world_size, socket.gethostname(), os.getpid()))
     elif is_using_distributed():
         if 'SLURM_PROCID' in os.environ:
             # DDP via SLURM
