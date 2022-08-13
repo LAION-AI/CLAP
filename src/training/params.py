@@ -359,6 +359,13 @@ def parse_args():
     parser.add_argument(
         "--openai-model-cache-dir", type=str, default='~/.cache/clip', help="Directory to download OpenAI models."
     )
+
+    parser.add_argument(
+        "--parallel-eval",
+        default=False,
+        action="store_true",
+        help="Eval in parallel (multi-GPU, multi-node)."
+    )
     args = parser.parse_args()
 
     # If some params are not passed, we use the default values based on model name.
