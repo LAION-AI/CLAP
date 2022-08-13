@@ -98,6 +98,19 @@ def init_distributed_device(args):
                 world_size=args.world_size,
                 rank=args.rank,
             )
+        elif 'OMPI_COMM_WORLD_SIZE' in os.environ: # using Summit cluster
+            world_size = int(os.environ['OMPI_COMM_WORLD_SIZE'])
+            world_rank = int(os.environ['OMPI_COMM_WORLD_RANK'])
+            local_rank = int(os.environ['OMPI_COMM_WORLD_LOCAL_RANK'])
+            args.local_rank = local_rank
+            args.rank = world_rank
+            args.world_size = world_size
+            torch.distributed.init_process_group(
+                backend=args.dist_backend,
+                init_method=args.dist_url,
+                world_size=args.world_size,
+                rank=args.rank,
+            )
         else:
             # DDP via torchrun, torch.distributed.launch
             args.local_rank, _, _ = world_info_from_env()
