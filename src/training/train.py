@@ -395,7 +395,7 @@ def evaluate(model, data, epoch, args, tb_writer=None):
 
         return metrics
     else:
-        return None
+        return {}
 
 
 def get_metrics(
