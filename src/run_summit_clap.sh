@@ -40,8 +40,8 @@ python -m training.main \
     --datasetpath /gpfs/alpine/scratch/wuyusong/csc499/clap_data/webdataset_tar \
     --logs /gpfs/alpine/scratch/wuyusong/csc499/clap_data/audio_clip_logs \
     --openai-model-cache-dir /gpfs/alpine/scratch/wuyusong/csc499/clap_data/.cache/clip \
-    --horovod \
-    --gather-with-grad
+    --gather-with-grad \
+    --local-loss
 
 #2>&1 > $LOG
 #    --report-to "wandb" \
