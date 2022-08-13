@@ -342,7 +342,7 @@ def evaluate(model, data, epoch, args, tb_writer=None):
 
                 # cumulative_loss += total_loss * batch_size
                 # num_samples += batch_size
-                if is_master(args) and (i % 100) == 0 and i != 0:
+                if is_master(args) and (i % 100) == 0:  # and i != 0:
                     logging.info(
                         f"Eval Epoch: {epoch} [{num_samples} / {samples_per_val}]"
                     )
