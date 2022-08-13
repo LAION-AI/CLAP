@@ -496,9 +496,9 @@ def main():
     if "train" not in data:
         evaluate(model, data, start_epoch, args, writer)
         return
-    # elif start_epoch == 0 and "val" in data: # TODO: (yusong) changed for multi-node debug
-    #     evaluate(model, data, 0, args, writer)
-    #     print('Start First Evaluation')
+    elif start_epoch == 0 and "val" in data:
+        evaluate(model, data, 0, args, writer)
+        print('Start First Evaluation')
     if args.save_top_performance:
         current_top_k_ckpt_metrics = {
             i: 0 for i in range(args.save_top_performance)
@@ -517,17 +517,16 @@ def main():
         train_one_epoch(model, data, epoch, optimizer, scaler, scheduler, args, writer)
         completed_epoch = epoch + 1
 
-        # # TODO: (yusong) changed for multi-node debug
-        # if any(v in data for v in ("val", "imagenet-val", "imagenet-v2")):
-        #     metrics = evaluate(model, data, completed_epoch, args, writer)
-        #     if args.save_top_performance:
-        #         top_k_dataset = args.top_k_checkpoint_select_dataset
-        #         top_k_metric = args.top_k_checkpoint_select_metric
-        #         filtered_metrics = [
-        #             v
-        #             for k, v in metrics.items()
-        #             if top_k_metric in k and top_k_dataset in k
-        #         ]  # check all R@10 metrics (all dataset) and use it to update the ckpt
+        if any(v in data for v in ("val", "imagenet-val", "imagenet-v2")):
+            metrics = evaluate(model, data, completed_epoch, args, writer)
+            if args.save_top_performance:
+                top_k_dataset = args.top_k_checkpoint_select_dataset
+                top_k_metric = args.top_k_checkpoint_select_metric
+                filtered_metrics = [
+                    v
+                    for k, v in metrics.items()
+                    if top_k_metric in k and top_k_dataset in k
+                ]  # check all R@10 metrics (all dataset) and use it to update the ckpt
         # Saving checkpoints.
         if args.save_logs:
             if args.split_opt:

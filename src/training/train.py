@@ -14,7 +14,7 @@ try:
 except ImportError:
     wandb = None
 
-from open_clip import ClipLoss
+from open_clip import ClipLoss, gather_features
 from .distributed import is_master
 from .zero_shot import zero_shot_eval
 
@@ -209,15 +209,14 @@ def train_one_epoch(
             # resetting batch / data time meters per log window
             batch_time_m.reset()
             data_time_m.reset()
-
-    print(f'batch_count: {batch_count}')
     # end for
 
 
 def evaluate(model, data, epoch, args, tb_writer=None):
     metrics = {}
-    if not is_master(args):
-        return metrics
+    if not args.parallel_eval:
+        if not is_master(args):
+            return metrics
     device = torch.device(args.device)
     model.eval()
 
@@ -249,9 +248,7 @@ def evaluate(model, data, epoch, args, tb_writer=None):
         # all_audio_features, all_text_features, all_audio_features_mlp, all_text_features_mlp = [], [], [], []
         with torch.no_grad():
             for i, batch in enumerate(dataloader):
-                audios = batch[
-                    2
-                ]  # (yusong) todo:  change to retrieve from index for now.
+                audios = batch[2]  # (yusong) todo:  change to retrieve from index for now.
                 texts = batch[3][:, 0, :]
                 audios = audios.to(device=device, non_blocking=True)
                 texts = texts.to(device=device, non_blocking=True)
@@ -277,49 +274,70 @@ def evaluate(model, data, epoch, args, tb_writer=None):
                         logit_scale_t,
                     ) = model(audios, texts)
 
-                    num_samples += audio_features.shape[0]
+                    if args.parallel_eval:
+                        # (yusong) multi-GPU eval
+                        (
+                            audio_features,
+                            text_features,
+                            audio_features_mlp,
+                            text_features_mlp,
+                        ) = gather_features(
+                            audio_features,
+                            text_features,
+                            audio_features_mlp,
+                            text_features_mlp,
+                            local_loss=args.local_loss,
+                            gather_with_grad=args.gather_with_grad,
+                            rank=args.rank,
+                            world_size=args.world_size,
+                            use_horovod=args.horovod,
+                            )
 
-                    for n in [*all_names, "all"]:
-                        if n == "all":
-                            eval_info[n]["all_audio_features"].append(
-                                audio_features.cpu()
-                            )
-                            eval_info[n]["all_text_features"].append(
-                                text_features.cpu()
-                            )
-                            eval_info[n]["all_audio_features_mlp"].append(
-                                audio_features_mlp.cpu()
-                            )
-                            eval_info[n]["all_text_features_mlp"].append(
-                                text_features_mlp.cpu()
-                            )
-                        else:
-                            idx = np.where(
-                                np.array(
-                                    ["-".join(b.split("/")[-3:-1]) for b in batch[0]]
+                    if is_master(args):
+
+                        num_samples += audio_features.shape[0]
+
+                        for n in [*all_names, "all"]:
+                            if n == "all":
+                                eval_info[n]["all_audio_features"].append(
+                                    audio_features.cpu()
                                 )
-                                == n
-                            )[0]
-                            eval_info[n]["all_audio_features"].append(
-                                audio_features.cpu().index_select(
-                                    0, torch.tensor(idx).long()
+                                eval_info[n]["all_text_features"].append(
+                                    text_features.cpu()
                                 )
-                            )
-                            eval_info[n]["all_text_features"].append(
-                                text_features.cpu().index_select(
-                                    0, torch.tensor(idx).long()
+                                eval_info[n]["all_audio_features_mlp"].append(
+                                    audio_features_mlp.cpu()
                                 )
-                            )
-                            eval_info[n]["all_audio_features_mlp"].append(
-                                audio_features_mlp.cpu().index_select(
-                                    0, torch.tensor(idx).long()
+                                eval_info[n]["all_text_features_mlp"].append(
+                                    text_features_mlp.cpu()
                                 )
-                            )
-                            eval_info[n]["all_text_features_mlp"].append(
-                                text_features_mlp.cpu().index_select(
-                                    0, torch.tensor(idx).long()
+                            else:
+                                idx = np.where(
+                                    np.array(
+                                        ["-".join(b.split("/")[-3:-1]) for b in batch[0]]
+                                    )
+                                    == n
+                                )[0]
+                                eval_info[n]["all_audio_features"].append(
+                                    audio_features.cpu().index_select(
+                                        0, torch.tensor(idx).long()
+                                    )
                                 )
-                            )
+                                eval_info[n]["all_text_features"].append(
+                                    text_features.cpu().index_select(
+                                        0, torch.tensor(idx).long()
+                                    )
+                                )
+                                eval_info[n]["all_audio_features_mlp"].append(
+                                    audio_features_mlp.cpu().index_select(
+                                        0, torch.tensor(idx).long()
+                                    )
+                                )
+                                eval_info[n]["all_text_features_mlp"].append(
+                                    text_features_mlp.cpu().index_select(
+                                        0, torch.tensor(idx).long()
+                                    )
+                                )
 
                 # cumulative_loss += total_loss * batch_size
                 # num_samples += batch_size
