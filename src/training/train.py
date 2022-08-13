@@ -275,7 +275,7 @@ def evaluate(model, data, epoch, args, tb_writer=None):
                     ) = model(audios, texts)
 
                     if args.parallel_eval:
-                        # (yusong) multi-GPU eval
+                        # multi-GPU eval
                         (
                             audio_features,
                             text_features,

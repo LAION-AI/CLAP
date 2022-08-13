@@ -498,13 +498,13 @@ def main():
         return
     elif start_epoch == 0 and "val" in data:
         evaluate(model, data, 0, args, writer)
-        print('Start First Evaluation')
+        print(f'rank {args.rank}, Start First Evaluation')
     if args.save_top_performance:
         current_top_k_ckpt_metrics = {
             i: 0 for i in range(args.save_top_performance)
         }  # initialize the top-k metric for ckpts to 0
 
-    print('Start Training')
+    print(f'rank {args.rank}, Start Training')
     for epoch in range(start_epoch, args.epochs):
         # freeze the text param after (include) args.freeze_text_after, this is -1 by default
         if epoch == args.freeze_text_after:
