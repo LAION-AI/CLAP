@@ -41,7 +41,8 @@ python -m training.main \
     --logs /gpfs/alpine/scratch/wuyusong/csc499/clap_data/audio_clip_logs \
     --openai-model-cache-dir /gpfs/alpine/scratch/wuyusong/csc499/clap_data/.cache/clip \
     --gather-with-grad \
-    --local-loss
+    --local-loss \
+    --no-eval
 
 #2>&1 > $LOG
 #    --report-to "wandb" \

@@ -83,7 +83,9 @@ def init_distributed_device(args):
         os.environ['LOCAL_RANK'] = str(args.local_rank)
         os.environ['RANK'] = str(args.rank)
         os.environ['WORLD_SIZE'] = str(args.world_size)
-        print("Distributed training: local_rank={}, rank={}, world_size={}, hostname={}, pid={}".format(args.local_rank, args.rank, args.world_size, socket.gethostname(), os.getpid()))
+        print(f"Distributed training: local_rank={args.local_rank}, "
+              f"rank={args.rank}, world_size={args.world_size}, "
+              f"hostname={socket.gethostname()}, pid={os.getpid()}")
     elif is_using_distributed():
         if 'SLURM_PROCID' in os.environ:
             # DDP via SLURM
@@ -120,6 +122,9 @@ def init_distributed_device(args):
             args.world_size = torch.distributed.get_world_size()
             args.rank = torch.distributed.get_rank()
         args.distributed = True
+        print(f"Distributed training: local_rank={args.local_rank}, "
+              f"rank={args.rank}, world_size={args.world_size}, "
+              f"hostname={socket.gethostname()}, pid={os.getpid()}")
 
     if torch.cuda.is_available():
         if args.distributed and not args.no_set_device_rank:

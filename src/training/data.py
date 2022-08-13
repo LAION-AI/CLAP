@@ -372,7 +372,6 @@ def preprocess(
     max_len,
     dtype,
     res_type,
-    resample_method="TorchAudio",
 ):
     """
     Preprocess a single sample for wdsdataloader.
@@ -429,7 +428,6 @@ def get_wds_dataset(
     proportion=1.0,
     sizefilepath_=None,
     is_local=None,
-    resample_method=None,
 ):
     """
     Get a dataset for wdsdataloader.
@@ -509,7 +507,6 @@ def get_wds_dataset(
                     max_len=max_len,
                     dtype=dtype,
                     res_type=res_type,
-                    resample_method=args.resample_method,
                 )
             ),
             # TODO: (yusong) use wds.to_dict instead?
