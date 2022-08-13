@@ -338,7 +338,7 @@ def evaluate(model, data, epoch, args, tb_writer=None):
                                         0, torch.tensor(idx).long()
                                     )
                                 )
-                        print(f'eval step {i}')
+                        #  print(f'eval step {i}') #  (yusong): for debug
 
                 # cumulative_loss += total_loss * batch_size
                 # num_samples += batch_size
@@ -395,7 +395,7 @@ def evaluate(model, data, epoch, args, tb_writer=None):
 
         return metrics
     else:
-        return {}
+        return metrics
 
 
 def get_metrics(

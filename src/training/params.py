@@ -366,6 +366,13 @@ def parse_args():
         action="store_true",
         help="Eval in parallel (multi-GPU, multi-node)."
     )
+
+    parser.add_argument(
+        "--no-eval",
+        default=False,
+        action="store_true",
+        help="Training without evaluation."
+    )
     args = parser.parse_args()
 
     # If some params are not passed, we use the default values based on model name.
