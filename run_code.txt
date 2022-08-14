@@ -283,3 +283,12 @@ torchrun --nproc_per_node 8  -m training.main \
     --top-k-checkpoint-select-metric="mAP@10" \
     --seed 3407 \
     --remotedata
+
+----run on summit----
+
+module load open-ce/1.5.2-py39-0
+conda activate ~/audio_clip
+cd ~/CLAP/src
+
+num_nodes=16
+jsrun --launch_distribution=packed -bpacked:7 -n${num_nodes} -r1 -a6 -g6 -c42 ./launch-smt4.sh ./run_summit_clap.sh
