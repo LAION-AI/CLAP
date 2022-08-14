@@ -21,7 +21,7 @@ python -m training.main \
     --save-top-performance 3 \
     --save-most-recent \
     --dataset-type="webdataset" \
-    --precision="fp16" \
+    --precision="amp" \
     --pretrained="openai" \
     --warmup 10000 \
     --batch-size=80 \
