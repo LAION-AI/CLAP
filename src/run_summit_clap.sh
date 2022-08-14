@@ -21,10 +21,10 @@ python -m training.main \
     --save-top-performance 3 \
     --save-most-recent \
     --dataset-type="webdataset" \
-    --precision="fp32" \
+    --precision="fp16" \
     --pretrained="openai" \
     --warmup 10000 \
-    --batch-size=48 \
+    --batch-size=96 \
     --lr=1e-3 \
     --wd=0.1 \
     --epochs=400 \
