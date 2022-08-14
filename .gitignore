@@ -154,3 +154,4 @@ src/sizes.json
 *.pt
 dev.ipynb
 src/json_files/*
+.vs/*
