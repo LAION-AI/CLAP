@@ -24,7 +24,7 @@ python -m training.main \
     --precision="amp" \
     --pretrained="openai" \
     --warmup 10000 \
-    --batch-size=80 \
+    --batch-size=72 \
     --lr=1e-3 \
     --wd=0.1 \
     --epochs=400 \
