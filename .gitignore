@@ -155,3 +155,4 @@ src/sizes.json
 dev.ipynb
 src/json_files/*
 .vs/*
+run.sh

@@ -98,3 +98,7 @@ Please refer to the ``get_metrics()`` function in the ``train.py``.
 ## Link to Pretrained Models
 TODO
 
+## Test if tar is invalid
+``python test_tars.py --tar-path "pipe:aws s3 cp s3://s-laion-audio/webdataset_tar/audioset/unbalanced_train" --start 0 --end 100 --exclude 11 21 --batch-size 32 --order``
+
+This means test tars from ``pipe:aws s3 cp s3://s-laion-audio/webdataset_tar/audioset/unbalanced_train/0.tar`` to ``pipe:aws s3 cp s3://s-laion-audio/webdataset_tar/audioset/unbalanced_train/100.tar`` but exclude ``pipe:aws s3 cp s3://s-laion-audio/webdataset_tar/audioset/unbalanced_train/11.tar``and ``pipe:aws s3 cp s3://s-laion-audio/webdataset_tar/audioset/unbalanced_train/21.tar``. The iterative order if not random by specifying `--order`.
