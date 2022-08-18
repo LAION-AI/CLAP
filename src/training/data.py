@@ -373,6 +373,8 @@ def preprocess(
     dtype,
     res_type,
     resample_method="TorchAudio",
+    multi_hot_class_name=None,
+    args=None,
 ):
     """
     Preprocess a single sample for wdsdataloader.
@@ -402,11 +404,16 @@ def preprocess(
 
     sample["waveform"] = torch.tensor(audio_data).float()
     del sample[audio_ext]
-    texts = json.loads(sample[text_ext].decode("utf-8"))["text"]
+    json_dict_raw = json.loads(sample[text_ext].decode("utf-8"))
+    texts = json_dict_raw["text"]
     if isinstance(texts, list) and isinstance(texts[0], str) and len(texts) > 1:
         texts = random.choice(texts)
     sample["raw_text"] = texts
     sample["text"] = tokenize(texts)
+    if multi_hot_class_name:
+        sample["multi_class_label"] = np.zeros(len(args.lp_class_label))
+        for x in json_dict_raw["class_names"]:
+            sample["multi_class_label"][args.lp_class_label[x]] = 1
     del sample[text_ext]
     sample["audio_name"] = sample["__key__"].split("/")[-1] + "." + audio_ext
     sample["text_name"] = sample["__key__"].split("/")[-1] + "." + text_ext
@@ -510,6 +517,8 @@ def get_wds_dataset(
                     dtype=dtype,
                     res_type=res_type,
                     resample_method=args.resample_method,
+                    multi_hot_class_name=bool(args.lp_class_label),
+                    args=args,
                 )
             ),
             # TODO: (yusong) use wds.to_dict instead?

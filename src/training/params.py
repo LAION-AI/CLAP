@@ -116,6 +116,12 @@ def parse_args():
         help="if the dataset is remote, set this flag",
     )
     parser.add_argument(
+        "--lp-class-label",
+        type=str,
+        default=None,
+        help="The path of the class label pickle."
+    )
+    parser.add_argument(
         "--datasetpath",
         type=str,
         default='/mnt/audio_clip/webdataset_tar',

@@ -286,3 +286,28 @@ def get_data_from_log(txt_path):
             "train_loss": train_losses[i],
         }
     return train_data, val_data
+
+def save_p(obj, filename):
+    import pickle
+
+    try:
+        from deepdiff import DeepDiff
+    except:
+        os.system("pip install deepdiff")
+        from deepdiff import DeepDiff
+    with open(filename, "wb") as file:
+        pickle.dump(obj, file, protocol=pickle.HIGHEST_PROTOCOL)  # highest protocol
+    with open(filename, "rb") as file:
+        z = pickle.load(file)
+    assert (
+        DeepDiff(obj, z, ignore_string_case=True) == {}
+    ), "there is something wrong with the saving process"
+    return
+
+
+def load_p(filename):
+    import pickle
+
+    with open(filename, "rb") as file:
+        z = pickle.load(file)
+    return z
