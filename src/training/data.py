@@ -404,7 +404,10 @@ def preprocess(
 
     sample["waveform"] = torch.tensor(audio_data).float()
     del sample[audio_ext]
-    json_dict_raw = json.loads(sample[text_ext].decode("utf-8"))
+    try:
+        json_dict_raw = json.loads(sample[text_ext].decode("utf-8"))
+    except:
+        print("sample[__url__]:", sample["__url__"])
     texts = json_dict_raw["text"]
     if isinstance(texts, list) and isinstance(texts[0], str) and len(texts) > 1:
         texts = random.choice(texts)
