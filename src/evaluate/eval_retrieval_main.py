@@ -118,7 +118,7 @@ if __name__ == '__main__':
 
     all_model_checkpoints = glob.glob(os.path.join(log_dir, 'checkpoints', '*.pt'))
     for model_path in all_model_checkpoints:
-        args.checkpoint_path = model_path
+        args.checkpoint_path = os.path.dirname(model_path)
         model, model_cfg = create_model(
             model_type,
             pretrained,
