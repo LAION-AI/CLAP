@@ -100,7 +100,7 @@ if __name__ == '__main__':
         find_params_value(params_file, 'wandb_notes')
         if wandb_notes is None:
             wandb_notes = f'experiment_{time.strftime("%Y%m%d-%H%M%S")}'
-        wandb_notes = wandb_notes + '_retrieval_eval'
+        wandb_notes = wandb_notes + '-eval-retrieval'
 
         logging.debug("Starting wandb.")
         args.train_sz = data["train"].dataloader.num_samples
@@ -118,6 +118,7 @@ if __name__ == '__main__':
 
     all_model_checkpoints = glob.glob(os.path.join(log_dir, 'checkpoints', '*.pt'))
     for model_path in all_model_checkpoints:
+        args.checkpoint_path = model_path
         model, model_cfg = create_model(
             model_type,
             pretrained,
