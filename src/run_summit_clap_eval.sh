@@ -1,0 +1,25 @@
+# set log path as the date and time
+LOG="/gpfs/alpine/scratch/wuyusong/csc499/clap_data/audio_clip_logs/clap_log_$(date +%Y%m%d_%H%M%S).log"
+unset CUDA_VISIBLE_DEVICES
+
+export NUMBA_CACHE_DIR=/tmp/
+
+export OMP_NUM_THREADS=7
+
+export HOROVOD_CACHE_CAPACITY=0
+
+export WANDB_DIR=/gpfs/alpine/scratch/wuyusong/csc499/clap_data/audio_clip_logs_wandb
+export WANDB_CONFIG_DIR=/gpfs/alpine/scratch/wuyusong/csc499/clap_data/audio_clip_logs_wandb
+export WANDB_MODE=offline
+wandb offline
+# Export need to be strictly before than wandb offline
+
+source ./bootstrap_pytorch_dist_env.sh
+
+python -m training.evaluate.eval_retrieval_main \
+    --datasetpath /gpfs/alpine/scratch/wuyusong/csc499/clap_data/webdataset_tar \
+    --datasetnames "audiocaps" "BBCSoundEffects" "audioset" "free_to_use_sounds" "paramount_motion" "sonniss_game_effects" "wesoundeffects" \
+    --report-to "wandb" \
+    --dataset-type="webdataset" \
+    --batch-size=48 \
+    --resume /gpfs/alpine/scratch/wuyusong/csc499/clap_data/audio_clip_logs/2022_08_14-00_48_09-model_HTSAT-tiny-lr_0.001-b_48-j_4-p_fp32/epoch_latest.pt
