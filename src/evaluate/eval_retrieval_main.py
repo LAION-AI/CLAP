@@ -113,7 +113,7 @@ if __name__ == '__main__':
     all_model_checkpoints = glob.glob(os.path.join(log_dir, 'checkpoints', '*.pt'))
     for model_path in all_model_checkpoints:
 
-        device = torch.device('gpu:0' if torch.cudnn.is_available() else 'cpu')
+        device = torch.device('gpu:0' if torch.cuda.is_available() else 'cpu')
         model, model_cfg = create_model(
             model_type,
             pretrained,
