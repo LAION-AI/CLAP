@@ -21,4 +21,4 @@ python -m evaluate.eval_retrieval_main \
     --dataset-type="webdataset" \
     --batch-size=48 \
     --workers=4 \
-    --resume /gpfs/alpine/scratch/wuyusong/csc499/clap_data/audio_clip_logs/2022_08_14-00_48_09-model_HTSAT-tiny-lr_0.001-b_48-j_4-p_fp32/checkpoints/epoch_latest.pt
+    --resume /gpfs/alpine/scratch/wuyusong/csc499/clap_data/audio_clip_logs/2022_08_14-20_56_47-model_HTSAT-tiny-lr_0.001-b_48-j_4-p_fp32/checkpoints/epoch_latest.pt
