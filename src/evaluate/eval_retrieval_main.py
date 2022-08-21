@@ -25,7 +25,7 @@ def find_params_value(file, key):
     # find value of params in params_file
     with open(file, 'r') as f:
         for line in f:
-            if key in line:
+            if key + ': ' in line:
                 return line.split(': ')[1].strip()
     return None
 
