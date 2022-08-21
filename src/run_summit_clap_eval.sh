@@ -14,8 +14,6 @@ export WANDB_MODE=offline
 wandb offline
 # Export need to be strictly before than wandb offline
 
-source ./bootstrap_pytorch_dist_env.sh
-
 python -m evaluate.eval_retrieval_main \
     --datasetpath /gpfs/alpine/scratch/wuyusong/csc499/clap_data/webdataset_tar \
     --datasetnames "audiocaps" "BBCSoundEffects" "audioset" "free_to_use_sounds" "paramount_motion" "sonniss_game_effects" "wesoundeffects" \
