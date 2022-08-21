@@ -58,6 +58,9 @@ if __name__ == '__main__':
     args.save_logs = True
     args.wandb = True
 
+    device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
+    args.device = device
+
     if args.remotedata:
         for dataset_name in args.datasetnames:
             for split in dataset_split[dataset_name]:
@@ -115,8 +118,6 @@ if __name__ == '__main__':
 
     all_model_checkpoints = glob.glob(os.path.join(log_dir, 'checkpoints', '*.pt'))
     for model_path in all_model_checkpoints:
-
-        device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
         model, model_cfg = create_model(
             model_type,
             pretrained,
