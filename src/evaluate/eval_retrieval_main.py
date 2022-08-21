@@ -48,6 +48,7 @@ if __name__ == '__main__':
     args.parallel_eval = False
     args.rank = 0
     args.local_rank = 0
+    args.world_size = 1
     args.val_frequency = 1
     args.epochs = 1
     args.precision = 'fp32'
