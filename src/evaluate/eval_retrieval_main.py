@@ -44,6 +44,8 @@ if __name__ == '__main__':
     pretrained = 'openai'
     model_type = find_params_value(params_file, 'model')
 
+    print(f'model_type: {model_type}')
+
     # set up dummy values for args
     args.parallel_eval = False
     args.rank = 0
