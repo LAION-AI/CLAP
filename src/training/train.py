@@ -46,7 +46,7 @@ def unwrap_model(model):
 
 
 def train_one_epoch(
-    model, data, epoch, optimizer, scaler, scheduler, args, tb_writer=None
+        model, data, epoch, optimizer, scaler, scheduler, args, tb_writer=None
 ):
     device = torch.device(args.device)
     autocast = torch.cuda.amp.autocast if args.precision == "amp" else suppress
@@ -227,8 +227,8 @@ def evaluate(model, data, epoch, args, tb_writer=None):
         print('Evaluating...')
     autocast = torch.cuda.amp.autocast if args.precision == "amp" else suppress
     if "val" in data and (
-        args.val_frequency
-        and ((epoch % args.val_frequency) == 0 or epoch == args.epochs)
+            args.val_frequency
+            and ((epoch % args.val_frequency) == 0 or epoch == args.epochs)
     ):
         dataloader = data["val"].dataloader
         num_samples = 0
@@ -274,9 +274,8 @@ def evaluate(model, data, epoch, args, tb_writer=None):
                         logit_scale_t,
                     ) = model(audios, texts)
 
-                    # debug
-                    print(audio_features[0][:10])
-                    break
+                    # TODO: debug
+                    print(audio_features[0][10:20])
 
                     if args.parallel_eval:
                         # multi-GPU eval
@@ -295,7 +294,7 @@ def evaluate(model, data, epoch, args, tb_writer=None):
                             rank=args.rank,
                             world_size=args.world_size,
                             use_horovod=args.horovod,
-                            )
+                        )
 
                     if is_master(args):
 
@@ -353,6 +352,8 @@ def evaluate(model, data, epoch, args, tb_writer=None):
             if is_master(args):
                 val_metrics_s = {}
                 for n in eval_info.keys():
+                    # TODO: debug
+                    print(torch.cat(eval_info[n]["all_audio_features"])[10:20, 40:50])
                     metrics_single_dataset = get_metrics(
                         audio_features=torch.cat(eval_info[n]["all_audio_features"]),
                         text_features=torch.cat(eval_info[n]["all_text_features"]),
@@ -403,12 +404,12 @@ def evaluate(model, data, epoch, args, tb_writer=None):
 
 
 def get_metrics(
-    audio_features,
-    text_features,
-    audio_features_mlp,
-    text_features_mlp,
-    logit_scale_a,
-    logit_scale_t,
+        audio_features,
+        text_features,
+        audio_features_mlp,
+        text_features_mlp,
+        logit_scale_a,
+        logit_scale_t,
 ):
     metrics = {}
     # Set up audio to text & text to audio similary matrice
@@ -424,11 +425,11 @@ def get_metrics(
     labels = torch.arange(audio_features.shape[0]).long()
     # Change the loss from two terms into four terms with 2x2 combined CE loss
     total_loss = (
-        F.cross_entropy(a_logits_per_audio, labels)
-        + F.cross_entropy(a_logits_per_text, labels)
-        + F.cross_entropy(t_logits_per_audio, labels)
-        + F.cross_entropy(t_logits_per_text, labels)
-    ) / 4
+                         F.cross_entropy(a_logits_per_audio, labels)
+                         + F.cross_entropy(a_logits_per_text, labels)
+                         + F.cross_entropy(t_logits_per_audio, labels)
+                         + F.cross_entropy(t_logits_per_text, labels)
+                 ) / 4
 
     metrics[f"cumulative_loss"] = total_loss.item()
     metrics[f"num_samples"] = audio_features.shape[0]
