@@ -45,6 +45,7 @@ if __name__ == '__main__':
     model_type = find_params_value(params_file, 'model')
 
     print(f'model_type: {model_type}')
+    print(f'log_dir: {log_dir}')
 
     # set up dummy values for args
     args.parallel_eval = False
