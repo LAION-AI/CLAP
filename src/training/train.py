@@ -274,6 +274,10 @@ def evaluate(model, data, epoch, args, tb_writer=None):
                         logit_scale_t,
                     ) = model(audios, texts)
 
+                    # debug
+                    print(audio_features[0][:10])
+                    break
+
                     if args.parallel_eval:
                         # multi-GPU eval
                         (
