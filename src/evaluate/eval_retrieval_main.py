@@ -44,8 +44,8 @@ if __name__ == '__main__':
     pretrained = 'openai'
     model_type = find_params_value(params_file, 'model')
 
-    print(f'model_type: {model_type}')
-    print(f'log_dir: {log_dir}')
+    if model_type is None:
+        raise ValueError('model type not found in params file')
 
     # set up dummy values for args
     args.parallel_eval = False
