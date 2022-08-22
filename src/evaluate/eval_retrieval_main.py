@@ -31,6 +31,8 @@ def find_params_value(file, key):
 
 
 if __name__ == '__main__':
+    # (yusong) repeated run might have different metric results.
+    # This is because we randomly select crop 10s for each audio.
     args = parse_args()
 
     log_dir = os.path.dirname(os.path.dirname(args.resume))

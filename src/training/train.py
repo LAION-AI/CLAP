@@ -274,9 +274,6 @@ def evaluate(model, data, epoch, args, tb_writer=None):
                         logit_scale_t,
                     ) = model(audios, texts)
 
-                    # TODO: debug
-                    print(audio_features[0][10:20])
-
                     if args.parallel_eval:
                         # multi-GPU eval
                         (
@@ -352,8 +349,6 @@ def evaluate(model, data, epoch, args, tb_writer=None):
             if is_master(args):
                 val_metrics_s = {}
                 for n in eval_info.keys():
-                    # TODO: debug
-                    print(torch.cat(eval_info[n]["all_audio_features"])[10:20, 40:50])
                     metrics_single_dataset = get_metrics(
                         audio_features=torch.cat(eval_info[n]["all_audio_features"]),
                         text_features=torch.cat(eval_info[n]["all_text_features"]),
