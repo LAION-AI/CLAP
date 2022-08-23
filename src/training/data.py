@@ -373,8 +373,7 @@ def preprocess(
     dtype,
     res_type,
     resample_method="TorchAudio",
-    multi_hot_class_name=None,
-    args=None,
+    class_index_dict=None,
 ):
     """
     Preprocess a single sample for wdsdataloader.
@@ -385,12 +384,6 @@ def preprocess(
         overflow = len(audio_data) - max_len
         idx = np.random.randint(0, overflow + 1)
         audio_data = audio_data[idx : idx + max_len]
-        # if np.random.rand() > 0.5:
-        #    audio_data = audio_data[idx : idx + max_len]
-        # else:
-        #    audio_data = audio_data[
-        #        len(audio_data) + 1 - idx - max_len : len(audio_data) + 1 - idx
-        #    ]
     else:  # padding if too short
         audio_data = np.pad(
             audio_data,
@@ -404,19 +397,21 @@ def preprocess(
 
     sample["waveform"] = torch.tensor(audio_data).float()
     del sample[audio_ext]
+
     try:
         json_dict_raw = json.loads(sample[text_ext].decode("utf-8"))
     except:
         print("sample[__url__]:", sample["__url__"])
     texts = json_dict_raw["text"]
+
     if isinstance(texts, list) and isinstance(texts[0], str) and len(texts) > 1:
         texts = random.choice(texts)
     sample["raw_text"] = texts
     sample["text"] = tokenize(texts)
-    if multi_hot_class_name:
-        sample["multi_class_label"] = np.zeros(len(args.lp_class_label))
+    if bool(class_index_dict):
+        sample["class_label"] = np.zeros(len(class_index_dict))
         for x in json_dict_raw["class_names"]:
-            sample["multi_class_label"][args.lp_class_label[x]] = 1
+            sample["class_label"][class_index_dict[x]] = 1
     del sample[text_ext]
     sample["audio_name"] = sample["__key__"].split("/")[-1] + "." + audio_ext
     sample["text_name"] = sample["__key__"].split("/")[-1] + "." + text_ext
@@ -520,8 +515,7 @@ def get_wds_dataset(
                     dtype=dtype,
                     res_type=res_type,
                     resample_method=args.resample_method,
-                    multi_hot_class_name=bool(args.lp_class_label),
-                    args=args,
+                    class_index_dict=args.class_index_dict,
                 )
             ),
             # TODO: (yusong) use wds.to_dict instead?
