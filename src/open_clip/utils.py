@@ -10,6 +10,7 @@ import json
 import os
 
 
+
 dataset_split = {
     "audiocaps": ["train", "valid", "test"],
     "audioset": ["balanced_train", "unbalanced_train", "eval"],
@@ -311,3 +312,17 @@ def load_p(filename):
     with open(filename, "rb") as file:
         z = pickle.load(file)
     return z
+
+def load_class_label(path):
+    import pathlib
+    if path is not None:
+        if pathlib.Path(path).suffix in [".pkl", ".pickle"]: 
+            out = load_p(path)
+        elif pathlib.Path(path).suffix in [".json", ".txt"]:
+            out = json.load(open(path))
+        elif pathlib.Path(path).suffix in [".npy", ".npz"]:
+            out = np.load(path)
+        elif pathlib.Path(path).suffix in [".csv"]:
+            import pandas as pd
+            out = pd.read_csv(path)
+    return out
