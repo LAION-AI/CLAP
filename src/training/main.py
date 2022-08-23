@@ -10,7 +10,7 @@ import torch
 import torch.backends.cudnn as cudnn
 from torch import optim
 from torch.cuda.amp import GradScaler
-
+import pathlib
 try:
     import wandb
 except ImportError:
@@ -34,7 +34,7 @@ from training.params import parse_args
 from training.scheduler import cosine_lr
 from training.train import train_one_epoch, evaluate
 from open_clip.utils import get_tar_path_from_dataset_name, dataset_split
-from open_clip.utils import load_p
+from open_clip.utils import load_p, load_class_label
 
 def maintain_ckpts(args, startidx, all_idx_len):
     for i in reversed(range(startidx, all_idx_len)):
@@ -136,8 +136,8 @@ def main():
     torch.cuda.manual_seed(args.seed)
     torch.cuda.manual_seed_all(args.seed)
     np.random.seed(args.seed)
-    if args.lp_class_label is not None:
-        args.lp_class_label = load_p(args.lp_class_label)
+    args.class_index_dict = load_class_label(args.class_label_path)
+
     if args.remotedata:
         for dataset_name in args.datasetnames:
             for split in dataset_split[dataset_name]:
