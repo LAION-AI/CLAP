@@ -116,10 +116,10 @@ def parse_args():
         help="if the dataset is remote, set this flag",
     )
     parser.add_argument(
-        "--lp-class-label",
+        "--class-label-path",
         type=str,
         default=None,
-        help="The path of the class label pickle."
+        help="The path of the class label pickle or csv."
     )
     parser.add_argument(
         "--datasetpath",
