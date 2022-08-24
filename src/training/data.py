@@ -367,11 +367,8 @@ def preprocess(
     sample,
     audio_ext,
     text_ext,
-    samplerate,
-    mono,
     max_len,
-    dtype,
-    res_type,
+    class_index_dict=None,
 ):
     """
     Preprocess a single sample for wdsdataloader.
@@ -382,12 +379,6 @@ def preprocess(
         overflow = len(audio_data) - max_len
         idx = np.random.randint(0, overflow + 1)
         audio_data = audio_data[idx : idx + max_len]
-        # if np.random.rand() > 0.5:
-        #    audio_data = audio_data[idx : idx + max_len]
-        # else:
-        #    audio_data = audio_data[
-        #        len(audio_data) + 1 - idx - max_len : len(audio_data) + 1 - idx
-        #    ]
     else:  # padding if too short
         audio_data = np.pad(
             audio_data,
@@ -401,11 +392,21 @@ def preprocess(
 
     sample["waveform"] = torch.tensor(audio_data).float()
     del sample[audio_ext]
-    texts = json.loads(sample[text_ext].decode("utf-8"))["text"]
+
+    try:
+        json_dict_raw = json.loads(sample[text_ext].decode("utf-8"))
+    except:
+        print("sample[__url__]:", sample["__url__"])
+    texts = json_dict_raw["text"]
+
     if isinstance(texts, list) and isinstance(texts[0], str) and len(texts) > 1:
         texts = random.choice(texts)
     sample["raw_text"] = texts
     sample["text"] = tokenize(texts)
+    if bool(class_index_dict):
+        sample["class_label"] = np.zeros(len(class_index_dict))
+        for x in json_dict_raw["tag"]:
+            sample["class_label"][class_index_dict[x]] = 1
     del sample[text_ext]
     sample["audio_name"] = sample["__key__"].split("/")[-1] + "." + audio_ext
     sample["text_name"] = sample["__key__"].split("/")[-1] + "." + text_ext
@@ -420,11 +421,8 @@ def get_wds_dataset(
     is_train,
     audio_ext="flac",
     text_ext="json",
-    samplerate=48000,
-    mono=True,
     max_len=480000,
     dtype="float64",
-    res_type="kaiser_best",
     proportion=1.0,
     sizefilepath_=None,
     is_local=None,
@@ -502,11 +500,8 @@ def get_wds_dataset(
                     preprocess,
                     audio_ext=audio_ext,
                     text_ext=text_ext,
-                    samplerate=samplerate,
-                    mono=mono,
                     max_len=max_len,
-                    dtype=dtype,
-                    res_type=res_type,
+                    class_index_dict=args.class_index_dict,
                 )
             ),
             # TODO: (yusong) use wds.to_dict instead?
@@ -546,7 +541,7 @@ def get_wds_dataset(
 
     kwargs = {}
     if args.horovod:  # multi-node training on summit
-        kwargs['multiprocessing_context'] = 'forkserver'
+        kwargs["multiprocessing_context"] = "forkserver"
 
     dataloader = wds.WebLoader(
         dataset, batch_size=None, shuffle=False, num_workers=args.workers, **kwargs

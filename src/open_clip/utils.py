@@ -10,6 +10,7 @@ import json
 import os
 
 
+
 dataset_split = {
     "audiocaps": ["train", "valid", "test"],
     "audioset": ["balanced_train", "unbalanced_train", "eval"],
@@ -286,3 +287,42 @@ def get_data_from_log(txt_path):
             "train_loss": train_losses[i],
         }
     return train_data, val_data
+
+def save_p(obj, filename):
+    import pickle
+
+    try:
+        from deepdiff import DeepDiff
+    except:
+        os.system("pip install deepdiff")
+        from deepdiff import DeepDiff
+    with open(filename, "wb") as file:
+        pickle.dump(obj, file, protocol=pickle.HIGHEST_PROTOCOL)  # highest protocol
+    with open(filename, "rb") as file:
+        z = pickle.load(file)
+    assert (
+        DeepDiff(obj, z, ignore_string_case=True) == {}
+    ), "there is something wrong with the saving process"
+    return
+
+
+def load_p(filename):
+    import pickle
+
+    with open(filename, "rb") as file:
+        z = pickle.load(file)
+    return z
+
+def load_class_label(path):
+    import pathlib
+    if path is not None:
+        if pathlib.Path(path).suffix in [".pkl", ".pickle"]: 
+            out = load_p(path)
+        elif pathlib.Path(path).suffix in [".json", ".txt"]:
+            out = json.load(open(path))
+        elif pathlib.Path(path).suffix in [".npy", ".npz"]:
+            out = np.load(path)
+        elif pathlib.Path(path).suffix in [".csv"]:
+            import pandas as pd
+            out = pd.read_csv(path)
+    return out

@@ -61,14 +61,17 @@ import random
 import copy
 from tqdm import tqdm
 import s3fs
+import numpy as np
 import shutil
-
+import json
+from open_clip.utils import load_p
+import logging
+lp_class_label = load_p("audioset_class_labels_indices.pkl")
 
 def log_and_continue(exn):
     """Call in an exception handler to ignore any exception, isssue a warning, and continue."""
     logging.warning(f"Handling webdataset error ({repr(exn)}). Ignoring.")
     return True
-
 
 def preprocess(
     sample,
@@ -80,6 +83,10 @@ def preprocess(
     audio_ext = "flac"
     audio_data, orig_sr = sf.read(io.BytesIO(sample[audio_ext]))
     sample["waveform"] = audio_data
+    json_dict_raw = json.loads(sample["json"].decode("utf-8"))
+    sample["multi_class_label"] = np.zeros(len(lp_class_label))
+    for x in json_dict_raw["class_names"]:
+        sample["multi_class_label"][lp_class_label[x]] = 1
     return sample
 
 
@@ -124,25 +131,26 @@ def preprocess(
 
 
 # 假设有数据集dataset_all = [‘aaa’, ‘bbb’, ‘ccc’]和他们的split
-dataset_split = {
-    "audiocaps": ["train", "valid", "test"],
-    "audioset": ["balanced_train", "unbalanced_train", "eval"],
-    "BBCSoundEffects": ["train", "test"],
-    "Clotho": ["train", "test", "valid"],
-}
-for dataset_name in ["audiocaps", "audioset", "BBCSoundEffects", "Clotho"]:
-    for split in dataset_split[dataset_name]:
-        if not os.path.exists(f"./json_files/{dataset_name}/{split}"):
-            os.makedirs(f"./json_files/{dataset_name}/{split}")
-        os.system(
-            f"aws s3 cp s3://s-laion-audio/webdataset_tar/{dataset_name}/{split}/sizes.json ./json_files/{dataset_name}/{split}/sizes.json"
-        )
+# dataset_split = {
+#     "audiocaps": ["train", "valid", "test"],
+#     "audioset": ["balanced_train", "unbalanced_train", "eval"],
+#     "BBCSoundEffects": ["train", "test"],
+#     "Clotho": ["train", "test", "valid"],
+# }
+# for dataset_name in ["audiocaps", "audioset", "BBCSoundEffects", "Clotho"]:
+#     for split in dataset_split[dataset_name]:
+#         if not os.path.exists(f"./json_files/{dataset_name}/{split}"):
+#             os.makedirs(f"./json_files/{dataset_name}/{split}")
+#         os.system(
+#             f"aws s3 cp s3://s-laion-audio/webdataset_tar/{dataset_name}/{split}/sizes.json ./json_files/{dataset_name}/{split}/sizes.json"
+#         )
 
 try:
-    input_shards = [
-        f"pipe:aws s3 cp s3://s-laion-audio/webdataset_tar/audioset/unbalanced_train/{i}.tar -"
-        for i in range(0, 3734)
-    ]
+    # input_shards = [
+    #     f"pipe:aws s3 cp s3://s-laion-audio/webdataset_tar/audioset/unbalanced_train/{i}.tar -"
+    #     for i in range(0, 3734)
+    # ]
+    input_shards = ["file://D:/eval.tar"]
     # input_shards = ["/mnt/audio_clip/webdataset_tar/audioset/eval/28.tar"]
     pipeline = [wds.SimpleShardList(input_shards)]
     _SHARD_SHUFFLE_SIZE = 2000
@@ -166,7 +174,7 @@ try:
     pipeline.extend(
         [
             wds.map(preprocess),
-            wds.to_tuple("__url__", "__key__", "waveform"),
+            wds.to_tuple("__url__", "__key__", "waveform", "multi_class_label"),
             wds.batched(1),
         ]
     )
@@ -178,7 +186,7 @@ try:
         print(k)
         old_k = k
         old_batch = copy.deepcopy(batch)
-        # print(batch)
+        print(batch)
 except:
     print(old_k)
     print(old_batch)
