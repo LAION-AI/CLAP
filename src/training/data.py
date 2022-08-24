@@ -465,7 +465,7 @@ def get_wds_dataset(
 
     pipeline = [wds.SimpleShardList(input_shards)]
     # at this point we have an iterator over all the shards
-    if is_train:
+    if is_train or args.parallel_eval:
         pipeline.extend(
             [
                 wds.detshuffle(
@@ -515,12 +515,14 @@ def get_wds_dataset(
                 "text_name",
                 "audio_orig_sr",
             ),
-            wds.batched(args.batch_size, partial=not is_train),
+            wds.batched(args.batch_size, partial=not (is_train or args.parallel_eval)),
         ]
     )
 
     dataset = wds.DataPipeline(*pipeline)
-    if is_train:
+    if is_train or args.parallel_eval:
+        # (yusong): Currently parallel evaluation will be not precise as we are repeat the last few samples.
+        # (yusong): See comments below.
         # roll over and repeat a few samples to get same number of full batches on each node
         global_batch_size = args.batch_size * args.world_size
         num_batches = math.ceil(num_samples / global_batch_size)

@@ -211,13 +211,6 @@ def parse_args():
         "--val-frequency", type=int, default=1, help="How often to run evaluation with val data."
     )
     parser.add_argument(
-        "--resample-method",
-        default=None,
-        type=str,
-        required=True,
-        help="Set None to disable resampling. Set TorchAudio to use batchwise torchaudio.resample. Set Librosa to use librosa.resample in the dataloader. Set TorchAudio_ to use torchaudio.resample in the dataloader.",
-    )
-    parser.add_argument(
         "--resume",
         default=None,
         type=str,
@@ -364,6 +357,20 @@ def parse_args():
     )
     parser.add_argument(
         "--openai-model-cache-dir", type=str, default='~/.cache/clip', help="Directory to download OpenAI models."
+    )
+
+    parser.add_argument(
+        "--parallel-eval",
+        default=False,
+        action="store_true",
+        help="Eval in parallel (multi-GPU, multi-node)."
+    )
+
+    parser.add_argument(
+        "--no-eval",
+        default=False,
+        action="store_true",
+        help="Training without evaluation."
     )
     args = parser.parse_args()
 

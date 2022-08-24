@@ -10,7 +10,9 @@ import torch
 import torch.backends.cudnn as cudnn
 from torch import optim
 from torch.cuda.amp import GradScaler
+import faulthandler
 import pathlib
+
 try:
     import wandb
 except ImportError:
@@ -130,6 +132,10 @@ def main():
     # sanitize model name for filesystem / uri use, easier if we don't use / in name as a rule?
     args.model = args.model.replace("/", "-")
     # download sizes.json file
+
+    # (yusong): the below two lines are for debug
+    # print("setting up faulthandler")
+    # faulthandler.register(10)
 
     random.seed(args.seed)
     torch.manual_seed(args.seed)
@@ -482,6 +488,7 @@ def main():
         wandb.init(
             project="clap",
             notes=args.wandb_notes,
+            name=args.wandb_notes,
             tags=[],
             config=vars(args),
         )
@@ -492,17 +499,16 @@ def main():
 
     if "train" not in data:
         evaluate(model, data, start_epoch, args, writer)
-        print('Start First Evaluation')
         return
-    elif start_epoch == 0 and "val" in data:
+    elif start_epoch == 0 and "val" in data and not args.no_eval:
         evaluate(model, data, 0, args, writer)
-        # pass
+        #  print(f'rank {args.rank}, Start First Evaluation')#  (yusong): for debug
     if args.save_top_performance:
         current_top_k_ckpt_metrics = {
             i: 0 for i in range(args.save_top_performance)
         }  # initialize the top-k metric for ckpts to 0
 
-    print('Start Training')
+    #  print(f'rank {args.rank}, Start Training') #  (yusong): for debug
     for epoch in range(start_epoch, args.epochs):
         # freeze the text param after (include) args.freeze_text_after, this is -1 by default
         if epoch == args.freeze_text_after:
@@ -515,7 +521,7 @@ def main():
         train_one_epoch(model, data, epoch, optimizer, scaler, scheduler, args, writer)
         completed_epoch = epoch + 1
 
-        if any(v in data for v in ("val", "imagenet-val", "imagenet-v2")):
+        if any(v in data for v in ("val", "imagenet-val", "imagenet-v2")) and not args.no_eval:
             metrics = evaluate(model, data, completed_epoch, args, writer)
             if args.save_top_performance:
                 top_k_dataset = args.top_k_checkpoint_select_dataset
@@ -554,7 +560,7 @@ def main():
                     checkpoint_dict,
                     os.path.join(args.checkpoint_path, f"epoch_latest.pt"),
                 )
-            if args.save_top_performance:
+            if args.save_top_performance and not args.no_eval:
                 update_top_k_performance(
                     filtered_metrics,
                     current_top_k_ckpt_metrics,
