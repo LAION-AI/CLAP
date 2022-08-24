@@ -367,12 +367,7 @@ def preprocess(
     sample,
     audio_ext,
     text_ext,
-    samplerate,
-    mono,
     max_len,
-    dtype,
-    res_type,
-    resample_method="TorchAudio",
     class_index_dict=None,
 ):
     """
@@ -410,7 +405,7 @@ def preprocess(
     sample["text"] = tokenize(texts)
     if bool(class_index_dict):
         sample["class_label"] = np.zeros(len(class_index_dict))
-        for x in json_dict_raw["class_names"]:
+        for x in json_dict_raw["tag"]:
             sample["class_label"][class_index_dict[x]] = 1
     del sample[text_ext]
     sample["audio_name"] = sample["__key__"].split("/")[-1] + "." + audio_ext
@@ -426,15 +421,11 @@ def get_wds_dataset(
     is_train,
     audio_ext="flac",
     text_ext="json",
-    samplerate=48000,
-    mono=True,
     max_len=480000,
     dtype="float64",
-    res_type="kaiser_best",
     proportion=1.0,
     sizefilepath_=None,
     is_local=None,
-    resample_method=None,
 ):
     """
     Get a dataset for wdsdataloader.
@@ -509,12 +500,7 @@ def get_wds_dataset(
                     preprocess,
                     audio_ext=audio_ext,
                     text_ext=text_ext,
-                    samplerate=samplerate,
-                    mono=mono,
                     max_len=max_len,
-                    dtype=dtype,
-                    res_type=res_type,
-                    resample_method=args.resample_method,
                     class_index_dict=args.class_index_dict,
                 )
             ),
@@ -553,7 +539,7 @@ def get_wds_dataset(
 
     kwargs = {}
     if args.horovod:  # multi-node training on summit
-        kwargs['multiprocessing_context'] = 'forkserver'
+        kwargs["multiprocessing_context"] = "forkserver"
 
     dataloader = wds.WebLoader(
         dataset, batch_size=None, shuffle=False, num_workers=args.workers, **kwargs
