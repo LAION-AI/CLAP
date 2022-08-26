@@ -305,7 +305,6 @@ def save_p(obj, filename):
     ), "there is something wrong with the saving process"
     return
 
-
 def load_p(filename):
     import pickle
 
@@ -313,13 +312,26 @@ def load_p(filename):
         z = pickle.load(file)
     return z
 
+def save_json(data, name="data.json"):
+    import json
+    with open(name, 'w') as fp:
+        json.dump(data, fp)
+    return
+
+def load_json(name):
+    import json
+    with open(name, 'r') as fp:
+        data = json.load(fp)
+    return data
+
+
 def load_class_label(path):
     import pathlib
     if path is not None:
         if pathlib.Path(path).suffix in [".pkl", ".pickle"]: 
             out = load_p(path)
         elif pathlib.Path(path).suffix in [".json", ".txt"]:
-            out = json.load(open(path))
+            out = load_json(path)
         elif pathlib.Path(path).suffix in [".npy", ".npz"]:
             out = np.load(path)
         elif pathlib.Path(path).suffix in [".csv"]:
