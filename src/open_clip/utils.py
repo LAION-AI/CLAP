@@ -8,6 +8,7 @@ from tqdm import tqdm
 import random
 import json
 import os
+import pathlib
 
 
 
@@ -314,9 +315,9 @@ def load_p(filename):
     return z
 
 def load_class_label(path):
-    import pathlib
+    out = None
     if path is not None:
-        if pathlib.Path(path).suffix in [".pkl", ".pickle"]: 
+        if pathlib.Path(path).suffix in [".pkl", ".pickle"]:
             out = load_p(path)
         elif pathlib.Path(path).suffix in [".json", ".txt"]:
             out = json.load(open(path))
