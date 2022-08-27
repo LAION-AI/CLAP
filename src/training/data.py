@@ -417,6 +417,7 @@ def preprocess(
 # TODO: Yusong: clear unused arguments
 def get_wds_dataset(
     args,
+    model_cfg,
     is_train,
     audio_ext="flac",
     text_ext="json",
