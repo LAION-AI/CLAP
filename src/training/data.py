@@ -417,12 +417,10 @@ def preprocess(
 # TODO: Yusong: clear unused arguments
 def get_wds_dataset(
     args,
-    model_cfg,
     is_train,
     audio_ext="flac",
     text_ext="json",
     max_len=480000,
-    dtype="float64",
     proportion=1.0,
     sizefilepath_=None,
     is_local=None,
@@ -493,18 +491,19 @@ def get_wds_dataset(
                 wds.tarfile_to_samples(handler=log_and_continue),
             ]
         )
-    pipeline.extend(
-        [
-            wds.map(
-                partial(
-                    preprocess,
-                    audio_ext=audio_ext,
-                    text_ext=text_ext,
-                    max_len=max_len,
-                    class_index_dict=args.class_index_dict,
-                )
-            ),
-            # TODO: (yusong) use wds.to_dict instead?
+    pipeline.append(
+        wds.map(
+            partial(
+                preprocess,
+                audio_ext=audio_ext,
+                text_ext=text_ext,
+                max_len=max_len,
+                class_index_dict=args.class_index_dict,
+            )
+        ),
+    )
+    if args.class_index_dict:
+        pipeline.append(
             wds.to_tuple(
                 "__url__",
                 "__key__",
@@ -515,10 +514,23 @@ def get_wds_dataset(
                 "audio_name",
                 "text_name",
                 "audio_orig_sr",
+            )
+        )
+    else:  # do not add class_label if no class_index_dict is provided
+        pipeline.append(
+            wds.to_tuple(
+                "__url__",
+                "__key__",
+                "waveform",
+                "text",
+                "raw_text",
+                "audio_name",
+                "text_name",
+                "audio_orig_sr",
             ),
-            wds.batched(args.batch_size, partial=not (is_train or args.parallel_eval)),
-        ]
-    )
+        )
+
+    pipeline.append(wds.batched(args.batch_size, partial=not (is_train or args.parallel_eval)))
 
     dataset = wds.DataPipeline(*pipeline)
     if is_train or args.parallel_eval:
