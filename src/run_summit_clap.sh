@@ -30,7 +30,6 @@ python -m training.main \
     --epochs=400 \
     --workers=4 \
     --use-bn-sync \
-    --freeze-text \
     --model HTSAT-tiny \
     --datasetnames "audiocaps" "BBCSoundEffects" "audioset" "free_to_use_sounds" "paramount_motion" "sonniss_game_effects" "wesoundeffects" \
     --datasetinfos "train" "unbalanced_train" "balanced_train" \
