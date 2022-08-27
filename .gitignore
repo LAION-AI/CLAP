@@ -159,3 +159,6 @@ run.sh
 Untitled.ipynb
 dev.ipynb
 src/dev.py
+ESC.csv
+.gitignore
+UrbanSound8K.csv

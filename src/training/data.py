@@ -511,6 +511,7 @@ def get_wds_dataset(
                 "waveform",
                 "text",
                 "raw_text",
+                "class_label",
                 "audio_name",
                 "text_name",
                 "audio_orig_sr",
