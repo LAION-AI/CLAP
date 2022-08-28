@@ -67,6 +67,7 @@ if __name__ == '__main__':
     args.precision = 'fp32'
     args.save_logs = True
     args.wandb = True
+    args.class_index_dict = None
 
     device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
     args.device = device
