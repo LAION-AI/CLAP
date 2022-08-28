@@ -4,6 +4,7 @@ import glob
 import json
 import librosa
 from tqdm import tqdm
+import random
 import numpy as np
 import logging
 import wandb
@@ -40,6 +41,13 @@ if __name__ == '__main__':
     log_path = os.path.join(log_dir, 'out.log')
     setup_logging(log_path, args.log_level)
     params_file = os.path.join(log_dir, 'params.txt')
+
+    seed = 1234
+    random.seed(seed)
+    torch.manual_seed(seed)
+    torch.cuda.manual_seed(seed)
+    torch.cuda.manual_seed_all(seed)
+    np.random.seed(seed)
 
     cudnn.benchmark = True
     cudnn.deterministic = False
