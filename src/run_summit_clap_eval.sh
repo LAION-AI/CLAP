@@ -22,4 +22,4 @@ python -m evaluate.eval_retrieval_main \
     --batch-size=96 \
     --workers=4 \
     --openai-model-cache-dir /gpfs/alpine/scratch/wuyusong/csc499/clap_data/.cache/clip \
-    --resume /gpfs/alpine/scratch/wuyusong/csc499/clap_data/audio_clip_logs/2022_08_27-13_45_45-model_HTSAT-tiny-lr_0.001-b_96-j_4-p_fp32
+    --resume /gpfs/alpine/scratch/wuyusong/csc499/clap_data/audio_clip_logs/2022_08_27-13_45_45-model_HTSAT-tiny-lr_0.001-b_96-j_4-p_fp32/checkpoints/epoch_latest.pt
