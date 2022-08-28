@@ -16,7 +16,7 @@ wandb offline
 
 python -m evaluate.eval_retrieval_main \
     --datasetpath /gpfs/alpine/scratch/wuyusong/csc499/clap_data/webdataset_tar \
-    --datasetnames "audiocaps" "BBCSoundEffects" "audioset" "free_to_use_sounds" "paramount_motion" "sonniss_game_effects" "wesoundeffects" \
+    --datasetnames "Clotho" "audiocaps" "BBCSoundEffects" "audioset" "free_to_use_sounds" "paramount_motion" "sonniss_game_effects" "wesoundeffects" \
     --report-to "wandb" \
     --dataset-type="webdataset" \
     --batch-size=96 \

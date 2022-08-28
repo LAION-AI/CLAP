@@ -107,8 +107,7 @@ if __name__ == '__main__':
         assert wandb is not None, "Please install wandb."
 
         # find the line with "wandb_notes" and get the value
-        wandb_notes = None
-        find_params_value(params_file, 'wandb_notes')
+        wandb_notes = find_params_value(params_file, 'wandb_notes')
         if wandb_notes is None:
             wandb_notes = f'experiment_{time.strftime("%Y%m%d-%H%M%S")}'
         wandb_notes = wandb_notes + '-eval-retrieval'
