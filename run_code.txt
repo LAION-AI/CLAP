@@ -15,7 +15,6 @@ CUDA_VISIBLE_DEVICES=0 python -m training.main \
     --workers=4 \
     --use-bn-sync  \
     --model PANN-14 \
-    --resample-method="None" \
     --datasetnames "Clotho" "audiocaps" "BBCSoundEffects" \
     --datasetinfos "train" "unbalanced_train" "balanced_train"
 
@@ -36,7 +35,6 @@ torchrun --nproc_per_node 8 -m training.main \
     --freeze-text \
     --use-bn-sync  \
     --model PANN-14 \
-    --resample-method="None" \
     --datasetnames "Clotho" "audiocaps" "BBCSoundEffects" \
     --datasetinfos "train" "unbalanced_train" "balanced_train"
 
@@ -63,7 +61,6 @@ torchrun --nproc_per_node 8 -m training.main \
     --model PANN-14 \
     --report-to "wandb" \
     --wandb-notes "text-audio-diff-lr-1e-3-1e-4-model-pann-14" \
-    --resample-method="None" \
     --datasetnames "Clotho" "audiocaps" "BBCSoundEffects" \
     --datasetinfos "train" "unbalanced_train" "balanced_train" \
 
@@ -86,7 +83,6 @@ torchrun --nproc_per_node 8 -m training.main \
     --model PANN-14 \
     --report-to "wandb" \
     --wandb-notes "text-audio-diff-lr-1e-3-1e-4-model-pann-14" \
-    --resample-method="None" \
     --datasetnames "Clotho" "audiocaps" "BBCSoundEffects" \
     --datasetinfos "train" "unbalanced_train" "balanced_train" "eval" \
 
@@ -109,7 +105,6 @@ torchrun --nproc_per_node 8 -m training.main \
     --model HTSAT-tiny \
     --report-to "wandb" \
     --wandb-notes "text-audio-diff-lr-1e-3-1e-4-model-htsat-tiny" \
-    --resample-method="None" \
     --datasetnames "Clotho" "audiocaps" "BBCSoundEffects" \
     --datasetinfos "train" "unbalanced_train" "balanced_train" \
 
@@ -134,7 +129,6 @@ torchrun --nproc_per_node 8 -m training.main \
     --model PANN-14 \
     --report-to "wandb" \
     --wandb-notes "text-audio-freeze-text-lr-1e-3-model-pann-14" \
-    --resample-method="None" \
     --datasetnames "Clotho" "audiocaps" "BBCSoundEffects" "audioset"  \
     --datasetinfos "train" "unbalanced_train" "balanced_train"\
 
@@ -156,7 +150,6 @@ torchrun --nproc_per_node 8 -m training.main \
     --model HTSAT-tiny \
     --report-to "wandb" \
     --wandb-notes "text-audio-freeze-text-lr-1e-3-model-htsat-tiny" \
-    --resample-method="None" \
     --datasetnames "Clotho" "audiocaps" "BBCSoundEffects" "audioset"  \
     --datasetinfos "train" "unbalanced_train" "balanced_train"\
 
@@ -180,7 +173,6 @@ torchrun --nproc_per_node 8 -m training.main \
     --model PANN-14 \
     --report-to "wandb" \
     --wandb-notes "text-audio-diff-lr-1e-3-1e-5-freeze-after-5-model-pann-14" \
-    --resample-method="None" \
     --datasetnames "Clotho" "audiocaps" "BBCSoundEffects"  \
     --datasetinfos "train" "unbalanced_train" "balanced_train" \
 
@@ -202,7 +194,6 @@ torchrun --nproc_per_node 8 -m training.main \
     --model HTSAT-tiny \
     --report-to "wandb" \
     --wandb-notes "text-audio-freeze-text-lr-1e-3-8-dataset-model-htsat-tiny" \
-    --resample-method="None" \
     --datasetnames "Clotho" "audiocaps" "BBCSoundEffects" "audioset" "free_to_use_sounds" "paramount_motion" "sonniss_game_effects" "wesoundeffects" \
     --datasetinfos "train" "unbalanced_train" "balanced_train"\
     --remotedata
@@ -225,7 +216,6 @@ torchrun --nproc_per_node 8 -m training.main \
     --model HTSAT-tiny \
     --report-to "wandb" \
     --wandb-notes "text-audio-freeze-text-lr-1e-3-8-dataset-model-htsat-tiny" \
-    --resample-method="None" \
     --datasetnames "audioset" \
     --datasetinfos "train" "unbalanced_train" "balanced_train"\
     --remotedata
@@ -251,7 +241,6 @@ torchrun --nproc_per_node 8  -m training.main \
     --model HTSAT-tiny \
     --report-to "wandb" \
     --wandb-notes "text-audio-freeze-text-lr-1e-3-8-dataset-model-htsat-tiny" \
-    --resample-method="None" \
     --datasetnames "Clotho" "audiocaps" "BBCSoundEffects" "audioset" "free_to_use_sounds" "paramount_motion" "sonniss_game_effects" "wesoundeffects" \
     --datasetinfos "train" "unbalanced_train" "balanced_train" "valid" \
     --top-k-checkpoint-select-dataset="Clotho-test" \
@@ -276,7 +265,6 @@ torchrun --nproc_per_node 8  -m training.main \
     --model PANN-14 \
     --report-to "wandb" \
     --wandb-notes "text-audio-freeze-text-lr-1e-3-8-dataset-model-pann-14" \
-    --resample-method="None" \
     --datasetnames "Clotho" "audiocaps" "BBCSoundEffects" "audioset" "free_to_use_sounds" "paramount_motion" "sonniss_game_effects" "wesoundeffects" \
     --datasetinfos "train" "unbalanced_train" "balanced_train" "valid" \
     --top-k-checkpoint-select-dataset="Clotho-test" \
