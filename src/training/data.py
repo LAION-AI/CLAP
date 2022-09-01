@@ -132,8 +132,8 @@ class ToyDataset(Dataset):
             self.fp["hdf5_path"][s_index]
             .decode()
             .replace(
-                "/home/tiger/DB/knut/data/audioset/hdf5s/waveforms",
-                "/mnt/audio_clip/test/data",
+                "../workspace",
+                "/home/la/kechen/Research/ke_zsasp/workspace",
             )
         )
         r_idx = self.fp["index_in_hdf5"][s_index]

@@ -19,6 +19,23 @@ CUDA_VISIBLE_DEVICES=0 python -m training.main \
     --datasetnames "Clotho" "audiocaps" "BBCSoundEffects" \
     --datasetinfos "train" "unbalanced_train" "balanced_train"
 
+# Toy dataset
+CUDA_VISIBLE_DEVICES=0 python -m training.main \
+    --save-frequency 1 \
+    --dataset-type="toy" \
+    --train-data="/home/la/kechen/Research/ke_zsasp/workspace/hdf5s/indexes/balanced_train.h5"  \
+    --val-data="/home/la/kechen/Research/ke_zsasp/workspace/hdf5s/indexes/eval.h5"  \
+    --train-ipc="/home/la/kechen/Research/clap/CLAP/idc_train.npy" \
+    --val-ipc="/home/la/kechen/Research/clap/CLAP/idc_eval.npy" \
+    --precision="fp32" \
+    --warmup 10000 \
+    --batch-size=32 \
+    --lr=1e-3 \
+    --wd=0.1 \
+    --epochs=1 \
+    --workers=8 \
+    --model PANN-14
+
 
 torchrun --nproc_per_node 8 -m training.main \
     --save-frequency 100 \

@@ -372,6 +372,34 @@ def parse_args():
         action="store_true",
         help="Training without evaluation."
     )
+
+    parser.add_argument(
+        "--lp-mlp",
+        default=False,
+        action="store_true",
+        help="Linear Probe using MLP layer or not."
+    )
+
+    parser.add_argument(
+        "--lp-freeze",
+        default=False,
+        action="store_true",
+        help="Linear Probe using Freeze CLAP or not"
+    )
+
+    parser.add_argument(
+        "--lp-act",
+        default='None',
+        type=str,
+        help="Options are ['relu','elu','prelu','softmax','sigmoid']"
+    )
+
+    parser.add_argument(
+        "--lp-out-ch", type=int, default=527, help="Output Dimension of Linear Probe."
+    )
+
+    parser.add_argument("--lp_lr_decay", type=float, default=0.1, help="Decayed learning rate in finetuning model of Linear Probe")
+
     args = parser.parse_args()
 
     # If some params are not passed, we use the default values based on model name.

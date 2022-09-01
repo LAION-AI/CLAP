@@ -315,6 +315,7 @@ def load_p(filename):
 
 def load_class_label(path):
     import pathlib
+    out = None
     if path is not None:
         if pathlib.Path(path).suffix in [".pkl", ".pickle"]: 
             out = load_p(path)
