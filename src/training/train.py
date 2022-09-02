@@ -82,12 +82,8 @@ def train_one_epoch(
                 s(step)
         else:
             scheduler(step)
-        if args.dataset_type == "toy":
-            audios = batch['waveform']
-            texts = batch['text']
-        else:
-            audios = batch['waveform']
-            texts = batch['text']
+        audios = batch['waveform']
+        texts = batch['text']
         audios = audios.to(device=device, non_blocking=True)
         texts = texts.to(device=device, non_blocking=True)
 
@@ -252,12 +248,8 @@ def evaluate(model, data, epoch, args, tb_writer=None):
         # all_audio_features, all_text_features, all_audio_features_mlp, all_text_features_mlp = [], [], [], []
         with torch.no_grad():
             for i, batch in enumerate(dataloader):
-                if args.dataset_type == "toy":
-                    audios = batch['waveform']
-                    texts = batch['text']
-                else:
-                    audios = batch['waveform']
-                    texts = batch['text']
+                audios = batch['waveform']
+                texts = batch['text']
                 audios = audios.to(device=device, non_blocking=True)
                 texts = texts.to(device=device, non_blocking=True)
                 all_names = list(set(["-".join(b.split("/")[-3:-1]) for b in batch[0]]))

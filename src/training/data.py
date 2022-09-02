@@ -515,33 +515,6 @@ def get_wds_dataset(
             )
         ),
     )
-    # if args.class_index_dict:
-    #     pipeline.append(
-    #         wds.to_tuple(
-    #             "__url__",
-    #             "__key__",
-    #             "waveform",
-    #             "text",
-    #             "raw_text",
-    #             "class_label",
-    #             "audio_name",
-    #             "text_name",
-    #             "audio_orig_sr",
-    #         )
-    #     )
-    # else:  # do not add class_label if no class_index_dict is provided
-    #     pipeline.append(
-    #         wds.to_tuple(
-    #             "__url__",
-    #             "__key__",
-    #             "waveform",
-    #             "text",
-    #             "raw_text",
-    #             "audio_name",
-    #             "text_name",
-    #             "audio_orig_sr",
-    #         ),
-    #     )
 
     pipeline.append(wds.batched(args.batch_size, partial=not (is_train or args.parallel_eval), collation_fn=collate_fn))
 
