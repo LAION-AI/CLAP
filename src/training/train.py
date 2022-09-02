@@ -86,8 +86,8 @@ def train_one_epoch(
             audios = batch['waveform']
             texts = batch['text']
         else:
-            audios = batch[2]  # (yusong) todo:  change to retrieve from index for now.
-            texts = batch[3][:, 0, :]
+            audios = batch['waveform']
+            texts = batch['text']
         audios = audios.to(device=device, non_blocking=True)
         texts = texts.to(device=device, non_blocking=True)
 
@@ -256,8 +256,8 @@ def evaluate(model, data, epoch, args, tb_writer=None):
                     audios = batch['waveform']
                     texts = batch['text']
                 else:
-                    audios = batch[2]  # (yusong) todo:  change to retrieve from index for now.
-                    texts = batch[3][:, 0, :]
+                    audios = batch['waveform']
+                    texts = batch['text']
                 audios = audios.to(device=device, non_blocking=True)
                 texts = texts.to(device=device, non_blocking=True)
                 all_names = list(set(["-".join(b.split("/")[-3:-1]) for b in batch[0]]))

@@ -401,7 +401,7 @@ def preprocess(
     if isinstance(texts, list) and isinstance(texts[0], str) and len(texts) > 1:
         texts = random.choice(texts)
     sample["raw_text"] = texts
-    sample["text"] = tokenize(texts)
+    sample["text"] = tokenize(texts)[:, 0, :]  # text shape: [num_token]
     if bool(class_index_dict):
         sample["class_label"] = np.zeros(len(class_index_dict))
         for x in json_dict_raw["tag"]:
@@ -502,33 +502,33 @@ def get_wds_dataset(
             )
         ),
     )
-    if args.class_index_dict:
-        pipeline.append(
-            wds.to_tuple(
-                "__url__",
-                "__key__",
-                "waveform",
-                "text",
-                "raw_text",
-                "class_label",
-                "audio_name",
-                "text_name",
-                "audio_orig_sr",
-            )
-        )
-    else:  # do not add class_label if no class_index_dict is provided
-        pipeline.append(
-            wds.to_tuple(
-                "__url__",
-                "__key__",
-                "waveform",
-                "text",
-                "raw_text",
-                "audio_name",
-                "text_name",
-                "audio_orig_sr",
-            ),
-        )
+    # if args.class_index_dict:
+    #     pipeline.append(
+    #         wds.to_tuple(
+    #             "__url__",
+    #             "__key__",
+    #             "waveform",
+    #             "text",
+    #             "raw_text",
+    #             "class_label",
+    #             "audio_name",
+    #             "text_name",
+    #             "audio_orig_sr",
+    #         )
+    #     )
+    # else:  # do not add class_label if no class_index_dict is provided
+    #     pipeline.append(
+    #         wds.to_tuple(
+    #             "__url__",
+    #             "__key__",
+    #             "waveform",
+    #             "text",
+    #             "raw_text",
+    #             "audio_name",
+    #             "text_name",
+    #             "audio_orig_sr",
+    #         ),
+    #     )
 
     pipeline.append(wds.batched(args.batch_size, partial=not (is_train or args.parallel_eval)))
 
