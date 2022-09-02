@@ -109,6 +109,7 @@ if __name__ == '__main__':
         # find the line with "wandb_notes" and get the value
         wandb_notes = find_params_value(params_file, 'wandb_notes')
         if wandb_notes is None:
+            print(f'wandb_notes not found in params file: {params_file}')
             wandb_notes = f'experiment_{time.strftime("%Y%m%d-%H%M%S")}'
         wandb_notes = wandb_notes + '-eval-retrieval'
 
