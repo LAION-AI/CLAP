@@ -103,6 +103,7 @@ if __name__ == '__main__':
 
     writer = None  # if use tensorboard, initalize writer here
 
+    print('---------------------')
     if args.wandb:
         assert wandb is not None, "Please install wandb."
 
@@ -112,6 +113,7 @@ if __name__ == '__main__':
             print(f'wandb_notes not found in params file: {params_file}')
             wandb_notes = f'experiment_{time.strftime("%Y%m%d-%H%M%S")}'
         wandb_notes = wandb_notes + '-eval-retrieval'
+        print(wandb_notes)
 
         logging.debug("Starting wandb.")
         args.train_sz = data["train"].dataloader.num_samples
