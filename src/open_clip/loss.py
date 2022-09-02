@@ -1,7 +1,10 @@
+from multiprocessing.sharedctypes import Value
 import torch
 import torch.distributed.nn
 from torch import distributed as dist, nn as nn
 from torch.nn import functional as F
+import numpy as np
+from sklearn.metrics import average_precision_score, roc_auc_score, accuracy_score 
 
 try:
     import horovod.torch as hvd
@@ -76,7 +79,6 @@ def gather_features(
 
     return all_audio_features, all_text_features, all_audio_features_mlp, all_text_features_mlp
 
-
 class ClipLoss(nn.Module):
 
     def __init__(
@@ -143,3 +145,83 @@ class ClipLoss(nn.Module):
             F.cross_entropy(t_logits_per_text, labels) 
             ) / 4
         return total_loss
+
+def lp_gather_features(
+        pred,
+        target,
+        world_size=1,
+        use_horovod=False
+):
+    if use_horovod:
+        assert hvd is not None, 'Please install horovod'
+        with torch.no_grad():
+            all_preds = hvd.allgather(pred)
+            all_targets = hvd.allgath(target)
+    else:
+        gathered_preds = [torch.zeros_like(pred) for _ in range(world_size)]
+        gathered_targets = [torch.zeros_like(target) for _ in range(world_size)]
+
+        dist.all_gather(gathered_preds, pred)
+        dist.all_gather(gathered_targets, target)
+        all_preds = torch.cat(gathered_preds, dim=0)
+        all_targets = torch.cat(gathered_targets, dim=0)
+
+    return all_preds, all_targets
+
+
+def get_map(pred, target):
+    pred = torch.sigmoid(pred).numpy()
+    target = target.numpy()
+    return np.mean(average_precision_score(target, pred, average=None))
+
+def get_acc(pred, target):
+    pred = torch.argmax(pred,1).numpy()
+    target = torch.argmax(target,1).numpy()
+    return accuracy_score(target, pred)
+
+def get_mauc(pred, target):
+    pred = torch.sigmoid(pred).numpy()
+    target = target.numpy()
+    return np.mean(roc_auc_score(target, pred, average=None))
+
+
+class LPMetrics(object):
+    def __init__(self, metric_names = ['map','acc','mauc']):
+        self.metrics = []
+        for name in metric_names:
+            self.metrics.append(self.get_metric(name))
+        self.metric_names = metric_names
+
+    def get_metric(self,name):
+        if name == 'map':
+            return get_map
+        elif name == 'acc':
+            return get_acc
+        elif name == 'mauc':
+            return get_mauc
+        else:
+            raise ValueError(f'the metric should be at least one of [map, acc, mauc]')
+
+    def evaluate_mertics(self, pred, target):
+        metric_dict = {}
+        for i in range(len(self.metric_names)):
+            metric_dict[self.metric_names[i]] = self.metrics[i](pred, target)
+        return metric_dict
+
+
+class LPLoss(nn.Module):
+
+    def __init__(self,loss_name):
+        super().__init__()
+        if loss_name == 'bce':
+            self.loss_func = nn.BCEWithLogitsLoss()
+        elif loss_name == 'ce':
+            self.loss_func = nn.CrossEntropyLoss()
+        elif loss_name == 'mse':
+            self.loss_func = nn.MSELoss()
+        else:
+            raise ValueError(f'the loss func should be at least one of [bce, ce, mse]')
+
+    def forward(self, pred, target):
+        loss = self.loss_func(pred,target)
+        return loss

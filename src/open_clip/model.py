@@ -475,7 +475,6 @@ class CLAP(nn.Module):
         text_features = self.encode_text(text)
         text_features = F.normalize(text_features, dim=-1)
 
-        
         audio_features_mlp = self.audio_transform(audio_features)
         text_features_mlp = self.text_transform(text_features)
         # Four outputs: audio features (basic & MLP), text features (basic & MLP)

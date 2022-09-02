@@ -45,14 +45,15 @@ def _rescan_model_configs():
 _rescan_model_configs()  # initial populate of model config registry
 
 
-def load_state_dict(checkpoint_path: str, map_location='cpu'):
+def load_state_dict(checkpoint_path: str, map_location='cpu', skip_params = True):
     checkpoint = torch.load(checkpoint_path, map_location=map_location)
     if isinstance(checkpoint, dict) and 'state_dict' in checkpoint:
         state_dict = checkpoint['state_dict']
     else:
         state_dict = checkpoint
-    if next(iter(state_dict.items()))[0].startswith('module'):
-        state_dict = {k[7:]: v for k, v in state_dict.items()}
+    if skip_params:
+        if next(iter(state_dict.items()))[0].startswith('module'):
+            state_dict = {k[7:]: v for k, v in state_dict.items()}
     return state_dict
 
 
@@ -64,6 +65,7 @@ def create_model(
         jit: bool = False,
         force_quick_gelu: bool = False,
         openai_model_cache_dir: str = os.path.expanduser("~/.cache/clip"),
+        skip_params = True
         # pretrained_image: bool = False,
 ):
     model_name = model_name.replace('/', '-')  # for callers using old naming with / in ViT names
@@ -114,7 +116,11 @@ def create_model(
 
             if checkpoint_path:
                 logging.info(f'Loading pretrained {model_name} weights ({pretrained}).')
-                model.load_state_dict(load_state_dict(checkpoint_path))
+                ckpt = load_state_dict(checkpoint_path, skip_params=skip_params)
+                model.load_state_dict(ckpt)
+                param_names = [n for n,p in model.named_parameters()]
+                for n in param_names:
+                    print(n, '\t', 'Loaded' if n in ckpt else 'Unloaded')             
             else:
                 logging.warning(f'Pretrained weights ({pretrained}) not found for model {model_name}.')
                 raise RuntimeError(f'Pretrained weights ({pretrained}) not found for model {model_name}.')
