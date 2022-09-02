@@ -543,7 +543,7 @@ def get_wds_dataset(
     #         ),
     #     )
 
-    pipeline.append(wds.batched(args.batch_size, partial=not (is_train or args.parallel_eval), collate_fn=collate_fn))
+    pipeline.append(wds.batched(args.batch_size, partial=not (is_train or args.parallel_eval), collation_fn=collate_fn))
 
     dataset = wds.DataPipeline(*pipeline)
     if is_train or args.parallel_eval:
