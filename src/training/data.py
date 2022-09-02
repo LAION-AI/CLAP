@@ -405,6 +405,7 @@ def preprocess(
         sample["class_label"] = np.zeros(len(class_index_dict))
         for x in json_dict_raw["tag"]:
             sample["class_label"][class_index_dict[x]] = 1
+        sample["class_label"] = torch.tensor(sample["class_label"]).long()
     del sample[text_ext]
     sample["audio_name"] = sample["__key__"].split("/")[-1] + "." + audio_ext
     sample["text_name"] = sample["__key__"].split("/")[-1] + "." + text_ext
@@ -422,6 +423,8 @@ def collate_fn(batch):
     for k in batch[0].keys():
         if isinstance(batch[0][k], torch.Tensor):
             batch_dict[k] = torch.stack([sample[k] for sample in batch])
+        elif isinstance(batch[0][k], np.Array):
+            batch_dict[k] = torch.tensor(np.stack([sample[k] for sample in batch]))
         else:
             batch_dict[k] = [sample[k] for sample in batch]
     return batch_dict
