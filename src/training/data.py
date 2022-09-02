@@ -401,7 +401,7 @@ def preprocess(
     if isinstance(texts, list) and isinstance(texts[0], str) and len(texts) > 1:
         texts = random.choice(texts)
     sample["raw_text"] = texts
-    sample["text"] = tokenize(texts)[:, 0, :]  # text shape: [num_token]
+    sample["text"] = tokenize(texts)[0, :]  # text shape: [num_token]
     if bool(class_index_dict):
         sample["class_label"] = np.zeros(len(class_index_dict))
         for x in json_dict_raw["tag"]:
