@@ -4,6 +4,7 @@ import glob
 import json
 import librosa
 from tqdm import tqdm
+import random
 import numpy as np
 import logging
 import wandb
@@ -41,6 +42,13 @@ if __name__ == '__main__':
     setup_logging(log_path, args.log_level)
     params_file = os.path.join(log_dir, 'params.txt')
 
+    seed = 1234
+    random.seed(seed)
+    torch.manual_seed(seed)
+    torch.cuda.manual_seed(seed)
+    torch.cuda.manual_seed_all(seed)
+    np.random.seed(seed)
+
     cudnn.benchmark = True
     cudnn.deterministic = False
     pretrained = 'openai'
@@ -59,6 +67,7 @@ if __name__ == '__main__':
     args.precision = 'fp32'
     args.save_logs = True
     args.wandb = True
+    args.class_index_dict = None
 
     device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
     args.device = device
@@ -98,9 +107,9 @@ if __name__ == '__main__':
         assert wandb is not None, "Please install wandb."
 
         # find the line with "wandb_notes" and get the value
-        wandb_notes = None
-        find_params_value(params_file, 'wandb_notes')
+        wandb_notes = find_params_value(params_file, 'wandb_notes')
         if wandb_notes is None:
+            print(f'wandb_notes not found in params file: {params_file}, set to timestamp.')
             wandb_notes = f'experiment_{time.strftime("%Y%m%d-%H%M%S")}'
         wandb_notes = wandb_notes + '-eval-retrieval'
 
@@ -118,7 +127,7 @@ if __name__ == '__main__':
         )
         logging.debug("Finished loading wandb.")
 
-    all_model_checkpoints = glob.glob(os.path.join(log_dir, 'checkpoints', '*.pt'))
+    all_model_checkpoints = sorted(glob.glob(os.path.join(log_dir, 'checkpoints', '*.pt')), key=os.path.getmtime)
     for model_path in all_model_checkpoints:
         args.checkpoint_path = os.path.dirname(model_path)
         model, model_cfg = create_model(

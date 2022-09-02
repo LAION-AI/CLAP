@@ -86,28 +86,10 @@ def get_tar_path_from_dataset_name(
     Get tar path from dataset name and type
     """
     if islocal:
-        # txt_paths = []
-        # for i in range(len(dataset_names)):
-        #     for j in range(len(dataset_types)):
-        #         if exist(dataset_names[i], dataset_types[j]):
-        #             txt_loc = template.replace("datasetname", dataset_names[i]).replace(
-        #                 "datasettype", dataset_types[j]
-        #             )
-        #             txt_paths.append(txt_loc)
-        #         else:
-        #             print(
-        #                 "Skipping dataset "
-        #                 + dataset_names[i]
-        #                 + " with "
-        #                 + dataset_types[j]
-        #             )
-        #             continue
-        # return get_tar_path_from_txts(txt_paths, islocal=islocal, proportion=proportion)
         output = []
         for n in dataset_names:
             for s in dataset_types:
                 tmp = []
-                # sizefilepath_ = f"./json_files/{n}/{s}/sizes.json" #  TODO:!!!
                 sizefilepath_ = f"{dataset_path}/{n}/{s}/sizes.json"
                 if not os.path.exists(sizefilepath_):
                     sizefilepath_ = f"./json_files/{n}/{s}/sizes.json"

@@ -16,10 +16,10 @@ wandb offline
 
 python -m evaluate.eval_retrieval_main \
     --datasetpath /gpfs/alpine/scratch/wuyusong/csc499/clap_data/webdataset_tar \
-    --datasetnames "audiocaps" "BBCSoundEffects" "audioset" "free_to_use_sounds" "paramount_motion" "sonniss_game_effects" "wesoundeffects" \
+    --datasetnames "Clotho" "audiocaps" "BBCSoundEffects" "audioset" "free_to_use_sounds" "paramount_motion" "sonniss_game_effects" "wesoundeffects" \
     --report-to "wandb" \
     --dataset-type="webdataset" \
-    --batch-size=48 \
+    --batch-size=96 \
     --workers=4 \
     --openai-model-cache-dir /gpfs/alpine/scratch/wuyusong/csc499/clap_data/.cache/clip \
-    --resume /gpfs/alpine/scratch/wuyusong/csc499/clap_data/audio_clip_logs/2022_08_14-20_56_47-model_HTSAT-tiny-lr_0.001-b_48-j_4-p_fp32/checkpoints/epoch_latest.pt
+    --resume /gpfs/alpine/scratch/wuyusong/csc499/clap_data/audio_clip_logs/2022_08_28-17_16_16-model_HTSAT-tiny-lr_0.001-b_96-j_4-p_fp32_fewer_checkpoints/checkpoints/epoch_latest.pt
