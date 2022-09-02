@@ -126,7 +126,7 @@ if __name__ == '__main__':
         )
         logging.debug("Finished loading wandb.")
 
-    all_model_checkpoints = glob.glob(os.path.join(log_dir, 'checkpoints', '*.pt'))
+    all_model_checkpoints = sorted(glob.glob(os.path.join(log_dir, 'checkpoints', '*.pt')), key=os.path.getmtime)
     for model_path in all_model_checkpoints:
         args.checkpoint_path = os.path.dirname(model_path)
         model, model_cfg = create_model(
