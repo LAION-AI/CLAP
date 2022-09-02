@@ -543,7 +543,7 @@ def get_wds_dataset(
     #         ),
     #     )
 
-    pipeline.append(wds.batched(args.batch_size, partial=not (is_train or args.parallel_eval)))
+    pipeline.append(wds.batched(args.batch_size, partial=not (is_train or args.parallel_eval), collate_fn=collate_fn))
 
     dataset = wds.DataPipeline(*pipeline)
     if is_train or args.parallel_eval:
@@ -570,7 +570,7 @@ def get_wds_dataset(
         kwargs["multiprocessing_context"] = "forkserver"
 
     dataloader = wds.WebLoader(
-        dataset, batch_size=None, shuffle=False, num_workers=args.workers, collate_fn=collate_fn, **kwargs
+        dataset, batch_size=None, shuffle=False, num_workers=args.workers, **kwargs
     )
 
     # FIXME not clear which approach is better, with_epoch before vs after dataloader?
