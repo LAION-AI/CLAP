@@ -29,7 +29,6 @@ try:
 except ImportError:
     hvd = None
 
-
 from open_clip import tokenize
 
 # initizlied the audioset map
@@ -97,7 +96,7 @@ class ToyDataset(Dataset):
     def crop_wav(self, x):
         crop_size = self.audio_cfg["crop_size"]
         crop_pos = random.randint(0, len(x) - crop_size - 1)
-        return x[crop_pos : crop_pos + crop_size]
+        return x[crop_pos: crop_pos + crop_size]
 
     def prompt_text(self, target):
         events = _AUDIOSET_MAP[np.where(target > 0)]
@@ -141,10 +140,10 @@ class ToyDataset(Dataset):
         text = self.prompt_text(target)
         with h5py.File(hdf5_path, "r") as f:
             waveform = int16_to_float32(f["waveform"][r_idx])[
-                : self.audio_cfg["clip_samples"]
-            ]
+                       : self.audio_cfg["clip_samples"]
+                       ]
         assert (
-            len(waveform) == self.audio_cfg["clip_samples"]
+                len(waveform) == self.audio_cfg["clip_samples"]
         ), "The sample length is not match"
         # Time shift
         # if (self.config.enable_time_shift) and (not self.eval_mode):
@@ -363,11 +362,11 @@ def sample_prop(sizefile, inputs, proportion, is_local=True):
 
 
 def preprocess(
-    sample,
-    audio_ext,
-    text_ext,
-    max_len,
-    class_index_dict=None,
+        sample,
+        audio_ext,
+        text_ext,
+        max_len,
+        class_index_dict=None,
 ):
     """
     Preprocess a single sample for wdsdataloader.
@@ -377,7 +376,7 @@ def preprocess(
     if len(audio_data) > max_len:  # random clip if too long
         overflow = len(audio_data) - max_len
         idx = np.random.randint(0, overflow + 1)
-        audio_data = audio_data[idx : idx + max_len]
+        audio_data = audio_data[idx: idx + max_len]
     else:  # padding if too short
         audio_data = np.pad(
             audio_data,
@@ -413,17 +412,31 @@ def preprocess(
     return sample
 
 
-# TODO: Yusong: clear unused arguments
+def collate_fn(batch):
+    """
+    Collate function for wdsdataloader.
+    batch: a list of dict, each dict is a sample
+    """
+    # concatenate values in each dictionary. if it is a tensor, concatenate. if it is a list, extend.
+    batch_dict = {}
+    for k in batch[0].keys():
+        if isinstance(batch[0][k], torch.Tensor):
+            batch_dict[k] = torch.stack([sample[k] for sample in batch])
+        else:
+            batch_dict[k] = [sample[k] for sample in batch]
+    return batch_dict
+
+
 def get_wds_dataset(
-    args,
-    model_cfg,
-    is_train,
-    audio_ext="flac",
-    text_ext="json",
-    max_len=480000,
-    proportion=1.0,
-    sizefilepath_=None,
-    is_local=None,
+        args,
+        model_cfg,
+        is_train,
+        audio_ext="flac",
+        text_ext="json",
+        max_len=480000,
+        proportion=1.0,
+        sizefilepath_=None,
+        is_local=None,
 ):
     """
     Get a dataset for wdsdataloader.
@@ -458,7 +471,7 @@ def get_wds_dataset(
                 )
         else:
             num_samples = (
-                args.val_num_samples or 0
+                    args.val_num_samples or 0
             )  # eval will just exhaust the iterator if not specified
 
     pipeline = [wds.SimpleShardList(input_shards)]
@@ -557,7 +570,7 @@ def get_wds_dataset(
         kwargs["multiprocessing_context"] = "forkserver"
 
     dataloader = wds.WebLoader(
-        dataset, batch_size=None, shuffle=False, num_workers=args.workers, **kwargs
+        dataset, batch_size=None, shuffle=False, num_workers=args.workers, collate_fn=collate_fn, **kwargs
     )
 
     # FIXME not clear which approach is better, with_epoch before vs after dataloader?
@@ -582,17 +595,17 @@ def get_wds_dataset(
 
 
 def wds_batch_list2dict(
-    batch,
-    keys=[
-        "__url__",
-        "__key__",
-        "waveform",
-        "text",
-        "raw_text",
-        "audio_name",
-        "text_name",
-        "audio_orig_sr",
-    ],
+        batch,
+        keys=[
+            "__url__",
+            "__key__",
+            "waveform",
+            "text",
+            "raw_text",
+            "audio_name",
+            "text_name",
+            "audio_orig_sr",
+        ],
 ):
     """
     Return a dictionary of the batch, with keys as the names of the fields.
