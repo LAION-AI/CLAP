@@ -15,6 +15,7 @@ class LinearProbe(nn.Module):
             act: torch.nn.functional, the activation function before the loss function
         """
         super().__init__()
+        in_ch = 512
         self.clap_model = model
         if mlp:
             self.lp_layer = MLPLayers(units = [in_ch, in_ch * 2, out_ch])
@@ -47,8 +48,9 @@ class LinearProbe(nn.Module):
             class_prob: torch.tensor [batch, class_num]
 
         """
-        x = self.lp_layer(x)
+        x = self.clap_model(audio=x, text=None)
+        out = self.lp_layer(x)
         if self.act is not None:
-            x = self.act(x)
-        return x
+            out = self.act(out)
+        return out
 

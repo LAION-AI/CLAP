@@ -398,7 +398,15 @@ def parse_args():
         "--lp-out-ch", type=int, default=527, help="Output Dimension of Linear Probe."
     )
 
-    parser.add_argument("--lp_lr_decay", type=float, default=0.1, help="Decayed learning rate in finetuning model of Linear Probe")
+    parser.add_argument(
+        "--lp-loss", type=str, default="bce", help="Loss func of Linear Probe."
+    )
+
+    parser.add_argument(
+        "--lp-metrics", type=str, default="map,mauc,acc", help="Metrics of Linear Probe."
+    )
+
+    parser.add_argument("--lp_lr", type=float, default=1e-4, help="learning rate of linear probe")
 
     args = parser.parse_args()
 
