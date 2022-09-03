@@ -142,15 +142,6 @@ def main():
     torch.cuda.manual_seed_all(args.seed)
     np.random.seed(args.seed)
 
-    if args.remotedata and is_master(args):
-        for dataset_name in args.datasetnames:
-            for split in dataset_split[dataset_name]:
-                if not os.path.exists(f"./json_files/{dataset_name}/{split}"):
-                    os.makedirs(f"./json_files/{dataset_name}/{split}")
-                os.system(
-                    f"aws s3 cp s3://s-laion-audio/webdataset_tar/{dataset_name}/{split}/sizes.json ./json_files/{dataset_name}/{split}/sizes.json"
-                )
-
     # get the name of the experiments
     if args.name is None:
         args.name = "-".join(
@@ -167,6 +158,15 @@ def main():
     # discover initial world args early so we can log properly
     args.distributed = False
     args.local_rank, args.rank, args.world_size = world_info_from_env()
+
+    if args.remotedata and is_master(args):
+        for dataset_name in args.datasetnames:
+            for split in dataset_split[dataset_name]:
+                if not os.path.exists(f"./json_files/{dataset_name}/{split}"):
+                    os.makedirs(f"./json_files/{dataset_name}/{split}")
+                os.system(
+                    f"aws s3 cp s3://s-laion-audio/webdataset_tar/{dataset_name}/{split}/sizes.json ./json_files/{dataset_name}/{split}/sizes.json"
+                )
 
     args.log_path = None
     if is_master(args, local=args.log_local):
