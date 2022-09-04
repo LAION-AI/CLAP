@@ -11,6 +11,8 @@ import braceexpand
 import numpy as np
 import pandas as pd
 import torch
+import torch.nn as nn
+import torch.nn.functional as F
 import torchvision.datasets as datasets
 import webdataset as wds
 from PIL import Image
@@ -24,11 +26,17 @@ import wget
 from open_clip import tokenize
 from open_clip.utils import get_tar_path_from_dataset_name, dataset_split
 from open_clip.utils import load_p, load_class_label
+import tempfile
 
 try:
     import horovod.torch as hvd
 except ImportError:
     hvd = None
+
+try:
+    import torchaudio
+except ImportError:
+    torchaudio = None
 
 from open_clip import tokenize
 
@@ -372,24 +380,33 @@ def preprocess(
     """
     Preprocess a single sample for wdsdataloader.
     """
-    audio_data, orig_sr = sf.read(io.BytesIO(sample[audio_ext]))
+    # if torchaudio not installed, use soundfile to load audio
+    if torchaudio is None:
+        audio_data, orig_sr = sf.read(io.BytesIO(sample[audio_ext]))
+        audio_data = torch.tensor(audio_data).float()
+    else:
+        # https://github.com/webdataset/webdataset/blob/main/webdataset/autodecode.py
+        with tempfile.TemporaryDirectory() as dirname:
+            os.makedirs(dirname, exist_ok=True)
+            fname = os.path.join(dirname, f"file.flac")
+            with open(fname, "wb") as stream:
+                stream.write(sample[audio_ext])
+            audio_data, orig_sr = torchaudio.load(fname)
+            audio_data = audio_data[0, :].float()
 
     if len(audio_data) > max_len:  # random clip if too long
         overflow = len(audio_data) - max_len
         idx = np.random.randint(0, overflow + 1)
         audio_data = audio_data[idx: idx + max_len]
     else:  # padding if too short
-        audio_data = np.pad(
+        audio_data = F.pad(
             audio_data,
             (0, max_len - len(audio_data)),
             mode="constant",
-            constant_values=0,
+            value=0,
         )
 
-    # TODO: (yusong) add a key of "original audio"
-    # TODO: (yusong) also return "original data"
-
-    sample["waveform"] = torch.tensor(audio_data).float()
+    sample["waveform"] = audio_data
     del sample[audio_ext]
 
     try:
