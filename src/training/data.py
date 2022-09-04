@@ -388,7 +388,8 @@ def preprocess(
             fname = os.path.join(dirname, f"file.flac")
             with open(fname, "wb") as stream:
                 stream.write(sample[audio_ext])
-            audio_data, orig_sr = torchaudio.load(fname)[0]
+            audio_data, orig_sr = torchaudio.load(fname)
+            audio_data = audio_data[0, :]
 
     if len(audio_data) > max_len:  # random clip if too long
         overflow = len(audio_data) - max_len
