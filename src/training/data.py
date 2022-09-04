@@ -11,6 +11,8 @@ import braceexpand
 import numpy as np
 import pandas as pd
 import torch
+import torch.nn as nn
+import torch.nn.functional as F
 import torchvision.datasets as datasets
 import webdataset as wds
 from PIL import Image
@@ -378,7 +380,7 @@ def preprocess(
     """
     Preprocess a single sample for wdsdataloader.
     """
-    # if we don't have torch audio, use soundfile to load audio
+    # if torchaudio not installed, use soundfile to load audio
     if torchaudio is None:
         audio_data, orig_sr = sf.read(io.BytesIO(sample[audio_ext]))
         audio_data = torch.tensor(audio_data).float()
@@ -397,11 +399,11 @@ def preprocess(
         idx = np.random.randint(0, overflow + 1)
         audio_data = audio_data[idx: idx + max_len]
     else:  # padding if too short
-        audio_data = np.pad(
+        audio_data = F.pad(
             audio_data,
             (0, max_len - len(audio_data)),
             mode="constant",
-            constant_values=0,
+            value=0,
         )
 
     sample["waveform"] = audio_data
