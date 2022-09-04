@@ -381,6 +381,7 @@ def preprocess(
     # if we don't have torch audio, use soundfile to load audio
     if torchaudio is None:
         audio_data, orig_sr = sf.read(io.BytesIO(sample[audio_ext]))
+        audio_data = torch.tensor(audio_data).float()
     else:
         # https://github.com/webdataset/webdataset/blob/main/webdataset/autodecode.py
         with tempfile.TemporaryDirectory() as dirname:
@@ -389,7 +390,7 @@ def preprocess(
             with open(fname, "wb") as stream:
                 stream.write(sample[audio_ext])
             audio_data, orig_sr = torchaudio.load(fname)
-            audio_data = audio_data[0, :]
+            audio_data = audio_data[0, :].float()
 
     if len(audio_data) > max_len:  # random clip if too long
         overflow = len(audio_data) - max_len
@@ -403,7 +404,7 @@ def preprocess(
             constant_values=0,
         )
 
-    sample["waveform"] = torch.tensor(audio_data).float()
+    sample["waveform"] = audio_data
     del sample[audio_ext]
 
     try:
