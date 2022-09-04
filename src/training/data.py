@@ -381,7 +381,7 @@ def preprocess(
     if torchaudio is None:
         audio_data, orig_sr = sf.read(io.BytesIO(sample[audio_ext]))
     else:
-        audio_data, orig_sr = torchaudio.load(io.BytesIO(sample[audio_ext]))
+        audio_data, orig_sr = torchaudio.load(io.BytesIO(sample[audio_ext]), format='flac')
 
     if len(audio_data) > max_len:  # random clip if too long
         overflow = len(audio_data) - max_len
