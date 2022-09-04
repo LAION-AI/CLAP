@@ -384,7 +384,7 @@ def preprocess(
     else:
         # https://github.com/webdataset/webdataset/blob/main/webdataset/autodecode.py
         with tempfile.TemporaryDirectory() as dirname:
-            os.makedirs(dirname)
+            os.makedirs(dirname, exist_ok=True)
             fname = os.path.join(dirname, f"file.flac")
             with open(fname, "wb") as stream:
                 stream.write(sample[audio_ext])
