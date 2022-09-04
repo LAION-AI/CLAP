@@ -24,6 +24,7 @@ import wget
 from open_clip import tokenize
 from open_clip.utils import get_tar_path_from_dataset_name, dataset_split
 from open_clip.utils import load_p, load_class_label
+import tempfile
 
 try:
     import horovod.torch as hvd
@@ -381,7 +382,13 @@ def preprocess(
     if torchaudio is None:
         audio_data, orig_sr = sf.read(io.BytesIO(sample[audio_ext]))
     else:
-        audio_data, orig_sr = torchaudio.load(io.BytesIO(sample[audio_ext]), format='flac')
+        # https://github.com/webdataset/webdataset/blob/main/webdataset/autodecode.py
+        with tempfile.TemporaryDirectory() as dirname:
+            fname = os.path.join(dirname, f"file.flac")
+            with open(fname, "wb") as stream:
+                stream.write(sample[audio_ext])
+
+        audio_data, orig_sr = torchaudio.load(fname)
 
     if len(audio_data) > max_len:  # random clip if too long
         overflow = len(audio_data) - max_len
@@ -394,9 +401,6 @@ def preprocess(
             mode="constant",
             constant_values=0,
         )
-
-    # TODO: (yusong) add a key of "original audio"
-    # TODO: (yusong) also return "original data"
 
     sample["waveform"] = torch.tensor(audio_data).float()
     del sample[audio_ext]
