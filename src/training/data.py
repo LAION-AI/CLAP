@@ -30,6 +30,11 @@ try:
 except ImportError:
     hvd = None
 
+try:
+    import torchaudio
+except ImportError:
+    torchaudio = None
+
 from open_clip import tokenize
 
 # initizlied the audioset map
@@ -372,7 +377,11 @@ def preprocess(
     """
     Preprocess a single sample for wdsdataloader.
     """
-    audio_data, orig_sr = sf.read(io.BytesIO(sample[audio_ext]))
+    # if we don't have torch audio, use soundfile to load audio
+    if torchaudio is None:
+        audio_data, orig_sr = sf.read(io.BytesIO(sample[audio_ext]))
+    else:
+        audio_data, orig_sr = torchaudio.load(io.BytesIO(sample[audio_ext]))
 
     if len(audio_data) > max_len:  # random clip if too long
         overflow = len(audio_data) - max_len
