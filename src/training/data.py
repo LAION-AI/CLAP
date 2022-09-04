@@ -384,10 +384,10 @@ def preprocess(
     else:
         # https://github.com/webdataset/webdataset/blob/main/webdataset/autodecode.py
         with tempfile.TemporaryDirectory() as dirname:
+            os.makedirs(dirname)
             fname = os.path.join(dirname, f"file.flac")
             with open(fname, "wb") as stream:
                 stream.write(sample[audio_ext])
-
         audio_data, orig_sr = torchaudio.load(fname)
 
     if len(audio_data) > max_len:  # random clip if too long
