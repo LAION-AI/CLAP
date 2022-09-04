@@ -22,7 +22,8 @@ import io
 from pathlib import Path
 import wget
 from open_clip import tokenize
-from open_clip.utils import dataset_split
+from open_clip.utils import get_tar_path_from_dataset_name, dataset_split
+from open_clip.utils import load_p, load_class_label
 
 try:
     import horovod.torch as hvd
@@ -423,7 +424,7 @@ def collate_fn(batch):
     for k in batch[0].keys():
         if isinstance(batch[0][k], torch.Tensor):
             batch_dict[k] = torch.stack([sample[k] for sample in batch])
-        elif isinstance(batch[0][k], np.Array):
+        elif isinstance(batch[0][k], np.ndarray):
             batch_dict[k] = torch.tensor(np.stack([sample[k] for sample in batch]))
         else:
             batch_dict[k] = [sample[k] for sample in batch]
@@ -671,26 +672,28 @@ def get_dataset_fn(data_path, dataset_type):
 
 
 def get_data(args, model_cfg):
-    # deprecated for audio
-    # preprocess_train, preprocess_val = preprocess_fns
     data = {}
 
-    # need to CHANGE when using the formal webdataset
-    # if args.train_data:
-    #     data["train"] = get_dataset_fn(args.train_data, args.dataset_type)(
-    #         args, preprocess_train, is_train=True
-    #     )
+    args.class_index_dict = load_class_label(args.class_label_path)
 
-    # if args.val_data:
-    #     data["val"] = get_dataset_fn(args.val_data, args.dataset_type)(
-    #         args, preprocess_val, is_train=False
-    #     )
+    if args.datasetinfos is None:
+        args.datasetinfos = ["train", "unbalanced_train", "balanced_train"]
+    if args.dataset_type == "webdataset":
+        args.train_data = get_tar_path_from_dataset_name(
+            args.datasetnames,
+            args.datasetinfos,
+            islocal=not args.remotedata,
+            proportion=args.dataset_proportion,
+            dataset_path=args.datasetpath,
+        )
+        args.val_data = get_tar_path_from_dataset_name(
+            args.datasetnames,
+            ["valid", "test", "eval"],
+            islocal=not args.remotedata,
+            proportion=1,
+            dataset_path=args.datasetpath,
+        )
 
-    # if args.imagenet_val is not None:
-    #     data["imagenet-val"] = get_imagenet(args, preprocess_fns, "val")
-
-    # if args.imagenet_v2 is not None:
-    #     data["imagenet-v2"] = get_imagenet(args, preprocess_fns, "v2")
     if args.train_data:
         data["train"] = get_dataset_fn(args.train_data, args.dataset_type)(
             args, model_cfg, is_train=True
