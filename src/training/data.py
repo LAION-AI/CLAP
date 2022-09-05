@@ -382,6 +382,7 @@ def preprocess(
     """
     audio_data, orig_sr = sf.read(io.BytesIO(sample[audio_ext]))
     audio_data = torch.tensor(audio_data).float()
+    class_index_dict = load_class_label(class_index_dict)# TODO: changed this
     # TODO: (yusong) to be include in the future
     # # if torchaudio not installed, use soundfile to load audio
     # if torchaudio is None:
@@ -535,7 +536,7 @@ def get_wds_dataset(
                 audio_ext=audio_ext,
                 text_ext=text_ext,
                 max_len=max_len,
-                class_index_dict=args.class_index_dict,
+                class_index_dict=args.class_label_path, # TODO: changed!!!
             )
         ),
     )
