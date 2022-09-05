@@ -423,8 +423,10 @@ def preprocess(
     sample["raw_text"] = texts
     sample["text"] = tokenize(texts)[0, :]  # text shape: [num_token]
     if bool(class_index_dict):
+        # https://stackoverflow.com/questions/48004243/how-to-share-large-read-only-dictionary-list-across-processes-in-multiprocessing
+        # https://stackoverflow.com/questions/45693949/storing-strings-in-a-multiprocessing-sharedctypes-array
         key, val = class_index_dict
-        key = str(key).split('\n')
+        key = key[:].split('\n')
         _dict = {k: v for k, v in zip(key, val)}
         sample["class_label"] = np.zeros(len(_dict))
         for x in json_dict_raw["tag"]:
