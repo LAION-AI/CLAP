@@ -541,7 +541,7 @@ def get_wds_dataset(
                 audio_ext=audio_ext,
                 text_ext=text_ext,
                 max_len=max_len,
-                class_index_dict=None#copy.deepcopy(args.class_index_dict),
+                class_index_dict=copy.deepcopy(args.class_index_dict),
             )
         ),
     )
