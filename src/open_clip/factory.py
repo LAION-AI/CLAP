@@ -69,7 +69,8 @@ def create_model(
         # pretrained_image: bool = False,
 ):
     model_name = model_name.replace('/', '-')  # for callers using old naming with / in ViT names
-    pretrained = pretrained.lower()
+    if not os.path.exists(pretrained):  # (yusong) an ugly fix to avoid lowering the path to the pretrained model
+        pretrained = pretrained.lower()
     if pretrained == 'openai':
         if model_name in _MODEL_CONFIGS:
             logging.info(f'Loading {model_name} model config.')
