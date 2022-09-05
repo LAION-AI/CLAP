@@ -27,6 +27,7 @@ from open_clip import tokenize
 from open_clip.utils import get_tar_path_from_dataset_name, dataset_split
 from open_clip.utils import load_p, load_class_label
 import tempfile
+import copy
 
 try:
     import horovod.torch as hvd
@@ -425,12 +426,12 @@ def preprocess(
     if bool(class_index_dict):
         # https://stackoverflow.com/questions/48004243/how-to-share-large-read-only-dictionary-list-across-processes-in-multiprocessing
         # https://stackoverflow.com/questions/45693949/storing-strings-in-a-multiprocessing-sharedctypes-array
-        key, val = class_index_dict
-        key = key[:].split('\n')
-        _dict = {k: v for k, v in zip(key, val)}
-        sample["class_label"] = np.zeros(len(_dict))
+        # key, val = class_index_dict
+        # key = key[:].split('\n')
+        # _dict = {k: v for k, v in zip(key, val)}
+        sample["class_label"] = np.zeros(len(class_index_dict))
         for x in json_dict_raw["tag"]:
-            sample["class_label"][_dict[x]] = 1
+            sample["class_label"][class_index_dict[x]] = 1
         sample["class_label"] = torch.tensor(sample["class_label"]).long()
     del sample[text_ext]
     sample["audio_name"] = sample["__key__"].split("/")[-1] + "." + audio_ext
@@ -540,7 +541,7 @@ def get_wds_dataset(
                 audio_ext=audio_ext,
                 text_ext=text_ext,
                 max_len=max_len,
-                class_index_dict=args.class_index_dict,
+                class_index_dict=copy.deepcopy(args.class_index_dict),
             )
         ),
     )

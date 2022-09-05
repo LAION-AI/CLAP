@@ -334,9 +334,10 @@ def load_class_label(path):
         elif pathlib.Path(path).suffix in [".csv"]:
             import pandas as pd
             out = pd.read_csv(path)
-    if out is None:
-        return None
-    else:
-        key = Array(c_wchar, '\n'.join(list(out.keys())), lock=False)
-        val = Array('i', out.values(), lock=False)
-        return (key, val)
+    return out
+    # if out is None:
+    #     return None
+    # else:
+    #     key = Array(c_wchar, '\n'.join(list(out.keys())), lock=False)
+    #     val = Array('i', out.values(), lock=False)
+    #     return (key, val)
