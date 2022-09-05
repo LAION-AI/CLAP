@@ -133,7 +133,7 @@ def random_seed(seed=42, rank=0):
 def main():
     args = parse_args()
     # sanitize model name for filesystem / uri use, easier if we don't use / in name as a rule?
-    args.model = args.model.replace("/", "-")
+    args.amodel = args.amodel.replace("/", "-")
     # download sizes.json file
 
     # (yusong): the below two lines are for debug
@@ -153,7 +153,7 @@ def main():
             [
                 datetime.now().strftime("%Y_%m_%d-%H_%M_%S"),
                 f"linear_probe"
-                f"model_{args.model}",
+                f"model_{args.amodel}",
                 f"lr_{args.lr}",
                 f"b_{args.batch_size}",
                 f"j_{args.workers}",
@@ -236,7 +236,7 @@ def main():
 
     # Create CLAP model
     clap_model, clap_model_cfg = create_model(
-        args.model,
+        args.amodel,
         args.pretrained,
         precision=args.precision,
         device=device,
@@ -247,7 +247,6 @@ def main():
     )
 
     args.lp_out_ch = len(list(args.class_index_dict.keys()))
-
     # Linear Probe 
     logging.info(f"linear probe using mlp: {args.lp_mlp}")
     logging.info(f"linear probe using freeze: {args.lp_freeze}")

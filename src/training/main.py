@@ -129,7 +129,7 @@ def random_seed(seed=42, rank=0):
 def main():
     args = parse_args()
     # sanitize model name for filesystem / uri use, easier if we don't use / in name as a rule?
-    args.model = args.model.replace("/", "-")
+    args.amodel = args.amodel.replace("/", "-")
     # download sizes.json file
 
     # (yusong): the below two lines are for debug
@@ -147,7 +147,7 @@ def main():
         args.name = "-".join(
             [
                 datetime.now().strftime("%Y_%m_%d-%H_%M_%S"),
-                f"model_{args.model}",
+                f"model_{args.amodel}",
                 f"lr_{args.lr}",
                 f"b_{args.batch_size}",
                 f"j_{args.workers}",
@@ -158,7 +158,7 @@ def main():
     # discover initial world args early so we can log properly
     args.distributed = False
     args.local_rank, args.rank, args.world_size = world_info_from_env()
-
+    
     if args.remotedata and is_master(args):
         for dataset_name in args.datasetnames:
             for split in dataset_split[dataset_name]:
@@ -229,7 +229,8 @@ def main():
     logging.info(f'openai cache dir: {os.path.expanduser(args.openai_model_cache_dir)}')
 
     model, model_cfg = create_model(
-        args.model,
+        args.amodel,
+        args.tmodel,
         args.pretrained,
         precision=args.precision,
         device=device,

@@ -128,7 +128,7 @@ def random_seed(seed=42, rank=0):
 def main():
     args = parse_args()
     # sanitize model name for filesystem / uri use, easier if we don't use / in name as a rule?
-    args.model = args.model.replace("/", "-")
+    args.amodel = args.amodel.replace("/", "-")
     # download sizes.json file
     if args.remotedata:
         for dataset_name in args.datasetnames:
@@ -162,7 +162,7 @@ def main():
         args.name = "-".join(
             [
                 datetime.now().strftime("%Y_%m_%d-%H_%M_%S"),
-                f"model_{args.model}",
+                f"model_{args.amodel}",
                 f"lr_{args.lr}",
                 f"b_{args.batch_size}",
                 f"j_{args.workers}",
@@ -234,7 +234,7 @@ def main():
 
     # don't need the transform
     # model, preprocess_train, preprocess_val = create_model_and_transforms(
-    #     args.model,
+    #     args.amodel,
     #     args.pretrained,
     #     precision=args.precision,
     #     device=device,
@@ -243,7 +243,7 @@ def main():
     #     # pretrained_image=args.pretrained_image,
     # )
     model, model_cfg = create_model(
-        args.model,
+        args.amodel,
         args.pretrained,
         precision=args.precision,
         device=device,

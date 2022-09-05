@@ -58,7 +58,8 @@ def load_state_dict(checkpoint_path: str, map_location='cpu', skip_params = True
 
 
 def create_model(
-        model_name: str,
+        amodel_name: str,
+        tmodel_name: str,
         pretrained: str = '',
         precision: str = 'fp32',
         device: torch.device = torch.device('cpu'),
@@ -68,62 +69,61 @@ def create_model(
         skip_params = True
         # pretrained_image: bool = False,
 ):
-    model_name = model_name.replace('/', '-')  # for callers using old naming with / in ViT names
+    amodel_name = amodel_name.replace('/', '-')  # for callers using old naming with / in ViT names
     pretrained = pretrained.lower()
     if pretrained == 'openai':
-        if model_name in _MODEL_CONFIGS:
-            logging.info(f'Loading {model_name} model config.')
-            model_cfg = deepcopy(_MODEL_CONFIGS[model_name])
+        if amodel_name in _MODEL_CONFIGS:
+            logging.info(f'Loading {amodel_name} model config.')
+            model_cfg = deepcopy(_MODEL_CONFIGS[amodel_name])
         else:
-            logging.error(f'Model config for {model_name} not found; available models {list_models()}.')
-            raise RuntimeError(f'Model config for {model_name} not found.')
+            logging.error(f'Model config for {amodel_name} not found; available models {list_models()}.')
+            raise RuntimeError(f'Model config for {amodel_name} not found.')
 
         logging.info(f'Loading pretrained ViT-B-16 text encoder from OpenAI.')
         # Hard Code in model name
+        model_cfg["text_cfg"]["model_type"] = tmodel_name
         model = load_openai_model("ViT-B-16", model_cfg, device=device, jit=jit, cache_dir=openai_model_cache_dir)
         # See https://discuss.pytorch.org/t/valueerror-attemting-to-unscale-fp16-gradients/81372
         if precision == "amp" or precision == "fp32":
             model = model.float()
     else:
-        if model_name in _MODEL_CONFIGS:
-            logging.info(f'Loading {model_name} model config.')
-            model_cfg = deepcopy(_MODEL_CONFIGS[model_name])
+        if amodel_name in _MODEL_CONFIGS:
+            logging.info(f'Loading {amodel_name} model config.')
+            model_cfg = deepcopy(_MODEL_CONFIGS[amodel_name])
         else:
-            logging.error(f'Model config for {model_name} not found; available models {list_models()}.')
-            raise RuntimeError(f'Model config for {model_name} not found.')
+            logging.error(f'Model config for {amodel_name} not found; available models {list_models()}.')
+            raise RuntimeError(f'Model config for {amodel_name} not found.')
 
         if force_quick_gelu:
             # override for use of QuickGELU on non-OpenAI transformer models
             model_cfg["quick_gelu"] = True
 
-
         # if pretrained_image:
-        #     if 'timm_model_name' in model_cfg.get('vision_cfg', {}):
+        #     if 'timm_amodel_name' in model_cfg.get('vision_cfg', {}):
         #         # pretrained weight loading for timm models set via vision_cfg
         #         model_cfg['vision_cfg']['timm_model_pretrained'] = True
         #     else:
         #         assert False, 'pretrained image towers currently only supported for timm models'
-
         model = CLAP(**model_cfg)
         
         if pretrained:
             checkpoint_path = ''
-            url = get_pretrained_url(model_name, pretrained)
+            url = get_pretrained_url(amodel_name, pretrained)
             if url:
                 checkpoint_path = download_pretrained(url, root=openai_model_cache_dir)
             elif os.path.exists(pretrained):
                 checkpoint_path = pretrained
 
             if checkpoint_path:
-                logging.info(f'Loading pretrained {model_name} weights ({pretrained}).')
+                logging.info(f'Loading pretrained {amodel_name} weights ({pretrained}).')
                 ckpt = load_state_dict(checkpoint_path, skip_params=skip_params)
                 model.load_state_dict(ckpt)
                 param_names = [n for n,p in model.named_parameters()]
                 for n in param_names:
                     print(n, '\t', 'Loaded' if n in ckpt else 'Unloaded')             
             else:
-                logging.warning(f'Pretrained weights ({pretrained}) not found for model {model_name}.')
-                raise RuntimeError(f'Pretrained weights ({pretrained}) not found for model {model_name}.')
+                logging.warning(f'Pretrained weights ({pretrained}) not found for model {amodel_name}.')
+                raise RuntimeError(f'Pretrained weights ({pretrained}) not found for model {amodel_name}.')
 
         model.to(device=device)
         if precision == "fp16":

@@ -223,10 +223,16 @@ def parse_args():
         help="Floating point precision."
     )
     parser.add_argument(
-        "--model",
+        "--amodel",
         type=str,
         default="RN50",
-        help="Name of the vision backbone to use.",
+        help="Name of the audio backbone to use.",
+    )
+    parser.add_argument(
+        "--tmodel",
+        type=str,
+        default="transformer",
+        help="Name of the text backbone to use. Can be [transformer, bert]",
     )
     parser.add_argument(
         "--pretrained",
@@ -414,9 +420,10 @@ def parse_args():
     args = parser.parse_args()
 
     # If some params are not passed, we use the default values based on model name.
-    default_params = get_default_params(args.model)
+    default_params = get_default_params(args.amodel)
     for name, val in default_params.items():
         if getattr(args, name) is None:
             setattr(args, name, val)
 
     return args
+    

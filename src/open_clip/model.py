@@ -20,7 +20,8 @@ from .utils import freeze_batch_norm_2d
 
 from .pann_model import create_pann_model
 from .htsat import create_htsat_model
-
+from transformers import BertModel
+from transformers.tokenization_utils_base import BatchEncoding
 
 class MLPLayers(nn.Module):
     def __init__(self, units=[512, 512, 512], nonlin=nn.ReLU(), dropout=0.1):
@@ -272,7 +273,7 @@ class VisualTransformer(nn.Module):
         self.positional_embedding = nn.Parameter(scale * torch.randn((image_size // patch_size) ** 2 + 1, width))
         self.ln_pre = LayerNorm(width)
 
-        self.transformer = Transformer(width, layers, heads, act_layer=act_layer)
+        self.text_branch = Transformer(width, layers, heads, act_layer=act_layer)
 
         self.ln_post = LayerNorm(width)
         self.proj = nn.Parameter(scale * torch.randn(width, output_dim))
@@ -293,7 +294,7 @@ class VisualTransformer(nn.Module):
         x = self.ln_pre(x)
 
         x = x.permute(1, 0, 2)  # NLD -> LND
-        x = self.transformer(x)
+        x = self.text_branch(x)
         x = x.permute(1, 0, 2)  # LND -> NLD
 
         x = self.ln_post(x[:, 0, :])
@@ -339,7 +340,7 @@ class CLAPTextCfg:
     width: int
     heads: int
     layers: int
-
+    model_type: str
 
 class CLAP(nn.Module):
     def __init__(
@@ -377,31 +378,38 @@ class CLAP(nn.Module):
             
         # text branch
         # text branch parameters
-        self.transformer = Transformer(
-            width=text_cfg.width,
-            layers=text_cfg.layers,
-            heads=text_cfg.heads,
-            act_layer=act_layer,
-        )
-
+        if text_cfg.model_type == "transformer":
+            self.text_branch = Transformer(
+                width=text_cfg.width,
+                layers=text_cfg.layers,
+                heads=text_cfg.heads,
+                act_layer=act_layer,
+            )
+            self.vocab_size = text_cfg.vocab_size
+            self.token_embedding = nn.Embedding(text_cfg.vocab_size, text_cfg.width)
+            self.positional_embedding = nn.Parameter(torch.empty(self.context_length, text_cfg.width))
+            self.ln_final = LayerNorm(text_cfg.width)
+            self.text_transform = MLPLayers(units=[512,512,512], dropout=0.1)
+            self.text_projection = nn.Parameter(torch.empty(text_cfg.width, 512)) # HARDCORE as 512
+        elif text_cfg.model_type == "bert":
+            self.text_branch = BertModel.from_pretrained("bert-base-uncased")
+            self.text_transform = MLPLayers(units=[512,512,512], dropout=0.1)
+            self.text_projection = None
+            self.text_projection_bert = nn.Parameter(torch.empty(768, 512)) # HARDCORE as 512
+        self.text_branch_type = text_cfg.model_type
         # text branch parameters
-        self.text_transform = MLPLayers(
-            units=[512,512,512], dropout=0.1
-        )
+
         # audio branch parameters
         self.audio_transform = MLPLayers(
             units=[512,512,512], dropout=0.1
         )
 
         # below here is text branch parameters
-        self.vocab_size = text_cfg.vocab_size
-        self.token_embedding = nn.Embedding(text_cfg.vocab_size, text_cfg.width)
-        self.positional_embedding = nn.Parameter(torch.empty(self.context_length, text_cfg.width))
-        self.ln_final = LayerNorm(text_cfg.width)
+
 
         # ============================================================================================================
         self.audio_projection = MLPLayers(units=[embed_dim, 512, 512], dropout=0.1)
-        self.text_projection = nn.Parameter(torch.empty(text_cfg.width, 512)) # HARDCORE as 512
+        
         self.logit_scale_a = nn.Parameter(torch.ones([]) * np.log(1 / 0.07))
         self.logit_scale_t = nn.Parameter(torch.ones([]) * np.log(1 / 0.07))
         self.register_buffer('attn_mask', self.build_attention_mask(), persistent=False)
@@ -409,8 +417,21 @@ class CLAP(nn.Module):
         self.init_text_branch_parameters()
 
     def init_text_branch_parameters(self):
-        nn.init.normal_(self.token_embedding.weight, std=0.02)
-        nn.init.normal_(self.positional_embedding, std=0.01)
+        if self.text_branch_type=='transformer':
+            nn.init.normal_(self.token_embedding.weight, std=0.02)
+            nn.init.normal_(self.positional_embedding, std=0.01)
+            proj_std = (self.text_branch.width ** -0.5) * ((2 * self.text_branch.layers) ** -0.5)
+            attn_std = self.text_branch.width ** -0.5
+            fc_std = (2 * self.text_branch.width) ** -0.5
+            for block in self.text_branch.resblocks:
+                nn.init.normal_(block.attn.in_proj_weight, std=attn_std)
+                nn.init.normal_(block.attn.out_proj.weight, std=proj_std)
+                nn.init.normal_(block.mlp.c_fc.weight, std=fc_std)
+                nn.init.normal_(block.mlp.c_proj.weight, std=proj_std)
+        if self.text_branch_type=='bert':    
+            width = self.text_branch.embeddings.word_embeddings.weight.shape[-1]
+        else:
+            width = self.text_branch.width
         nn.init.constant_(self.logit_scale_a, np.log(1 / 0.07))
         nn.init.constant_(self.logit_scale_t, np.log(1 / 0.07))
 
@@ -418,17 +439,8 @@ class CLAP(nn.Module):
         # if hasattr(self.visual, 'init_parameters'):
             # self.visual.init_parameters()
 
-        proj_std = (self.transformer.width ** -0.5) * ((2 * self.transformer.layers) ** -0.5)
-        attn_std = self.transformer.width ** -0.5
-        fc_std = (2 * self.transformer.width) ** -0.5
-        for block in self.transformer.resblocks:
-            nn.init.normal_(block.attn.in_proj_weight, std=attn_std)
-            nn.init.normal_(block.attn.out_proj.weight, std=proj_std)
-            nn.init.normal_(block.mlp.c_fc.weight, std=fc_std)
-            nn.init.normal_(block.mlp.c_proj.weight, std=proj_std)
-
         if self.text_projection is not None:
-            nn.init.normal_(self.text_projection, std=self.transformer.width ** -0.5)
+            nn.init.normal_(self.text_projection, std=width ** -0.5)
 
     def build_attention_mask(self):
         # lazily create causal attention mask, with full attention between the vision tokens
@@ -441,22 +453,43 @@ class CLAP(nn.Module):
     def encode_audio(self, audio):
         return self.audio_branch(audio, None) # mix lambda needs to add
 
-    def encode_text(self, text):
-        x = self.token_embedding(text)  # [batch_size, n_ctx, d_model]
+    def list_of_dict_of_tensor2dict_of_tensor(self, x, device):
+        tmp = {}
+        for k in x[0].keys():
+            tmp[k] = []
+            for i in range(len(x)):
+                tmp[k].append(x[i][k])
+        for k in x[0].keys():
+            tmp[k] = torch.tensor(tmp[k]).to(device=device, non_blocking=True)
+        return tmp
 
-        x = x + self.positional_embedding
-        x = x.permute(1, 0, 2)  # NLD -> LND
-        x = self.transformer(x, attn_mask=self.attn_mask)
-        x = x.permute(1, 0, 2)  # LND -> NLD
-        x = self.ln_final(x)
+    def encode_text(self, text, type, device):
+        if type == "transformer":
+            text = text.to(device=device, non_blocking=True)
+            x = self.token_embedding(text)  # [batch_size, n_ctx, d_model]
 
-        # x.shape = [batch_size, n_ctx, transformer.width]
-        # take features from the eot embedding (eot_token is the highest number in each sequence)
-        x = x[torch.arange(x.shape[0]), text.argmax(dim=-1)] @ self.text_projection
+            x = x + self.positional_embedding
+            x = x.permute(1, 0, 2)  # NLD -> LND
+            x = self.text_branch(x, attn_mask=self.attn_mask)
+            x = x.permute(1, 0, 2)  # LND -> NLD
+            x = self.ln_final(x)
 
+            # x.shape = [batch_size, n_ctx, transformer.width]
+            # take features from the eot embedding (eot_token is the highest number in each sequence)
+            x = x[torch.arange(x.shape[0]), text.argmax(dim=-1)] @ self.text_projection
+        elif type == "bert":
+            text = self.list_of_dict_of_tensor2dict_of_tensor(text, device)
+            # text = BatchEncoding(text)
+            # print("text", text)
+            x = self.text_branch(input_ids=text['input_ids'], attention_mask=text['attention_mask'], token_type_ids=text['token_type_ids'])["pooler_output"]
+            x = x @ self.text_projection_bert
+        else:
+            logging.error(f'Model type {type} not found')
+            raise RuntimeError(f'Model type {type} not found.')
         return x
 
-    def forward(self, audio, text):
+
+    def forward(self, audio, text, device):
         """Forward audio and text into the CLAP
 
         Parameters
@@ -467,12 +500,16 @@ class CLAP(nn.Module):
             the text token input 
         """
         if audio is None:
-            return self.encode_text(text)
+            return self.encode_text(text, type=self.text_branch_type, device=device)
         elif text is None:
             return self.audio_projection(self.encode_audio(audio)["embedding"])
         audio_features = self.audio_projection(self.encode_audio(audio)["embedding"])
         audio_features = F.normalize(audio_features, dim=-1)
-        text_features = self.encode_text(text)
+        
+        text_features = self.encode_text(text, type=self.text_branch_type, device=device)
+        # print("text_features", text_features)
+        # print("text_features.shape", text_features.shape)
+        # print("text_features.type", type(text_features))
         text_features = F.normalize(text_features, dim=-1)
 
         audio_features_mlp = self.audio_transform(audio_features)
@@ -564,7 +601,7 @@ def build_model_from_openai_state_dict(state_dict: dict, model_cfg):
 
     embed_dim = model_cfg["embed_dim"]
     audio_cfg = model_cfg["audio_cfg"]
-
+    text_cfg = model_cfg["text_cfg"]
     context_length = state_dict["positional_embedding"].shape[0]
     vocab_size = state_dict["token_embedding.weight"].shape[0]
     transformer_width = state_dict["ln_final.weight"].shape[0]
@@ -573,13 +610,8 @@ def build_model_from_openai_state_dict(state_dict: dict, model_cfg):
 
 
     audio_cfg = CLAPAudioCfp(**audio_cfg)
-    text_cfg = CLAPTextCfg(
-        context_length=context_length,
-        vocab_size=vocab_size,
-        width=transformer_width,
-        heads=transformer_heads,
-        layers=transformer_layers
-    )
+    text_cfg = CLAPTextCfg(**text_cfg)
+
     model = CLAP(
         embed_dim,
         audio_cfg=audio_cfg,

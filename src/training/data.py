@@ -6,7 +6,7 @@ import os
 import random
 import h5py
 from dataclasses import dataclass
-
+from training.params import parse_args
 import braceexpand
 import numpy as np
 import pandas as pd
@@ -23,11 +23,10 @@ import soundfile as sf
 import io
 from pathlib import Path
 import wget
-from open_clip import tokenize
+
 from open_clip.utils import get_tar_path_from_dataset_name, dataset_split
 from open_clip.utils import load_p, load_class_label
 import tempfile
-
 try:
     import horovod.torch as hvd
 except ImportError:
@@ -38,7 +37,17 @@ try:
 except ImportError:
     torchaudio = None
 
-from open_clip import tokenize
+args = parse_args()
+if args.tmodel == "transformer":
+    from open_clip import tokenize
+    def tokenizer(text):
+        return tokenize(text)[0, :]
+elif args.tmodel == "bert":
+    from transformers import BertTokenizer
+    tokenize = BertTokenizer.from_pretrained('bert-base-uncased')
+    def tokenizer(text):
+        return tokenize(text, padding="max_length")
+
 
 # initizlied the audioset map
 _AUDIOSET_MAP_PATH = os.path.join(Path(__file__).parent, "audioset_textmap.npy")
@@ -53,7 +62,6 @@ def int16_to_float32(x):
 class ToyDataset(Dataset):
     def __init__(self, index_path, ipc, config, eval_mode=False):
         """Toy Dataset for testing the audioset input with text labels
-
         Parameters
         ----------
             index_path: str
@@ -421,7 +429,7 @@ def preprocess(
     if isinstance(texts, list) and isinstance(texts[0], str) and len(texts) > 1:
         texts = random.choice(texts)
     sample["raw_text"] = texts
-    sample["text"] = tokenize(texts)[0, :]  # text shape: [num_token]
+    sample["text"] = tokenizer(texts)  # text shape: [num_token]
     if bool(class_index_dict):
         sample["class_label"] = np.zeros(len(class_index_dict))
         for x in json_dict_raw["tag"]:
