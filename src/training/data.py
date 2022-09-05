@@ -380,19 +380,22 @@ def preprocess(
     """
     Preprocess a single sample for wdsdataloader.
     """
-    # if torchaudio not installed, use soundfile to load audio
-    if torchaudio is None:
-        audio_data, orig_sr = sf.read(io.BytesIO(sample[audio_ext]))
-        audio_data = torch.tensor(audio_data).float()
-    else:
-        # https://github.com/webdataset/webdataset/blob/main/webdataset/autodecode.py
-        with tempfile.TemporaryDirectory() as dirname:
-            os.makedirs(dirname, exist_ok=True)
-            fname = os.path.join(dirname, f"file.flac")
-            with open(fname, "wb") as stream:
-                stream.write(sample[audio_ext])
-            audio_data, orig_sr = torchaudio.load(fname)
-            audio_data = audio_data[0, :].float()
+    audio_data, orig_sr = sf.read(io.BytesIO(sample[audio_ext]))
+    audio_data = torch.tensor(audio_data).float()
+    # TODO: (yusong) to be include in the future
+    # # if torchaudio not installed, use soundfile to load audio
+    # if torchaudio is None:
+    #     audio_data, orig_sr = sf.read(io.BytesIO(sample[audio_ext]))
+    #     audio_data = torch.tensor(audio_data).float()
+    # else:
+    #     # https://github.com/webdataset/webdataset/blob/main/webdataset/autodecode.py
+    #     with tempfile.TemporaryDirectory() as dirname:
+    #         os.makedirs(dirname, exist_ok=True)
+    #         fname = os.path.join(dirname, f"file.flac")
+    #         with open(fname, "wb") as stream:
+    #             stream.write(sample[audio_ext])
+    #         audio_data, orig_sr = torchaudio.load(fname)
+    #         audio_data = audio_data[0, :].float()
 
     if len(audio_data) > max_len:  # random clip if too long
         overflow = len(audio_data) - max_len

@@ -339,6 +339,7 @@ def evaluate(model, data, epoch, args, tb_writer=None):
 
                     if args.parallel_eval:
                         # multi-GPU eval
+
                         if args.clap_mlploss:
                             (
                                 audio_features,
@@ -350,8 +351,8 @@ def evaluate(model, data, epoch, args, tb_writer=None):
                                 text_features=text_features,
                                 audio_features_mlp=audio_features_mlp,
                                 text_features_mlp=text_features_mlp,
-                                local_loss=args.local_loss,
-                                gather_with_grad=args.gather_with_grad,
+                                local_loss=False,
+                                gather_with_grad=False,
                                 rank=args.rank,
                                 world_size=args.world_size,
                                 use_horovod=args.horovod,
@@ -364,8 +365,8 @@ def evaluate(model, data, epoch, args, tb_writer=None):
                             ) = gather_features(
                                 audio_features=audio_features,
                                 text_features=text_features,
-                                local_loss=args.local_loss,
-                                gather_with_grad=args.gather_with_grad,
+                                local_loss=False,
+                                gather_with_grad=False,
                                 rank=args.rank,
                                 world_size=args.world_size,
                                 use_horovod=args.horovod,
