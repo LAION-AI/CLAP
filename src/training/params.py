@@ -408,6 +408,13 @@ def parse_args():
 
     parser.add_argument("--lp_lr", type=float, default=1e-4, help="learning rate of linear probe")
 
+    parser.add_argument(
+        "--clap-mlploss",
+        default=False,
+        action="store_true",
+        help="Using MLP loss for CLAP model or not"
+    )
+
     args = parser.parse_args()
 
     # If some params are not passed, we use the default values based on model name.

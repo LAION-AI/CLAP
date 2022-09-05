@@ -276,9 +276,9 @@ def main():
     model = LinearProbe(
         clap_model, 
         mlp=args.lp_mlp, freeze=args.lp_freeze, 
-        in_ch=clap_model_cfg['embed_dim'], out_ch=args.lp_out_ch,
+        in_ch=512, out_ch=args.lp_out_ch,
         act=args.lp_act
-    )
+    ) # in_ch is fixed (i.e., 512)
     model = model.to(device)
     
     if args.horovod:
