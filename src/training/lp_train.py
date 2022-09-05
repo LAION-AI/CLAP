@@ -184,7 +184,7 @@ def train_one_epoch(
             batch_time_m.reset()
             data_time_m.reset()
 
-        logging.info('one training step')
+        logging.info(f'{i}-th training step on {args.rank} GPU')
     # end for
 
 
