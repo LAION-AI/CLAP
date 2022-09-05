@@ -406,7 +406,7 @@ def parse_args():
         "--lp-metrics", type=str, default="map,mauc,acc", help="Metrics of Linear Probe."
     )
 
-    parser.add_argument("--lp_lr", type=float, default=1e-4, help="learning rate of linear probe")
+    parser.add_argument("--lp-lr", type=float, default=1e-4, help="learning rate of linear probe")
 
     parser.add_argument(
         "--clap-mlploss",
@@ -424,3 +424,4 @@ def parse_args():
             setattr(args, name, val)
 
     return args
+

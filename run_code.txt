@@ -49,7 +49,7 @@ torchrun --nproc_per_node 2 -m training.lp_main \
     --wd=0.1 \
     --epochs=1 \
     --workers=4 \
-    --model PANN-14 \
+    --model PANN-14 
 
 CUDA_VISIBLE_DEVICES=0 python -m training.main \
     --save-frequency 1 \

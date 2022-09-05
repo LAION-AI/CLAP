@@ -307,7 +307,8 @@ def evaluate(model, data, epoch, args, tb_writer=None):
                 texts = batch['text']
                 audios = audios.to(device=device, non_blocking=True)
                 texts = texts.to(device=device, non_blocking=True)
-                all_names = list(set(["-".join(b.split("/")[-3:-1]) for b in batch['__url__']]))
+                all_names = []
+                # list(set(["-".join(b.split("/")[-3:-1]) for b in batch['__url__']]))
                 for name in all_names:
                     if name not in eval_info.keys():
                         if args.clap_mlploss:
