@@ -147,7 +147,7 @@ def main():
     np.random.seed(args.seed)
     args.class_index_dict = load_class_label(args.class_label_path)
 
-    if args.remotedata:
+    if args.remotedata and is_master(args):
         for dataset_name in args.datasetnames:
             for split in dataset_split[dataset_name]:
                 if not os.path.exists(f"./json_files/{dataset_name}/{split}"):
@@ -156,24 +156,6 @@ def main():
                     f"aws s3 cp s3://s-laion-audio/webdataset_tar/{dataset_name}/{split}/sizes.json ./json_files/{dataset_name}/{split}/sizes.json"
                 )
 
-    if args.datasetinfos is None:
-        args.datasetinfos = ["train", "unbalanced_train", "balanced_train"]
-    if args.dataset_type == "webdataset":
-        args.train_data = get_tar_path_from_dataset_name(
-            args.datasetnames,
-            args.datasetinfos,
-            islocal=not args.remotedata,
-            proportion=args.dataset_proportion,
-            dataset_path=args.datasetpath,
-        )
-        args.val_data = get_tar_path_from_dataset_name(
-            args.datasetnames,
-            ["valid", "test", "eval"],
-            islocal=not args.remotedata,
-            proportion=1,
-            dataset_path=args.datasetpath,
-        )
-        # args.val_data = get_tar_path_from_dataset_name(args.datasetnames, ["valid"], islocal=not args.remotedata, template=args.data_txt_example)
     # get the name of the experiments
     if args.name is None:
         args.name = "-".join(
