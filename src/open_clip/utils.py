@@ -11,7 +11,7 @@ import os
 import pathlib
 
 
-
+# TODO: (yusong) this not a good place to store those information and does not scale. Need to be fixed later.
 dataset_split = {
     "audiocaps": ["train", "valid", "test"],
     "audioset": ["balanced_train", "unbalanced_train", "eval"],
@@ -21,6 +21,10 @@ dataset_split = {
     "paramount_motion": ["train", "test"],
     "sonniss_game_effects": ["train", "test"],
     "wesoundeffects": ["train", "test"],
+    "MACS": ["train", "test"],
+    "freesound": ["train", "test"],
+    "FSD50K": ["train", "test"],
+    "esc50": ["train", "test"],
 }
 
 
