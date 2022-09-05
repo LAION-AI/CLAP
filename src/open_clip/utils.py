@@ -311,6 +311,8 @@ def load_json(name):
         data = json.load(fp)
     return data
 
+from multiprocessing import Process, Manager
+
 
 def load_class_label(path):
     out = None
@@ -324,4 +326,5 @@ def load_class_label(path):
         elif pathlib.Path(path).suffix in [".csv"]:
             import pandas as pd
             out = pd.read_csv(path)
+        out = Manager().dict(out)
     return out
