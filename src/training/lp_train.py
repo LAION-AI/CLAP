@@ -69,6 +69,7 @@ def train_one_epoch(
     end = time.time()
 
     for i, batch in enumerate(dataloader):
+        logging.info(f'POINT1 GPU {args.rank}')
         step = num_batches_per_epoch * epoch + i
 
         if isinstance(scheduler, dict):
@@ -76,16 +77,15 @@ def train_one_epoch(
                 s(step)
         else:
             scheduler(step)
+        logging.info(f'POINT2 GPU {args.rank}')
 
-        if args.dataset_type == "toy":
-            audio = batch['waveform']
-            class_label = batch['class_label']
-        else:
-            audio = batch['waveform']  # (yusong) todo:  change to retrieve from index for now.
-            class_label = batch['class_label']
+        audio = batch['waveform']
+        class_label = batch['class_label']
 
         audio = audio.to(device=device, non_blocking=True)
         class_label = class_label.to(device=device, non_blocking=True)
+
+        logging.info(f'POINT3 GPU {args.rank}')
 
         data_time_m.update(time.time() - end)
         if isinstance(optimizer, dict):
@@ -187,6 +187,8 @@ def train_one_epoch(
             # resetting batch / data time meters per log window
             batch_time_m.reset()
             data_time_m.reset()
+
+        logging.info(f'{i}-th training step on {args.rank} GPU')
     # end for
 
 

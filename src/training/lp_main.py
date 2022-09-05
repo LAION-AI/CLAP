@@ -147,33 +147,6 @@ def main():
     np.random.seed(args.seed)
     args.class_index_dict = load_class_label(args.class_label_path)
 
-    if args.remotedata:
-        for dataset_name in args.datasetnames:
-            for split in dataset_split[dataset_name]:
-                if not os.path.exists(f"./json_files/{dataset_name}/{split}"):
-                    os.makedirs(f"./json_files/{dataset_name}/{split}")
-                os.system(
-                    f"aws s3 cp s3://s-laion-audio/webdataset_tar/{dataset_name}/{split}/sizes.json ./json_files/{dataset_name}/{split}/sizes.json"
-                )
-
-    if args.datasetinfos is None:
-        args.datasetinfos = ["train", "unbalanced_train", "balanced_train"]
-    if args.dataset_type == "webdataset":
-        args.train_data = get_tar_path_from_dataset_name(
-            args.datasetnames,
-            args.datasetinfos,
-            islocal=not args.remotedata,
-            proportion=args.dataset_proportion,
-            dataset_path=args.datasetpath,
-        )
-        args.val_data = get_tar_path_from_dataset_name(
-            args.datasetnames,
-            ["valid", "test", "eval"],
-            islocal=not args.remotedata,
-            proportion=1,
-            dataset_path=args.datasetpath,
-        )
-        # args.val_data = get_tar_path_from_dataset_name(args.datasetnames, ["valid"], islocal=not args.remotedata, template=args.data_txt_example)
     # get the name of the experiments
     if args.name is None:
         args.name = "-".join(
@@ -191,6 +164,15 @@ def main():
     # discover initial world args early so we can log properly
     args.distributed = False
     args.local_rank, args.rank, args.world_size = world_info_from_env()
+
+    if args.remotedata and is_master(args):
+        for dataset_name in args.datasetnames:
+            for split in dataset_split[dataset_name]:
+                if not os.path.exists(f"./json_files/{dataset_name}/{split}"):
+                    os.makedirs(f"./json_files/{dataset_name}/{split}")
+                os.system(
+                    f"aws s3 cp s3://s-laion-audio/webdataset_tar/{dataset_name}/{split}/sizes.json ./json_files/{dataset_name}/{split}/sizes.json"
+                )
 
     args.log_path = None
     if is_master(args, local=args.log_local):
@@ -263,6 +245,8 @@ def main():
         openai_model_cache_dir=os.path.expanduser(args.openai_model_cache_dir),
         skip_params=False
     )
+
+    args.lp_out_ch = len(list(args.class_index_dict.keys()))
 
     # Linear Probe 
     logging.info(f"linear probe using mlp: {args.lp_mlp}")

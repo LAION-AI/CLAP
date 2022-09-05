@@ -395,10 +395,6 @@ def parse_args():
     )
 
     parser.add_argument(
-        "--lp-out-ch", type=int, default=527, help="Output Dimension of Linear Probe."
-    )
-
-    parser.add_argument(
         "--lp-loss", type=str, default="bce", help="Loss func of Linear Probe."
     )
 
@@ -406,7 +402,7 @@ def parse_args():
         "--lp-metrics", type=str, default="map,mauc,acc", help="Metrics of Linear Probe."
     )
 
-    parser.add_argument("--lp_lr", type=float, default=1e-4, help="learning rate of linear probe")
+    parser.add_argument("--lp-lr", type=float, default=1e-4, help="learning rate of linear probe")
 
     parser.add_argument(
         "--clap-mlploss",
