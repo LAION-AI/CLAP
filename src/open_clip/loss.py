@@ -278,7 +278,5 @@ class LPLoss(nn.Module):
             raise ValueError(f'the loss func should be at least one of [bce, ce, mse]')
 
     def forward(self, pred, target):
-        print(pred.shape, target.shape)
-        print(pred)
         loss = self.loss_func(pred, target)
         return loss

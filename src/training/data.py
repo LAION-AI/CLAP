@@ -432,7 +432,7 @@ def preprocess(
         sample["class_label"] = np.zeros(len(class_index_dict.keys()))
         for x in json_dict_raw["tag"]:
             sample["class_label"][class_index_dict[x]] = 1
-        sample["class_label"] = torch.tensor(sample["class_label"]).long()
+        sample["class_label"] = torch.tensor(sample["class_label"]).float()
     del sample[text_ext]
     sample["audio_name"] = sample["__key__"].split("/")[-1] + "." + audio_ext
     sample["text_name"] = sample["__key__"].split("/")[-1] + "." + text_ext
