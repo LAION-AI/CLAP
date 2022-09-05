@@ -69,7 +69,6 @@ def train_one_epoch(
     end = time.time()
 
     for i, batch in enumerate(dataloader):
-        print('1111')
         step = num_batches_per_epoch * epoch + i
 
         if isinstance(scheduler, dict):
@@ -95,7 +94,6 @@ def train_one_epoch(
             pred = model(audio)
             total_loss = loss(pred, class_label)
 
-        print('2222')
         if isinstance(optimizer, dict):
             if scaler is not None:
                 scaler.scale(total_loss).backward()
@@ -127,7 +125,6 @@ def train_one_epoch(
                 total_loss.backward()
                 optimizer.step()
 
-        print('3333')
         # Note: we clamp to 4.6052 = ln(100), as in the original paper.
         with torch.no_grad():
             unwrap_model(model).clap_model.logit_scale_a.clamp_(0, math.log(100))
@@ -137,7 +134,6 @@ def train_one_epoch(
         end = time.time()
         batch_count = i + 1
 
-        print('4444')
         if is_master(args) and (i % 100 == 0 or batch_count == num_batches_per_epoch):
             batch_size = len(audio)
             num_samples = batch_count * batch_size * args.world_size
@@ -176,7 +172,6 @@ def train_one_epoch(
                     "batch_time": batch_time_m.val,
                     "lr": optimizer.param_groups[0]["lr"],
                 }
-            print('5555')
             for name, val in log_data.items():
                 name = "train/" + name
                 if tb_writer is not None:
@@ -188,6 +183,8 @@ def train_one_epoch(
             # resetting batch / data time meters per log window
             batch_time_m.reset()
             data_time_m.reset()
+
+        logging.info('one training step')
     # end for
 
 
