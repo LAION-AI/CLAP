@@ -424,7 +424,8 @@ def preprocess(
     sample["text"] = tokenize(texts)[0, :]  # text shape: [num_token]
     if bool(class_index_dict):
         key, val = class_index_dict
-        _dict = {k: v for k, v in val.items()}
+        key = key.split('\n')
+        _dict = {k: v for k, v in zip(key, val)}
         sample["class_label"] = np.zeros(len(_dict))
         for x in json_dict_raw["tag"]:
             sample["class_label"][_dict[x]] = 1

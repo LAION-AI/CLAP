@@ -317,11 +317,12 @@ def load_json(name):
 
 from multiprocessing import Process, Manager
 from multiprocessing import Process, Value, Array
-from ctypes import c_char_p
+from ctypes import c_wchar
 
 
 def load_class_label(path):
     # https://stackoverflow.com/questions/48004243/how-to-share-large-read-only-dictionary-list-across-processes-in-multiprocessing
+    # https://stackoverflow.com/questions/45693949/storing-strings-in-a-multiprocessing-sharedctypes-array
     out = None
     if path is not None:
         if pathlib.Path(path).suffix in [".pkl", ".pickle"]:
@@ -336,6 +337,6 @@ def load_class_label(path):
     if out is None:
         return None
     else:
-        key = Array(c_char_p, out.keys())
+        key = Array(c_wchar, '\n'.join(list(out.keys())))
         val = Array('i', out.values())
         return (key, val)
