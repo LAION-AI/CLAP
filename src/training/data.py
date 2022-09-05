@@ -423,17 +423,17 @@ def preprocess(
         texts = random.choice(texts)
     sample["raw_text"] = texts
     sample["text"] = tokenize(texts)[0, :]  # text shape: [num_token]
-    if True:
-        # https://stackoverflow.com/questions/48004243/how-to-share-large-read-only-dictionary-list-across-processes-in-multiprocessing
-        # https://stackoverflow.com/questions/45693949/storing-strings-in-a-multiprocessing-sharedctypes-array
-        # key, val = class_index_dict
-        # key = key[:].split('\n')
-        # _dict = {k: v for k, v in zip(key, val)}
-        sample["class_label"] = np.zeros(50)
-        sample["class_label"][5] = 1
-        # for x in json_dict_raw["tag"]:
-        #     sample["class_label"][class_index_dict[x]] = 1
-        sample["class_label"] = torch.tensor(sample["class_label"]).long()
+    # if True:
+    #     # https://stackoverflow.com/questions/48004243/how-to-share-large-read-only-dictionary-list-across-processes-in-multiprocessing
+    #     # https://stackoverflow.com/questions/45693949/storing-strings-in-a-multiprocessing-sharedctypes-array
+    #     # key, val = class_index_dict
+    #     # key = key[:].split('\n')
+    #     # _dict = {k: v for k, v in zip(key, val)}
+    #     sample["class_label"] = np.zeros(50)
+    #     sample["class_label"][5] = 1
+    #     # for x in json_dict_raw["tag"]:
+    #     #     sample["class_label"][class_index_dict[x]] = 1
+    #     sample["class_label"] = torch.tensor(sample["class_label"]).long()
     del sample[text_ext]
     sample["audio_name"] = sample["__key__"].split("/")[-1] + "." + audio_ext
     sample["text_name"] = sample["__key__"].split("/")[-1] + "." + text_ext
@@ -701,7 +701,7 @@ def get_dataset_fn(data_path, dataset_type):
 def get_data(args, model_cfg):
     data = {}
 
-    args.class_index_dict = load_class_label(args.class_label_path)
+    args.class_index_dict = None #load_class_label(args.class_label_path)
 
     if args.datasetinfos is None:
         args.datasetinfos = ["train", "unbalanced_train", "balanced_train"]
