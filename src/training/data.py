@@ -423,7 +423,7 @@ def preprocess(
         texts = random.choice(texts)
     sample["raw_text"] = texts
     sample["text"] = tokenize(texts)[0, :]  # text shape: [num_token]
-    if bool(class_index_dict):
+    if True:
         # https://stackoverflow.com/questions/48004243/how-to-share-large-read-only-dictionary-list-across-processes-in-multiprocessing
         # https://stackoverflow.com/questions/45693949/storing-strings-in-a-multiprocessing-sharedctypes-array
         # key, val = class_index_dict
