@@ -83,7 +83,6 @@ def train_one_epoch(
         audio = audio.to(device=device, non_blocking=True)
         class_label = class_label.to(device=device, non_blocking=True)
 
-
         data_time_m.update(time.time() - end)
         if isinstance(optimizer, dict):
             for o_ in optimizer.values():

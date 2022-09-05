@@ -266,7 +266,7 @@ def calc_celoss(pred, target):
 
 class LPLoss(nn.Module):
 
-    def __init__(self,loss_name):
+    def __init__(self, loss_name):
         super().__init__()
         if loss_name == 'bce':
             self.loss_func = nn.BCEWithLogitsLoss()
@@ -278,5 +278,5 @@ class LPLoss(nn.Module):
             raise ValueError(f'the loss func should be at least one of [bce, ce, mse]')
 
     def forward(self, pred, target):
-        loss = self.loss_func(pred,target)
+        loss = self.loss_func(pred, target)
         return loss
