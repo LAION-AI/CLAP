@@ -264,6 +264,8 @@ def main():
         skip_params=False
     )
 
+    args.lp_out_ch = len(list(args.class_index_dict.keys()))
+
     # Linear Probe 
     logging.info(f"linear probe using mlp: {args.lp_mlp}")
     logging.info(f"linear probe using freeze: {args.lp_freeze}")
