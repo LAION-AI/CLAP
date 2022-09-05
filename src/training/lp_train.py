@@ -129,6 +129,8 @@ def train_one_epoch(
                 total_loss.backward()
                 optimizer.step()
 
+        logging.info(f'POINT4 GPU {args.rank}')
+
         # Note: we clamp to 4.6052 = ln(100), as in the original paper.
         with torch.no_grad():
             unwrap_model(model).clap_model.logit_scale_a.clamp_(0, math.log(100))
@@ -137,6 +139,8 @@ def train_one_epoch(
         batch_time_m.update(time.time() - end)
         end = time.time()
         batch_count = i + 1
+
+        logging.info(f'POINT5 GPU {args.rank}')
 
         if is_master(args) and (i % 100 == 0 or batch_count == num_batches_per_epoch):
             batch_size = len(audio)
