@@ -77,12 +77,8 @@ def train_one_epoch(
         else:
             scheduler(step)
 
-        if args.dataset_type == "toy":
-            audio = batch['waveform']
-            class_label = batch['class_label']
-        else:
-            audio = batch['waveform']  # (yusong) todo:  change to retrieve from index for now.
-            class_label = batch['class_label']
+        audio = batch['waveform']
+        class_label = batch['class_label']
 
         audio = audio.to(device=device, non_blocking=True)
         class_label = class_label.to(device=device, non_blocking=True)
