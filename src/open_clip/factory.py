@@ -69,6 +69,7 @@ def create_model(
         # pretrained_image: bool = False,
 ):
     model_name = model_name.replace('/', '-')  # for callers using old naming with / in ViT names
+    pretrained_orig = pretrained
     pretrained = pretrained.lower()
     if pretrained == 'openai':
         if model_name in _MODEL_CONFIGS:
@@ -111,12 +112,11 @@ def create_model(
             url = get_pretrained_url(model_name, pretrained)
             if url:
                 checkpoint_path = download_pretrained(url, root=openai_model_cache_dir)
-            elif os.path.exists(pretrained):
-                checkpoint_path = pretrained
-
+            elif os.path.exists(pretrained_orig):
+                checkpoint_path = pretrained_orig
             if checkpoint_path:
                 logging.info(f'Loading pretrained {model_name} weights ({pretrained}).')
-                ckpt = load_state_dict(checkpoint_path, skip_params=skip_params)
+                ckpt = load_state_dict(checkpoint_path, skip_params=True)
                 model.load_state_dict(ckpt)
                 param_names = [n for n,p in model.named_parameters()]
                 for n in param_names:
