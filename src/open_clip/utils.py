@@ -10,7 +10,6 @@ import json
 import os
 import pathlib
 
-
 # TODO: (yusong) this not a good place to store those information and does not scale. Need to be fixed later.
 dataset_split = {
     "audiocaps": ["train", "valid", "test"],
@@ -49,7 +48,7 @@ def freeze_batch_norm_2d(module, module_match={}, name=""):
     if module_match:
         is_match = name in module_match
     if is_match and isinstance(
-        module, (nn.modules.batchnorm.BatchNorm2d, nn.modules.batchnorm.SyncBatchNorm)
+            module, (nn.modules.batchnorm.BatchNorm2d, nn.modules.batchnorm.SyncBatchNorm)
     ):
         res = FrozenBatchNorm2d(module.num_features)
         res.num_features = module.num_features
@@ -80,11 +79,11 @@ def exist(dataset_name, dataset_type):
 
 
 def get_tar_path_from_dataset_name(
-    dataset_names,
-    dataset_types,
-    islocal,
-    dataset_path,
-    proportion=1,
+        dataset_names,
+        dataset_types,
+        islocal,
+        dataset_path,
+        proportion=1,
 ):
     """
     Get tar path from dataset name and type
@@ -178,8 +177,8 @@ def do_mixup(x, mixup_lambda):
       out: (batch_size, ...)
     """
     out = (
-        x.transpose(0, -1) * mixup_lambda
-        + torch.flip(x, dims=[0]).transpose(0, -1) * (1 - mixup_lambda)
+            x.transpose(0, -1) * mixup_lambda
+            + torch.flip(x, dims=[0]).transpose(0, -1) * (1 - mixup_lambda)
     ).transpose(0, -1)
     return out
 
@@ -275,6 +274,7 @@ def get_data_from_log(txt_path):
         }
     return train_data, val_data
 
+
 def save_p(obj, filename):
     import pickle
 
@@ -288,9 +288,10 @@ def save_p(obj, filename):
     with open(filename, "rb") as file:
         z = pickle.load(file)
     assert (
-        DeepDiff(obj, z, ignore_string_case=True) == {}
+            DeepDiff(obj, z, ignore_string_case=True) == {}
     ), "there is something wrong with the saving process"
     return
+
 
 def load_p(filename):
     import pickle
@@ -299,11 +300,13 @@ def load_p(filename):
         z = pickle.load(file)
     return z
 
+
 def save_json(data, name="data.json"):
     import json
     with open(name, 'w') as fp:
         json.dump(data, fp)
     return
+
 
 def load_json(name):
     import json
@@ -311,10 +314,14 @@ def load_json(name):
         data = json.load(fp)
     return data
 
+
 from multiprocessing import Process, Manager
+from multiprocessing import Process, Value, Array
+from ctypes import c_char_p
 
 
 def load_class_label(path):
+    # https://stackoverflow.com/questions/48004243/how-to-share-large-read-only-dictionary-list-across-processes-in-multiprocessing
     out = None
     if path is not None:
         if pathlib.Path(path).suffix in [".pkl", ".pickle"]:
@@ -326,5 +333,9 @@ def load_class_label(path):
         elif pathlib.Path(path).suffix in [".csv"]:
             import pandas as pd
             out = pd.read_csv(path)
-        out = Manager().dict(out)
-    return out
+    if out is None:
+        return None
+    else:
+        key = Array(c_char_p, out.keys())
+        val = Array('i', out.values())
+        return (key, val)

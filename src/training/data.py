@@ -423,9 +423,11 @@ def preprocess(
     sample["raw_text"] = texts
     sample["text"] = tokenize(texts)[0, :]  # text shape: [num_token]
     if bool(class_index_dict):
-        sample["class_label"] = np.zeros(len(class_index_dict))
+        key, val = class_index_dict
+        _dict = {k: v for k, v in val.items()}
+        sample["class_label"] = np.zeros(len(_dict))
         for x in json_dict_raw["tag"]:
-            sample["class_label"][class_index_dict[x]] = 1
+            sample["class_label"][_dict[x]] = 1
         sample["class_label"] = torch.tensor(sample["class_label"]).long()
     del sample[text_ext]
     sample["audio_name"] = sample["__key__"].split("/")[-1] + "." + audio_ext
