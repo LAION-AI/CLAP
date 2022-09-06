@@ -245,7 +245,7 @@ def main():
         openai_model_cache_dir=os.path.expanduser(args.openai_model_cache_dir),
         skip_params=False
     )
-
+    
     args.lp_out_ch = len(list(args.class_index_dict.keys()))
     # Linear Probe 
     logging.info(f"linear probe using mlp: {args.lp_mlp}")

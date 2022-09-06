@@ -123,7 +123,7 @@ class ToyDataset(Dataset):
 
     def __getitem__(self, index):
         """Load waveform, text, and target of an audio clip
-
+        
         Parameters
         ----------
             index: int

@@ -458,7 +458,7 @@ class CLAP(nn.Module):
         for k in x[0].keys():
             tmp[k] = []
             for i in range(len(x)):
-                tmp[k].append(x[i][k])
+                tmp[k].append(x[i][k][:77])
         for k in x[0].keys():
             tmp[k] = torch.tensor(tmp[k]).to(device=device, non_blocking=True)
         return tmp
