@@ -561,7 +561,11 @@ class CLAP(nn.Module):
         elif self.text_branch_type == "bert":
             # text = self.list_of_dict_of_tensor2dict_of_tensor(text, device)
             # text = BatchEncoding(text)
-
+            print("type(text)", type(text))
+            try:
+                print("len(text)", len(text))
+                print("text[0]", text[0])
+                print("text[0].keys()", text[0].keys())
             x = self.text_branch(
                 input_ids=text["input_ids"].to(device=device, non_blocking=True),
                 attention_mask=text["attention_mask"].to(
