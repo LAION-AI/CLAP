@@ -469,7 +469,6 @@ def collate_fn(batch):
     batch_dict = {}
     for k in batch[0].keys():
         if isinstance(batch[0][k], dict):  # dealwith bert tokenizer output
-            print("flag!")
             batch_dict[k] = {}
             for kk in batch[0][k].keys():
                 tmp = []
