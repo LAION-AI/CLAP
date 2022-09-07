@@ -544,7 +544,7 @@ class CLAP(nn.Module):
     #         tmp[k] = torch.tensor(tmp[k]).to(device=device, non_blocking=True)
     #     return tmp
 
-    def encode_text(self, text, type, device):
+    def encode_text(self, text, type_, device):
         if self.text_branch_type == "transformer":
             text = text.to(device=device, non_blocking=True)
             x = self.token_embedding(text)  # [batch_size, n_ctx, d_model]
@@ -561,12 +561,6 @@ class CLAP(nn.Module):
         elif self.text_branch_type == "bert":
             # text = self.list_of_dict_of_tensor2dict_of_tensor(text, device)
             # text = BatchEncoding(text)
-            try:
-                print("len(text)", len(text))
-                print("text[0]", text[0])
-                print("text[0].keys()", text[0].keys())
-            except:
-                pass
             x = self.text_branch(
                 input_ids=text["input_ids"].to(device=device, non_blocking=True),
                 attention_mask=text["attention_mask"].to(
@@ -578,8 +572,8 @@ class CLAP(nn.Module):
             )["pooler_output"]
             x = x @ self.text_projection
         else:
-            logging.error(f"Model type {type} not found")
-            raise RuntimeError(f"Model type {type} not found.")
+            logging.error(f"Model type {type_} not found")
+            raise RuntimeError(f"Model type {type_} not found.")
         return x
 
     def forward(self, audio, text, device):
@@ -593,14 +587,14 @@ class CLAP(nn.Module):
             the text token input
         """
         if audio is None:
-            return self.encode_text(text, device=device)
+            return self.encode_text(text, type_=self.text_branch_type, device=device)
         elif text is None:
             return self.audio_projection(self.encode_audio(audio)["embedding"])
         audio_features = self.audio_projection(self.encode_audio(audio)["embedding"])
         audio_features = F.normalize(audio_features, dim=-1)
 
         text_features = self.encode_text(
-            text, type=self.text_branch_type, device=device
+            text, type_=self.text_branch_type, device=device
         )
         # print("text_features", text_features)
         # print("text_features.shape", text_features.shape)
