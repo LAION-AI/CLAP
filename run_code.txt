@@ -33,7 +33,10 @@ CUDA_VISIBLE_DEVICES=0 python -m training.lp_main \
     --wd=0.1 \
     --epochs=1 \
     --workers=4 \
-    --model PANN-14 \
+    --model HTSAT-tiny \
+    --no-eval \
+    --lp-freeze \
+    --pretrained="/home/la/kechen/Research/clap/ckpt/2022_05_07-19_16_07-model_HTSAT-tiny-lr_0.001-b_96-j_4-p_fp32/checkpoints/epoch_top_0.pt"
 
 torchrun --nproc_per_node 2 -m training.lp_main \
     --save-frequency 1 \
@@ -49,7 +52,10 @@ torchrun --nproc_per_node 2 -m training.lp_main \
     --wd=0.1 \
     --epochs=1 \
     --workers=4 \
-    --model PANN-14 \
+    --model HTSAT-tiny \
+    --no-eval \
+    --lp-freeze \
+    --pretrained="/home/la/kechen/Research/clap/ckpt/2022_05_07-19_16_07-model_HTSAT-tiny-lr_0.001-b_96-j_4-p_fp32/checkpoints/epoch_top_0.pt"
 
 CUDA_VISIBLE_DEVICES=0 python -m training.main \
     --save-frequency 1 \
