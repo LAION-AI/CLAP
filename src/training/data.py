@@ -470,7 +470,12 @@ def collate_fn(batch):
     print("batch[0]", batch[0])
     for k in batch[0].keys():
         if isinstance(batch[0][k], dict):
-            batch_dict[k] = collate_fn([x[k] for x in batch])
+            batch_dict[k] = {}
+            for kk in batch[0][k].keys():
+                tmp = []
+                for i in range(len(batch)):
+                    tmp.append(batch[i][k][kk])
+                batch_dict[k][kk] = torch.vstack(tmp)
         if isinstance(batch[0][k], torch.Tensor):
             batch_dict[k] = torch.stack([sample[k] for sample in batch])
         elif isinstance(batch[0][k], np.ndarray):
