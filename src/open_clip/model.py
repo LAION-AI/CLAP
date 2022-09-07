@@ -566,6 +566,8 @@ class CLAP(nn.Module):
                 print("len(text)", len(text))
                 print("text[0]", text[0])
                 print("text[0].keys()", text[0].keys())
+            except:
+                pass
             x = self.text_branch(
                 input_ids=text["input_ids"].to(device=device, non_blocking=True),
                 attention_mask=text["attention_mask"].to(
