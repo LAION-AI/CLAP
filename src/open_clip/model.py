@@ -567,7 +567,7 @@ class CLAP(nn.Module):
                 attention_mask=text["attention_mask"],
                 token_type_ids=text["token_type_ids"],
             )["pooler_output"]
-            x = x @ self.text_projection_bert
+            x = x @ self.text_projection
         else:
             logging.error(f"Model type {type} not found")
             raise RuntimeError(f"Model type {type} not found.")
