@@ -37,6 +37,7 @@ from training.scheduler import cosine_lr
 from training.train import train_one_epoch, evaluate
 from open_clip.utils import dataset_split
 
+
 def maintain_ckpts(args, startidx, all_idx_len):
     for i in reversed(range(startidx, all_idx_len)):
         if os.path.exists(os.path.join(args.checkpoint_path, f"epoch_top_{i}.pt")):
@@ -141,6 +142,10 @@ def main():
     torch.cuda.manual_seed(args.seed)
     torch.cuda.manual_seed_all(args.seed)
     np.random.seed(args.seed)
+    if args.tmodel == "bert":
+        assert (
+            args.pretrained == "" or args.pretrained is None
+        ), "bert text encoder does not support pretrained models."
 
     # get the name of the experiments
     if args.name is None:
@@ -158,7 +163,7 @@ def main():
     # discover initial world args early so we can log properly
     args.distributed = False
     args.local_rank, args.rank, args.world_size = world_info_from_env()
-    
+
     if args.remotedata and is_master(args):
         for dataset_name in args.datasetnames:
             for split in dataset_split[dataset_name]:
@@ -226,7 +231,7 @@ def main():
     else:
         logging.info(f"Running with a single process. Device {args.device}.")
 
-    logging.info(f'openai cache dir: {os.path.expanduser(args.openai_model_cache_dir)}')
+    logging.info(f"openai cache dir: {os.path.expanduser(args.openai_model_cache_dir)}")
 
     model, model_cfg = create_model(
         args.amodel,
@@ -502,7 +507,10 @@ def main():
         train_one_epoch(model, data, epoch, optimizer, scaler, scheduler, args, writer)
         completed_epoch = epoch + 1
 
-        if any(v in data for v in ("val", "imagenet-val", "imagenet-v2")) and not args.no_eval:
+        if (
+            any(v in data for v in ("val", "imagenet-val", "imagenet-v2"))
+            and not args.no_eval
+        ):
             metrics = evaluate(model, data, completed_epoch, args, writer)
             if args.save_top_performance:
                 top_k_dataset = args.top_k_checkpoint_select_dataset
