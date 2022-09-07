@@ -89,7 +89,7 @@ def create_model(
 
         logging.info(f"Loading pretrained ViT-B-16 text encoder from OpenAI.")
         # Hard Code in model name
-
+        model_cfg["text_cfg"]["model_type"] = tmodel_name
         model = load_openai_model(
             "ViT-B-16",
             model_cfg,
