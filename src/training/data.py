@@ -467,9 +467,8 @@ def collate_fn(batch):
     """
     # concatenate values in each dictionary. if it is a tensor, concatenate. if it is a list, extend.
     batch_dict = {}
-    print("batch[0]", batch[0])
     for k in batch[0].keys():
-        if isinstance(batch[0][k], dict):
+        if isinstance(batch[0][k], dict):  # dealwith bert tokenizer output
             batch_dict[k] = {}
             for kk in batch[0][k].keys():
                 tmp = []

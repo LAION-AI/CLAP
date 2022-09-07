@@ -534,15 +534,15 @@ class CLAP(nn.Module):
     def encode_audio(self, audio):
         return self.audio_branch(audio, None)  # mix lambda needs to add
 
-    def list_of_dict_of_tensor2dict_of_tensor(self, x, device):
-        tmp = {}
-        for k in x[0].keys():
-            tmp[k] = []
-            for i in range(len(x)):
-                tmp[k].append(x[i][k][:77])
-        for k in x[0].keys():
-            tmp[k] = torch.tensor(tmp[k]).to(device=device, non_blocking=True)
-        return tmp
+    # def list_of_dict_of_tensor2dict_of_tensor(self, x, device):
+    #     tmp = {}
+    #     for k in x[0].keys():
+    #         tmp[k] = []
+    #         for i in range(len(x)):
+    #             tmp[k].append(x[i][k][:77])
+    #     for k in x[0].keys():
+    #         tmp[k] = torch.tensor(tmp[k]).to(device=device, non_blocking=True)
+    #     return tmp
 
     def encode_text(self, text, type, device):
         if self.text_branch_type == "transformer":
@@ -561,7 +561,6 @@ class CLAP(nn.Module):
         elif self.text_branch_type == "bert":
             # text = self.list_of_dict_of_tensor2dict_of_tensor(text, device)
             # text = BatchEncoding(text)
-            print("len(text)", len(text))
 
             x = self.text_branch(
                 input_ids=text["input_ids"].to(device=device, non_blocking=True),
