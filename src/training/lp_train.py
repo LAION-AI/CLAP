@@ -229,7 +229,7 @@ def evaluate(model, data, epoch, args, tb_writer=None):
                 else:
                     audio = batch['waveform']  # (yusong) todo:  change to retrieve from index for now.
                     class_label = batch['class_label']
-                
+                           
                 audio = audio.to(device=device, non_blocking=True)
                 class_label = class_label.to(device=device, non_blocking=True)
 

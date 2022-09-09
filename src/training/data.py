@@ -6,7 +6,7 @@ import os
 import random
 import h5py
 from dataclasses import dataclass
-
+from training.params import parse_args
 import braceexpand
 import numpy as np
 import pandas as pd
@@ -23,7 +23,7 @@ import soundfile as sf
 import io
 from pathlib import Path
 import wget
-from open_clip import tokenize
+
 from open_clip.utils import get_tar_path_from_dataset_name, dataset_split
 from open_clip.utils import load_p, load_class_label
 import tempfile
@@ -39,7 +39,40 @@ try:
 except ImportError:
     torchaudio = None
 
-from open_clip import tokenize
+args = parse_args()
+if args.tmodel == "transformer":
+    from open_clip import tokenize
+
+    def tokenizer(text):
+        return tokenize(text)[0, :]
+
+elif args.tmodel == "bert":
+    from transformers import BertTokenizer
+    tokenize = BertTokenizer.from_pretrained("bert-base-uncased")
+
+    def tokenizer(text):
+        result = tokenize(
+            text,
+            padding="max_length",
+            truncation=True,
+            max_length=77,
+            return_tensors="pt",
+        )
+        return {k: v.squeeze(0) for k, v in result.items()}
+
+elif args.tmodel == "roberta":
+    from transformers import RobertaTokenizer
+    tokenize = RobertaTokenizer.from_pretrained('roberta-base')
+
+    def tokenizer(text):
+        result = tokenize(
+            text,
+            padding="max_length",
+            truncation=True,
+            max_length=77,
+            return_tensors="pt",
+        )
+        return {k: v.squeeze(0) for k, v in result.items()}
 
 # initizlied the audioset map
 _AUDIOSET_MAP_PATH = os.path.join(Path(__file__).parent, "audioset_textmap.npy")
@@ -54,7 +87,6 @@ def int16_to_float32(x):
 class ToyDataset(Dataset):
     def __init__(self, index_path, ipc, config, eval_mode=False):
         """Toy Dataset for testing the audioset input with text labels
-
         Parameters
         ----------
             index_path: str
@@ -106,7 +138,7 @@ class ToyDataset(Dataset):
     def crop_wav(self, x):
         crop_size = self.audio_cfg["crop_size"]
         crop_pos = random.randint(0, len(x) - crop_size - 1)
-        return x[crop_pos: crop_pos + crop_size]
+        return x[crop_pos : crop_pos + crop_size]
 
     def prompt_text(self, target):
         events = _AUDIOSET_MAP[np.where(target > 0)]
@@ -150,10 +182,10 @@ class ToyDataset(Dataset):
         text = self.prompt_text(target)
         with h5py.File(hdf5_path, "r") as f:
             waveform = int16_to_float32(f["waveform"][r_idx])[
-                       : self.audio_cfg["clip_samples"]
-                       ]
+                : self.audio_cfg["clip_samples"]
+            ]
         assert (
-                len(waveform) == self.audio_cfg["clip_samples"]
+            len(waveform) == self.audio_cfg["clip_samples"]
         ), "The sample length is not match"
         # Time shift
         # if (self.config.enable_time_shift) and (not self.eval_mode):
@@ -372,11 +404,11 @@ def sample_prop(sizefile, inputs, proportion, is_local=True):
 
 
 def preprocess(
-        sample,
-        audio_ext,
-        text_ext,
-        max_len,
-        class_index_dict=None,
+    sample,
+    audio_ext,
+    text_ext,
+    max_len,
+    class_index_dict=None,
 ):
     """
     Preprocess a single sample for wdsdataloader.
@@ -401,7 +433,7 @@ def preprocess(
     if len(audio_data) > max_len:  # random clip if too long
         overflow = len(audio_data) - max_len
         idx = np.random.randint(0, overflow + 1)
-        audio_data = audio_data[idx: idx + max_len]
+        audio_data = audio_data[idx : idx + max_len]
     else:  # padding if too short
         audio_data = F.pad(
             audio_data,
@@ -422,7 +454,7 @@ def preprocess(
     if isinstance(texts, list) and isinstance(texts[0], str) and len(texts) > 1:
         texts = random.choice(texts)
     sample["raw_text"] = texts
-    sample["text"] = tokenize(texts)[0, :]  # text shape: [num_token]
+    sample["text"] = tokenizer(texts)  # text shape: [num_token]
     if class_index_dict is not None:
         # https://stackoverflow.com/questions/48004243/how-to-share-large-read-only-dictionary-list-across-processes-in-multiprocessing
         # https://stackoverflow.com/questions/45693949/storing-strings-in-a-multiprocessing-sharedctypes-array
@@ -448,7 +480,14 @@ def collate_fn(batch):
     # concatenate values in each dictionary. if it is a tensor, concatenate. if it is a list, extend.
     batch_dict = {}
     for k in batch[0].keys():
-        if isinstance(batch[0][k], torch.Tensor):
+        if isinstance(batch[0][k], dict):  # dealwith bert tokenizer output
+            batch_dict[k] = {}
+            for kk in batch[0][k].keys():
+                tmp = []
+                for i in range(len(batch)):
+                    tmp.append(batch[i][k][kk])
+                batch_dict[k][kk] = torch.vstack(tmp)
+        elif isinstance(batch[0][k], torch.Tensor):
             batch_dict[k] = torch.stack([sample[k] for sample in batch])
         elif isinstance(batch[0][k], np.ndarray):
             batch_dict[k] = torch.tensor(np.stack([sample[k] for sample in batch]))
@@ -458,15 +497,15 @@ def collate_fn(batch):
 
 
 def get_wds_dataset(
-        args,
-        model_cfg,
-        is_train,
-        audio_ext="flac",
-        text_ext="json",
-        max_len=480000,
-        proportion=1.0,
-        sizefilepath_=None,
-        is_local=None,
+    args,
+    model_cfg,
+    is_train,
+    audio_ext="flac",
+    text_ext="json",
+    max_len=480000,
+    proportion=1.0,
+    sizefilepath_=None,
+    is_local=None,
 ):
     """
     Get a dataset for wdsdataloader.
@@ -501,7 +540,7 @@ def get_wds_dataset(
                 )
         else:
             num_samples = (
-                    args.val_num_samples or 0
+                args.val_num_samples or 0
             )  # eval will just exhaust the iterator if not specified
 
     pipeline = [wds.SimpleShardList(input_shards)]
@@ -546,7 +585,13 @@ def get_wds_dataset(
         ),
     )
 
-    pipeline.append(wds.batched(args.batch_size, partial=not (is_train or args.parallel_eval), collation_fn=collate_fn))
+    pipeline.append(
+        wds.batched(
+            args.batch_size,
+            partial=not (is_train or args.parallel_eval),
+            collation_fn=collate_fn,
+        )
+    )
 
     dataset = wds.DataPipeline(*pipeline)
     if is_train or args.parallel_eval:
@@ -598,17 +643,17 @@ def get_wds_dataset(
 
 
 def wds_batch_list2dict(
-        batch,
-        keys=[
-            "__url__",
-            "__key__",
-            "waveform",
-            "text",
-            "raw_text",
-            "audio_name",
-            "text_name",
-            "audio_orig_sr",
-        ],
+    batch,
+    keys=[
+        "__url__",
+        "__key__",
+        "waveform",
+        "text",
+        "raw_text",
+        "audio_name",
+        "text_name",
+        "audio_orig_sr",
+    ],
 ):
     """
     Return a dictionary of the batch, with keys as the names of the fields.

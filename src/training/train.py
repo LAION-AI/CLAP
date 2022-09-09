@@ -86,7 +86,7 @@ def train_one_epoch(
         audios = batch['waveform']
         texts = batch['text']
         audios = audios.to(device=device, non_blocking=True)
-        texts = texts.to(device=device, non_blocking=True)
+        # texts = texts.to(device=device, non_blocking=True)
 
         data_time_m.update(time.time() - end)
         if isinstance(optimizer, dict):
@@ -103,7 +103,7 @@ def train_one_epoch(
                 text_features_mlp,
                 logit_scale_a,
                 logit_scale_t,
-            ) = model(audios, texts)
+            ) = model(audios, texts, device)
 
             if args.clap_mlploss:
                 total_loss = loss(
@@ -306,9 +306,8 @@ def evaluate(model, data, epoch, args, tb_writer=None):
                 audios = batch['waveform']
                 texts = batch['text']
                 audios = audios.to(device=device, non_blocking=True)
-                texts = texts.to(device=device, non_blocking=True)
-                all_names = []
-                # list(set(["-".join(b.split("/")[-3:-1]) for b in batch['__url__']]))
+                
+                all_names = list(set(["-".join(b.split("/")[-3:-1]) for b in batch['__url__']]))
                 for name in all_names:
                     if name not in eval_info.keys():
                         if args.clap_mlploss:
@@ -327,7 +326,6 @@ def evaluate(model, data, epoch, args, tb_writer=None):
                                 "all_audio_features": [],
                                 "all_text_features": []
                             }
-
                 with autocast():
                     (
                         audio_features,
@@ -336,11 +334,10 @@ def evaluate(model, data, epoch, args, tb_writer=None):
                         text_features_mlp,
                         logit_scale_a,
                         logit_scale_t,
-                    ) = model(audios, texts)
+                    ) = model(audios, texts, device)
 
                     if args.parallel_eval:
                         # multi-GPU eval
-
                         if args.clap_mlploss:
                             (
                                 audio_features,
@@ -528,6 +525,8 @@ def get_metrics(
         ground_truth = torch.arange(len(text_features)).view(-1, 1)
 
     else:
+        # print("text_features", text_features)
+        # print("text_features.shape", text_features.shape)
         logits_per_audio = (logit_scale_a * audio_features @ text_features.t()).detach().cpu()
         logits_per_text = logits_per_audio.t().detach().cpu()
 
@@ -561,3 +560,4 @@ def get_metrics(
 
 
     return metrics
+    

@@ -14,7 +14,8 @@ CUDA_VISIBLE_DEVICES=0 python -m training.main \
     --epochs=200  \
     --workers=4 \
     --use-bn-sync  \
-    --model PANN-14 \
+    --amodel PANN-14 \
+    --tmodel transformer \
     --datasetnames "Clotho" "audiocaps" "BBCSoundEffects" \
     --datasetinfos "train" "unbalanced_train" "balanced_train"
 
@@ -33,7 +34,8 @@ CUDA_VISIBLE_DEVICES=0 python -m training.lp_main \
     --wd=0.1 \
     --epochs=1 \
     --workers=4 \
-    --model HTSAT-tiny \
+    --amodel HTSAT-tiny \
+    --tmodel transformer \
     --no-eval \
     --lp-freeze \
     --pretrained="/home/la/kechen/Research/clap/ckpt/2022_05_07-19_16_07-model_HTSAT-tiny-lr_0.001-b_96-j_4-p_fp32/checkpoints/epoch_top_0.pt"
@@ -52,7 +54,8 @@ torchrun --nproc_per_node 2 -m training.lp_main \
     --wd=0.1 \
     --epochs=1 \
     --workers=4 \
-    --model HTSAT-tiny \
+    --amodel HTSAT-tiny \
+    --tmodel transformer \
     --no-eval \
     --lp-freeze \
     --pretrained="/home/la/kechen/Research/clap/ckpt/2022_05_07-19_16_07-model_HTSAT-tiny-lr_0.001-b_96-j_4-p_fp32/checkpoints/epoch_top_0.pt"
@@ -71,7 +74,8 @@ CUDA_VISIBLE_DEVICES=0 python -m training.main \
     --wd=0.1 \
     --epochs=1 \
     --workers=4 \
-    --model PANN-14 \
+    --amodel PANN-14 \
+    --tmodel transformer \
 
 
 
@@ -90,7 +94,8 @@ torchrun --nproc_per_node 8 -m training.main \
     --workers=4 \
     --freeze-text \
     --use-bn-sync  \
-    --model PANN-14 \
+    --amodel PANN-14 \
+    --tmodel transformer \
     --datasetnames "Clotho" "audiocaps" "BBCSoundEffects" \
     --datasetinfos "train" "unbalanced_train" "balanced_train"
 
@@ -114,7 +119,8 @@ torchrun --nproc_per_node 8 -m training.main \
     --epochs=200  \
     --workers=4 \
     --use-bn-sync  \
-    --model PANN-14 \
+    --amodel PANN-14 \
+    --tmodel transformer \
     --report-to "wandb" \
     --wandb-notes "text-audio-diff-lr-1e-3-1e-4-model-pann-14" \
     --datasetnames "Clotho" "audiocaps" "BBCSoundEffects" \
@@ -136,7 +142,8 @@ torchrun --nproc_per_node 8 -m training.main \
     --epochs=200  \
     --workers=4 \
     --use-bn-sync  \
-    --model PANN-14 \
+    --amodel PANN-14 \
+    --tmodel transformer \
     --report-to "wandb" \
     --wandb-notes "text-audio-diff-lr-1e-3-1e-4-model-pann-14" \
     --datasetnames "Clotho" "audiocaps" "BBCSoundEffects" \
@@ -158,7 +165,8 @@ torchrun --nproc_per_node 8 -m training.main \
     --epochs=200  \
     --workers=4 \
     --use-bn-sync  \
-    --model HTSAT-tiny \
+    --amodel HTSAT-tiny \
+    --tmodel transformer \
     --report-to "wandb" \
     --wandb-notes "text-audio-diff-lr-1e-3-1e-4-model-htsat-tiny" \
     --datasetnames "Clotho" "audiocaps" "BBCSoundEffects" \
@@ -182,7 +190,8 @@ torchrun --nproc_per_node 8 -m training.main \
     --workers=4 \
     --use-bn-sync  \
     --freeze-text \
-    --model PANN-14 \
+    --amodel PANN-14 \
+    --tmodel transformer \
     --report-to "wandb" \
     --wandb-notes "text-audio-freeze-text-lr-1e-3-model-pann-14" \
     --datasetnames "Clotho" "audiocaps" "BBCSoundEffects" "audioset"  \
@@ -203,7 +212,8 @@ torchrun --nproc_per_node 8 -m training.main \
     --workers=4 \
     --use-bn-sync  \
     --freeze-text \
-    --model HTSAT-tiny \
+    --amodel HTSAT-tiny \
+    --tmodel transformer \
     --report-to "wandb" \
     --wandb-notes "text-audio-freeze-text-lr-1e-3-model-htsat-tiny" \
     --datasetnames "Clotho" "audiocaps" "BBCSoundEffects" "audioset"  \
@@ -226,7 +236,8 @@ torchrun --nproc_per_node 8 -m training.main \
     --epochs=200  \
     --workers=4 \
     --use-bn-sync  \
-    --model PANN-14 \
+    --amodel PANN-14 \
+    --tmodel transformer \
     --report-to "wandb" \
     --wandb-notes "text-audio-diff-lr-1e-3-1e-5-freeze-after-5-model-pann-14" \
     --datasetnames "Clotho" "audiocaps" "BBCSoundEffects"  \
@@ -247,7 +258,8 @@ torchrun --nproc_per_node 8 -m training.main \
     --workers=10 \
     --use-bn-sync  \
     --freeze-text \
-    --model HTSAT-tiny \
+    --amodel HTSAT-tiny \
+    --tmodel transformer \
     --report-to "wandb" \
     --wandb-notes "text-audio-freeze-text-lr-1e-3-8-dataset-model-htsat-tiny" \
     --datasetnames "Clotho" "audiocaps" "BBCSoundEffects" "audioset" "free_to_use_sounds" "paramount_motion" "sonniss_game_effects" "wesoundeffects" \
@@ -269,7 +281,8 @@ torchrun --nproc_per_node 8 -m training.main \
     --workers=10 \
     --use-bn-sync  \
     --freeze-text \
-    --model HTSAT-tiny \
+    --amodel HTSAT-tiny \
+    --tmodel transformer \
     --report-to "wandb" \
     --wandb-notes "text-audio-freeze-text-lr-1e-3-8-dataset-model-htsat-tiny" \
     --datasetnames "audioset" \
@@ -294,7 +307,8 @@ torchrun --nproc_per_node 8  -m training.main \
     --workers=10 \
     --use-bn-sync \
     --freeze-text \
-    --model HTSAT-tiny \
+    --amodel HTSAT-tiny \
+    --tmodel transformer \
     --report-to "wandb" \
     --wandb-notes "text-audio-freeze-text-lr-1e-3-8-dataset-model-htsat-tiny" \
     --datasetnames "Clotho" "audiocaps" "BBCSoundEffects" "audioset" "free_to_use_sounds" "paramount_motion" "sonniss_game_effects" "wesoundeffects" \
@@ -318,7 +332,8 @@ torchrun --nproc_per_node 8  -m training.main \
     --workers=10 \
     --use-bn-sync \
     --freeze-text \
-    --model PANN-14 \
+    --amodel PANN-14 \
+    --tmodel transformer \
     --report-to "wandb" \
     --wandb-notes "text-audio-freeze-text-lr-1e-3-8-dataset-model-pann-14" \
     --datasetnames "Clotho" "audiocaps" "BBCSoundEffects" "audioset" "free_to_use_sounds" "paramount_motion" "sonniss_game_effects" "wesoundeffects" \
@@ -328,6 +343,56 @@ torchrun --nproc_per_node 8  -m training.main \
     --seed 3407 \
     --remotedata
 
+torchrun --nproc_per_node 8  -m training.main \
+    --save-frequency 50 \
+    --save-top-performance 3 \
+    --save-most-recent \
+    --dataset-type="webdataset" \
+    --precision="fp32" \
+    --warmup 10000 \
+    --batch-size=184 \
+    --lr=1e-3 \
+    --wd=0.1 \
+    --epochs=400 \
+    --workers=10 \
+    --use-bn-sync \
+    --freeze-text \
+    --amodel PANN-14 \
+    --tmodel bert \
+    --report-to "wandb" \
+    --wandb-notes "text-audio-freeze-text-lr-1e-3-8-dataset-model-pann-14" \
+    --datasetnames "Clotho" "audiocaps" "BBCSoundEffects" "audioset" "free_to_use_sounds" "paramount_motion" "sonniss_game_effects" "wesoundeffects" \
+    --datasetinfos "train" "unbalanced_train" "balanced_train" "valid" \
+    --top-k-checkpoint-select-dataset="Clotho-test" \
+    --top-k-checkpoint-select-metric="mAP@10" \
+    --seed 3407 \
+    --remotedata
+
+
+torchrun --nproc_per_node 8  -m training.main \
+    --save-frequency 50 \
+    --save-top-performance 3 \
+    --save-most-recent \
+    --dataset-type="webdataset" \
+    --precision="fp32" \
+    --warmup 10000 \
+    --batch-size=184 \
+    --lr=1e-3 \
+    --wd=0.1 \
+    --epochs=400 \
+    --workers=10 \
+    --use-bn-sync \
+    --freeze-text \
+    --amodel PANN-14 \
+    --tmodel roberta \
+    --report-to "wandb" \
+    --wandb-notes "text-audio-freeze-text-lr-1e-3-8-dataset-model-pann-14" \
+    --datasetnames "Clotho" "audiocaps" "BBCSoundEffects" "audioset" "free_to_use_sounds" "paramount_motion" "sonniss_game_effects" "wesoundeffects" \
+    --datasetinfos "train" "unbalanced_train" "balanced_train" "valid" \
+    --top-k-checkpoint-select-dataset="Clotho-test" \
+    --top-k-checkpoint-select-metric="mAP@10" \
+    --seed 3407 \
+    --remotedata
 ----run on summit----
 
 module load open-ce/1.5.2-py39-0
