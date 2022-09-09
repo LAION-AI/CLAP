@@ -48,7 +48,6 @@ if args.tmodel == "transformer":
 
 elif args.tmodel == "bert":
     from transformers import BertTokenizer
-
     tokenize = BertTokenizer.from_pretrained("bert-base-uncased")
 
     def tokenizer(text):
@@ -61,6 +60,19 @@ elif args.tmodel == "bert":
         )
         return {k: v.squeeze(0) for k, v in result.items()}
 
+elif args.tmodel == "roberta":
+    from transformers import RobertaTokenizer
+    tokenize = RobertaTokenizer.from_pretrained('roberta-base')
+
+    def tokenizer(text):
+        result = tokenize(
+            text,
+            padding="max_length",
+            truncation=True,
+            max_length=77,
+            return_tensors="pt",
+        )
+        return {k: v.squeeze(0) for k, v in result.items()}
 
 # initizlied the audioset map
 _AUDIOSET_MAP_PATH = os.path.join(Path(__file__).parent, "audioset_textmap.npy")

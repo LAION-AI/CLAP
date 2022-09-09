@@ -20,7 +20,7 @@ from .utils import freeze_batch_norm_2d
 
 from .pann_model import create_pann_model
 from .htsat import create_htsat_model
-from transformers import BertModel
+from transformers import BertModel, RobertaModel
 from transformers.tokenization_utils_base import BatchEncoding
 
 
@@ -478,6 +478,12 @@ class CLAP(nn.Module):
             self.text_projection = nn.Parameter(
                 torch.empty(768, 512)
             )  # HARDCORE as 512
+        elif text_cfg.model_type == "roberta":
+            self.text_branch = RobertaModel.from_pretrained('roberta-base')
+            self.text_transform = MLPLayers(units=[512, 512, 512], dropout=0.1)
+            self.text_projection = nn.Parameter(
+                torch.empty(768, 512)
+            )  # HARDCORE as 512
         self.text_branch_type = text_cfg.model_type
         # text branch parameters
 
@@ -509,7 +515,7 @@ class CLAP(nn.Module):
                 nn.init.normal_(block.attn.out_proj.weight, std=proj_std)
                 nn.init.normal_(block.mlp.c_fc.weight, std=fc_std)
                 nn.init.normal_(block.mlp.c_proj.weight, std=proj_std)
-        if self.text_branch_type == "bert":
+        if self.text_branch_type == "bert" or self.text_branch_type == "roberta":
             width = self.text_branch.embeddings.word_embeddings.weight.shape[-1]
         else:
             width = self.text_branch.width
@@ -558,7 +564,7 @@ class CLAP(nn.Module):
             # x.shape = [batch_size, n_ctx, transformer.width]
             # take features from the eot embedding (eot_token is the highest number in each sequence)
             x = x[torch.arange(x.shape[0]), text.argmax(dim=-1)] @ self.text_projection
-        elif self.text_branch_type == "bert":
+        elif self.text_branch_type == "bert" or self.text_branch_type == "roberta":
             # text = self.list_of_dict_of_tensor2dict_of_tensor(text, device)
             # text = BatchEncoding(text)
             x = self.text_branch(
