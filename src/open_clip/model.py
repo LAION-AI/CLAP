@@ -564,7 +564,7 @@ class CLAP(nn.Module):
             # x.shape = [batch_size, n_ctx, transformer.width]
             # take features from the eot embedding (eot_token is the highest number in each sequence)
             x = x[torch.arange(x.shape[0]), text.argmax(dim=-1)] @ self.text_projection
-        elif self.text_branch_type == "bert" or self.text_branch_type == "roberta":
+        elif self.text_branch_type == "bert":
             # text = self.list_of_dict_of_tensor2dict_of_tensor(text, device)
             # text = BatchEncoding(text)
             x = self.text_branch(
@@ -573,6 +573,14 @@ class CLAP(nn.Module):
                     device=device, non_blocking=True
                 ),
                 token_type_ids=text["token_type_ids"].to(
+                    device=device, non_blocking=True
+                ),
+            )["pooler_output"]
+            x = x @ self.text_projection
+        elif self.text_branch_type == "roberta":
+            x = self.text_branch(
+                input_ids=text["input_ids"].to(device=device, non_blocking=True),
+                attention_mask=text["attention_mask"].to(
                     device=device, non_blocking=True
                 ),
             )["pooler_output"]
