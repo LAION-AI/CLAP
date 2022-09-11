@@ -485,7 +485,7 @@ class CLAP(nn.Module):
                 torch.empty(768, 512)
             )  # HARDCORE as 512
         elif text_cfg.model_type == "bart":
-            self.text_branch = BartModel.from_pretrained('roberta-base')
+            self.text_branch = BartModel.from_pretrained('facebook/bart-base')
             self.text_transform = MLPLayers(units=[512, 512, 512], dropout=0.1)
             self.text_projection = nn.Parameter(
                 torch.empty(768, 512)
