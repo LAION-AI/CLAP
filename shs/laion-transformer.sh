@@ -75,5 +75,6 @@ srun --comment clap --cpu_bind=v --accel-bind=gn python -m training.main \
     --top-k-checkpoint-select-dataset="Clotho-test" \
     --top-k-checkpoint-select-metric="mAP@10" \
     --seed 3407 \
+    --openai-model-cache-dir /fsx/tyz/transformers_cache \
     --remotedata
 
