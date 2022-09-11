@@ -20,7 +20,7 @@ from .utils import freeze_batch_norm_2d
 
 from .pann_model import create_pann_model
 from .htsat import create_htsat_model
-from transformers import BertModel, RobertaModel
+from transformers import BertModel, RobertaModel, BartModel
 from transformers.tokenization_utils_base import BatchEncoding
 
 
