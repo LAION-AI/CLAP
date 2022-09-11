@@ -264,7 +264,7 @@ def parse_args():
         "--tmodel",
         type=str,
         default="transformer",
-        help="Name of the text backbone to use. Can be [transformer, bert, roberta]",
+        help="Name of the text backbone to use. Can be [transformer, bert, roberta, bart]",
     )
     parser.add_argument(
         "--pretrained",

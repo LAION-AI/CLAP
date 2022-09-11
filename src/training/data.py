@@ -74,6 +74,20 @@ elif args.tmodel == "roberta":
         )
         return {k: v.squeeze(0) for k, v in result.items()}
 
+elif args.tmodel == "bart":
+    from transformers import BartTokenizer
+    tokenize = BartTokenizer.from_pretrained('facebook/bart-base')
+
+    def tokenizer(text):
+        result = tokenize(
+            text,
+            padding="max_length",
+            truncation=True,
+            max_length=77,
+            return_tensors="pt",
+        )
+        return {k: v.squeeze(0) for k, v in result.items()}
+
 # initizlied the audioset map
 _AUDIOSET_MAP_PATH = os.path.join(Path(__file__).parent, "audioset_textmap.npy")
 _AUDIOSET_MAP = np.load(_AUDIOSET_MAP_PATH, allow_pickle=True)

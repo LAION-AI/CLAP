@@ -237,6 +237,7 @@ def main():
     # Create CLAP model
     clap_model, clap_model_cfg = create_model(
         args.amodel,
+        args.tmodel,
         args.pretrained,
         precision=args.precision,
         device=device,

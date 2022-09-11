@@ -484,6 +484,15 @@ class CLAP(nn.Module):
             self.text_projection = nn.Parameter(
                 torch.empty(768, 512)
             )  # HARDCORE as 512
+        elif text_cfg.model_type == "bart":
+            self.text_branch = BartModel.from_pretrained('roberta-base')
+            self.text_transform = MLPLayers(units=[512, 512, 512], dropout=0.1)
+            self.text_projection = nn.Parameter(
+                torch.empty(768, 512)
+            )  # HARDCORE as 512
+        else:
+            logging.error(f"Model config for {text_cfg.model_type} not found")
+            raise RuntimeError(f"Model config for {text_cfg.model_type} not found.")
         self.text_branch_type = text_cfg.model_type
         # text branch parameters
 
@@ -584,6 +593,14 @@ class CLAP(nn.Module):
                     device=device, non_blocking=True
                 ),
             )["pooler_output"]
+            x = x @ self.text_projection
+        elif self.text_branch_type == "bart":
+            x = torch.mean(self.text_branch(
+                input_ids=text["input_ids"].to(device=device, non_blocking=True),
+                attention_mask=text["attention_mask"].to(
+                    device=device, non_blocking=True
+                ),
+            )["encoder_last_hidden_state"],axis=1)
             x = x @ self.text_projection
         else:
             logging.error(f"Model type {type_} not found")
