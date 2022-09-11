@@ -47,8 +47,8 @@ export COUNT_NODE=`scontrol show hostnames "$SLURM_JOB_NODELIST" | wc -l`
 echo go $COUNT_NODE
 echo $HOSTNAMES
 
-source /home/tyz/clap/bin/activate
-cd /home/tyz/CLAP/src
+source /fsx/tyz/clap/bin/activate
+cd /fsx/tyz/CLAP/src
 
 export TRANSFORMERS_CACHE=/fsx/tyz/transformers_cache
 
