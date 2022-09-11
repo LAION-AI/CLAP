@@ -7,7 +7,7 @@
 #SBATCH --cpus-per-gpu=6
 #SBATCH --gres=gpu:8
 #SBATCH --output=%x_%j.out
-#SBATCH --exclude gpu-st-p4d-24xlarge-[66,106,141,144,225,324,347-350]
+#SBATCH --exclude gpu-st-p4d-24xlarge-[23,30,31,108,115,134,135,183,185,186,187,188,275,277,374]
 
 module load intelmpi
 source /opt/intel/mpi/latest/env/vars.sh
@@ -49,6 +49,8 @@ echo $HOSTNAMES
 
 source /home/tyz/clap/bin/activate
 cd /home/tyz/CLAP/src
+
+export TRANSFORMERS_CACHE=/fsx/tyz/transformers_cache
 
 srun --comment clap --cpu_bind=v --accel-bind=gn python -m training.main \
     --save-frequency 50 \

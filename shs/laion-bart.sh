@@ -67,7 +67,7 @@ srun --comment clap --cpu_bind=v --accel-bind=gn python -m training.main \
     --use-bn-sync \
     --freeze-text \
     --amodel PANN-14 \
-    --tmodel transformer \
+    --tmodel bart \
     --report-to "wandb" \
     --wandb-notes "text-audio-freeze-text-lr-1e-3-8-dataset-model-pann-14" \
     --datasetnames "Clotho" "audiocaps" "BBCSoundEffects" "audioset" "free_to_use_sounds" "paramount_motion" "sonniss_game_effects" "wesoundeffects" \
