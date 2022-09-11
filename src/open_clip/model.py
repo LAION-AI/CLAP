@@ -524,8 +524,10 @@ class CLAP(nn.Module):
                 nn.init.normal_(block.attn.out_proj.weight, std=proj_std)
                 nn.init.normal_(block.mlp.c_fc.weight, std=fc_std)
                 nn.init.normal_(block.mlp.c_proj.weight, std=proj_std)
-        if self.text_branch_type == "bert" or self.text_branch_type == "roberta" or self.text_branch_type == "bart":
+        if self.text_branch_type == "bert" or self.text_branch_type == "roberta":
             width = self.text_branch.embeddings.word_embeddings.weight.shape[-1]
+        elif self.text_branch_type == "bart":
+            width = self.text_branch.shared.weight.shape[-1]
         else:
             width = self.text_branch.width
         nn.init.constant_(self.logit_scale_a, np.log(1 / 0.07))
