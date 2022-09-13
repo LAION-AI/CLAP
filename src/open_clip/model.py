@@ -561,7 +561,7 @@ class CLAP(nn.Module):
     #         tmp[k] = torch.tensor(tmp[k]).to(device=device, non_blocking=True)
     #     return tmp
 
-    def encode_text(self, text, type_, device):
+    def encode_text(self, text, device):
         if self.text_branch_type == "transformer":
             text = text.to(device=device, non_blocking=True)
             x = self.token_embedding(text)  # [batch_size, n_ctx, d_model]
@@ -605,8 +605,8 @@ class CLAP(nn.Module):
             )["encoder_last_hidden_state"],axis=1)
             x = x @ self.text_projection
         else:
-            logging.error(f"Model type {type_} not found")
-            raise RuntimeError(f"Model type {type_} not found.")
+            logging.error(f"Model type {self.text_branch_type} not found")
+            raise RuntimeError(f"Model type {self.text_branch_type} not found.")
         return x
 
     def forward(self, audio, text, device):
@@ -620,7 +620,7 @@ class CLAP(nn.Module):
             the text token input
         """
         if audio is None:
-            return self.encode_text(text, type_=self.text_branch_type, device=device)
+            return self.encode_text(text, device=device)
         elif text is None:
             return self.audio_projection(self.encode_audio(audio)["embedding"])
         audio_features = self.audio_projection(self.encode_audio(audio)["embedding"])
