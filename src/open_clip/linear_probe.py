@@ -48,7 +48,7 @@ class LinearProbe(nn.Module):
             class_prob: torch.tensor [batch, class_num]
 
         """
-        x = self.clap_model(audio=x, text=None, device=self.device)
+        x = self.clap_model(audio=x, text=None)
         out = self.lp_layer(x)
         if self.act is not None:
             out = self.act(out)

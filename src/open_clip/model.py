@@ -609,7 +609,7 @@ class CLAP(nn.Module):
             raise RuntimeError(f"Model type {self.text_branch_type} not found.")
         return x
 
-    def forward(self, audio, text, device):
+    def forward(self, audio, text, device=None):
         """Forward audio and text into the CLAP
 
         Parameters
@@ -619,6 +619,8 @@ class CLAP(nn.Module):
         text: torch.Tensor () // need to add
             the text token input
         """
+        if device is None:
+            device = audio.device
         if audio is None:
             return self.encode_text(text, device=device)
         elif text is None:
