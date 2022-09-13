@@ -620,7 +620,10 @@ class CLAP(nn.Module):
             the text token input
         """
         if device is None:
-            device = audio.device
+            if audio is not None:
+                device = audio.device
+            elif text is not None:
+                device = text.device
         if audio is None:
             return self.encode_text(text, device=device)
         elif text is None:
