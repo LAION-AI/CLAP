@@ -632,7 +632,7 @@ class CLAP(nn.Module):
         audio_features = F.normalize(audio_features, dim=-1)
 
         text_features = self.encode_text(
-            text, type_=self.text_branch_type, device=device
+            text, device=device
         )
         # print("text_features", text_features)
         # print("text_features.shape", text_features.shape)
