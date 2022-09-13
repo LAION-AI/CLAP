@@ -223,12 +223,8 @@ def evaluate(model, data, epoch, args, tb_writer=None):
         }
         with torch.no_grad():
             for i, batch in enumerate(dataloader):
-                if args.dataset_type == "toy":
-                    audio = batch['waveform']
-                    class_label = batch['class_label']
-                else:
-                    audio = batch['waveform']  # (yusong) todo:  change to retrieve from index for now.
-                    class_label = batch['class_label']
+                audio = batch['waveform']
+                class_label = batch['class_label']
                            
                 audio = audio.to(device=device, non_blocking=True)
                 class_label = class_label.to(device=device, non_blocking=True)
