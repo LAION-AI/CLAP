@@ -230,7 +230,7 @@ def evaluate(model, data, epoch, args, tb_writer=None):
                 class_label = class_label.to(device=device, non_blocking=True)
 
                 with autocast():
-                    pred = model(audio, device=device)
+                    pred = model(audio, None, device)
                     if args.parallel_eval:
                         pred, class_label = lp_gather_features(pred, class_label, args.world_size, args.horovod)
                     eval_info['pred'].append(pred)
