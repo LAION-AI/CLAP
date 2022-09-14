@@ -131,7 +131,7 @@ def create_model(
             elif os.path.exists(pretrained_orig):
                 checkpoint_path = pretrained_orig
             if checkpoint_path:
-                logging.info(f"Loading pretrained {model_name} weights ({pretrained}).")
+                logging.info(f"Loading pretrained {amodel_name}-{tmodel_name} weights ({pretrained}).")
                 ckpt = load_state_dict(checkpoint_path, skip_params=True)
                 model.load_state_dict(ckpt)
                 param_names = [n for n, p in model.named_parameters()]
