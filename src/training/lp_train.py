@@ -46,7 +46,7 @@ def unwrap_model(model):
 
 
 def train_one_epoch(
-        model, data, epoch, optimizer, scaler, scheduler, args, tb_writer=None
+        model, data, epoch, optimizer, scaler, scheduler, args, tb_writer=None, extra_suffix=""
 ):
     device = torch.device(args.device)
     autocast = torch.cuda.amp.autocast if args.precision == "amp" else suppress
@@ -173,7 +173,7 @@ def train_one_epoch(
                     "lr": optimizer.param_groups[0]["lr"],
                 }
             for name, val in log_data.items():
-                name = "train/" + name
+                name = f"train{extra_suffix}/{name}"
                 if tb_writer is not None:
                     tb_writer.add_scalar(name, val, step)
                 if args.wandb:
@@ -186,7 +186,7 @@ def train_one_epoch(
     # end for
 
 
-def evaluate(model, data, epoch, args, tb_writer=None):
+def evaluate(model, data, epoch, args, tb_writer=None, extra_suffix=""):
     metrics = {}
     if not args.parallel_eval:
         if not is_master(args):
@@ -267,7 +267,7 @@ def evaluate(model, data, epoch, args, tb_writer=None):
         if args.save_logs:
             for name, val in metrics.items():
                 if tb_writer is not None:
-                    tb_writer.add_scalar(f"val/{name}", val, epoch)
+                    tb_writer.add_scalar(f"val{extra_suffix}/{name}", val, epoch)
 
             with open(os.path.join(args.checkpoint_path, "results.jsonl"), "a+") as f:
                 f.write(json.dumps(metrics))
@@ -276,7 +276,7 @@ def evaluate(model, data, epoch, args, tb_writer=None):
         if args.wandb:
             assert wandb is not None, "Please install wandb."
             for name, val in metrics.items():
-                wandb.log({f"val/{name}": val, "epoch": epoch})
+                wandb.log({f"val{extra_suffix}/{name}": val, "epoch": epoch})
 
         return metrics
     else:
