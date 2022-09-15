@@ -143,7 +143,7 @@ def main():
     # sanitize model name for filesystem / uri use, easier if we don't use / in name as a rule?
     args.amodel = args.amodel.replace("/", "-")
     
-    pretrained_ckpts = sorted(glob.glob(os.path.join(args.checkpoint_path, "*.pt")), key=os.path.getmtime)
+    pretrained_ckpts = sorted(glob.glob(os.path.join(args.pretrained, "*.pt")), key=os.path.getmtime)
 
     if args.name is None:
         args.name = "-".join(
