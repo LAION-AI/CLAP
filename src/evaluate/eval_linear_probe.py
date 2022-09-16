@@ -630,6 +630,7 @@ def lp_main(args, device, writer, pretrain_epoch, idx):
                     bignumbetter=True,
                     pretrain_epoch=pretrain_epoch
                 )
+    del clap_model
     return best_metrics
 
 
