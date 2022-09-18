@@ -19,6 +19,7 @@ import torch.distributed as dist
 import faulthandler
 import pathlib
 import argparse
+import glob
 
 try:
     import wandb
@@ -142,10 +143,7 @@ def main():
     # sanitize model name for filesystem / uri use, easier if we don't use / in name as a rule?
     args.amodel = args.amodel.replace("/", "-")
     
-    pretrained_ckpts = []
-    for f in os.listdir(args.pretrained):
-        if f.endswith(".pt"):
-            pretrained_ckpts.append(os.path.join(args.pretrained, f))
+    pretrained_ckpts = sorted(glob.glob(os.path.join(args.pretrained, "*.pt")), key=os.path.getmtime)
 
     if args.name is None:
         args.name = "-".join(
@@ -252,7 +250,7 @@ def main():
         )
         logging.debug("Finished loading wandb.")
 
-    for idx,f in enumerate(pretrained_ckpts):
+    for idx, f in enumerate(pretrained_ckpts):
         logging.info(f"pretrained on {f}")
         args.pretrained = f
         ckpt = torch.load(f, map_location='cpu')
@@ -301,7 +299,7 @@ def lp_main(args, device, writer, pretrain_epoch, idx):
         skip_params=False
     )
     
-    args.lp_out_ch = 527 # len(list(args.class_index_dict.keys()))
+    args.lp_out_ch = len(list(args.class_index_dict.keys()))
     # Linear Probe 
     if idx == 0:
         logging.info(f"linear probe using mlp: {args.lp_mlp}")
@@ -330,7 +328,7 @@ def lp_main(args, device, writer, pretrain_epoch, idx):
 
     if is_master(args) and idx == 0:
         logging.info("Linear Probe CLAP Model:")
-        # logging.info(f"{str(clap_model)}")
+        logging.info(f"{str(clap_model)}")
         logging.info("Params:")
         params_file = os.path.join(args.logs, args.name, "params.txt")
         with open(params_file, "w") as f:
@@ -632,6 +630,7 @@ def lp_main(args, device, writer, pretrain_epoch, idx):
                     bignumbetter=True,
                     pretrain_epoch=pretrain_epoch
                 )
+    del clap_model
     return best_metrics
 
 
