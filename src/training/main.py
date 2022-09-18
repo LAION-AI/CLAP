@@ -294,7 +294,7 @@ def main():
     text_freeze_parameters = [
         p
         for n, p in named_parameters
-        if n.startswith("transformer")
+        if n.startswith("text_branch")
         or n in ["positional_embedding", "text_projection"]
         or n.startswith("token_embedding")
         or n.startswith("ln_final")
