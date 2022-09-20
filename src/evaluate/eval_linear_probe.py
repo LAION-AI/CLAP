@@ -6,6 +6,7 @@ from doctest import master
 from inspect import getargs
 import logging
 import os
+from pickletools import optimize
 import random
 from datetime import datetime
 import bisect
@@ -42,11 +43,11 @@ from training.params import parse_args
 from training.distributed import is_master, init_distributed_device, world_info_from_env
 from training.logger import setup_logging
 from training.scheduler import cosine_lr
+from training.lp_main import config_lp_optimizer
 from training.lp_train import train_one_epoch, evaluate
 from open_clip.utils import get_tar_path_from_dataset_name, dataset_split
 from open_clip.utils import load_p, load_class_label
 from open_clip.linear_probe import LinearProbe
-
 
 def maintain_ckpts(args, startidx, all_idx_len):
     for i in reversed(range(startidx, all_idx_len)):
@@ -354,153 +355,7 @@ def lp_main(args, device, writer, pretrain_epoch, idx):
     if args.trace:
         assert "train" not in data, "Cannot train with traced model"
 
-    
-    
-    in_clap = (
-        lambda n, p: n.startswith("clap_model")
-    )
-
-    named_parameters = list(model.named_parameters())
-
-    optimizer = {}
-    scheduler = {}
-    
-    # freeze text encoder
-    text_freeze_parameters = [
-        p
-        for n, p in named_parameters
-        if n.startswith("clap_model.transformer")
-        or n in ["clap_model.positional_embedding", "clap_model.text_projection"]
-        or n.startswith("clap_model.token_embedding")
-        or n.startswith("clap_model.ln_final")
-    ]
-    
-    if args.freeze_text:
-        logging.info("Freeze Text!!!!")
-        for k in text_freeze_parameters:
-            k.requires_grad = False
-
-    if not args.lp_freeze:
-        exclude = (
-            lambda n, p: p.ndim < 2
-            or "bn" in n
-            or "ln" in n
-            or "bias" in n
-            or "logit_scale" in n
-        )
-        include = lambda n, p: not exclude(n, p)
-
-        gain_or_bias_params = [
-            p for n, p in named_parameters if in_clap(n,p) and exclude(n, p) and p.requires_grad
-        ]
-        rest_params = [p for n, p in named_parameters if in_clap(n,p) and include(n, p) and p.requires_grad]
-
-        if args.train_data is None:
-            optimizer = None
-            scheduler = None
-        else:
-            total_steps = data["train"].dataloader.num_batches * args.epochs
-
-            if args.split_opt:
-                for x in ["lr", "beta1", "beta2", "eps", "wd"]:
-                    for y in ["_new", "_pretrained"]:
-                        if getattr(args, x + y) is None:
-                            setattr(args, x + y, getattr(args, x))
-
-                gain_or_bias_pretrained_params = [
-                    p
-                    for n, p in named_parameters
-                    if (exclude(n, p) and p.requires_grad) and is_pretrained_params(n)
-                ]
-                rest_pretrained_params = [
-                    p
-                    for n, p in named_parameters
-                    if (include(n, p) and p.requires_grad) and is_pretrained_params(n)
-                ]
-                gain_or_bias_new_params = [
-                    p
-                    for n, p in named_parameters
-                    if (exclude(n, p) and p.requires_grad) and (not is_pretrained_params(n))
-                ]
-                rest_new_params = [
-                    p
-                    for n, p in named_parameters
-                    if (include(n, p) and p.requires_grad) and (not is_pretrained_params(n))
-                ]
-
-                pretrained_params_optimizer = optim.AdamW(
-                    [
-                        {"params": gain_or_bias_pretrained_params, "weight_decay": 0.0},
-                        {
-                            "params": rest_pretrained_params,
-                            "weight_decay": args.wd_pretrained,
-                        },
-                    ],
-                    lr=args.lr_pretrained,
-                    betas=(args.beta1_pretrained, args.beta2_pretrained),
-                    eps=args.eps_pretrained,
-                )
-                pretrained_params_scheduler = cosine_lr(
-                    pretrained_params_optimizer,
-                    args.lr_pretrained,
-                    args.warmup,
-                    total_steps,
-                )
-
-                new_params_optimizer = optim.AdamW(
-                    [
-                        {"params": gain_or_bias_new_params, "weight_decay": 0.0},
-                        {"params": rest_new_params, "weight_decay": args.wd_new},
-                    ],
-                    lr=args.lr_new,
-                    betas=(args.beta1_new, args.beta2_new),
-                    eps=args.eps_new,
-                )
-                new_params_scheduler = cosine_lr(
-                    new_params_optimizer, args.lr_new, args.warmup, total_steps
-                )
-
-                optimizer["text"] = pretrained_params_optimizer
-                optimizer["audio"] = new_params_optimizer
-                scheduler["text"] = pretrained_params_scheduler
-                scheduler["audio"] = new_params_scheduler
-
-                if args.horovod:
-                    pretrained_params_optimizer = hvd.DistributedOptimizer(
-                        pretrained_params_optimizer,
-                        named_parameters=model.named_parameters(),
-                    )
-                    new_params_optimizer = hvd.DistributedOptimizer(
-                        new_params_optimizer, named_parameters=model.named_parameters()
-                    )
-                    hvd.broadcast_parameters(model.state_dict(), root_rank=0)
-                    hvd.broadcast_optimizer_state(pretrained_params_optimizer, root_rank=0)
-                    hvd.broadcast_optimizer_state(new_params_optimizer, root_rank=0)
-            else:
-                                
-                optimizer["clap"] = optim.AdamW(
-                    [
-                        {"params": gain_or_bias_params, "weight_decay": 0.0},
-                        {"params": rest_params, "weight_decay": args.wd},
-                    ],
-                    lr=args.lr,
-                    betas=(args.beta1, args.beta2),
-                    eps=args.eps,
-                )
-                scheduler["clap"] = cosine_lr(optimizer["clap"], args.lr, args.warmup, total_steps)
-
-                if args.horovod:
-                    optimizer["clap"] = hvd.DistributedOptimizer(
-                        optimizer["clap"], named_parameters=model.named_parameters()
-                    )
-                    hvd.broadcast_parameters(model.state_dict(), root_rank=0)
-                    hvd.broadcast_optimizer_state(optimizer["clap"], root_rank=0)
-
-    # linear probe optimizer
-    lp_params = [p for n,p in named_parameters if (not in_clap(n,p)) and p.requires_grad]
-    lp_optim = optim.AdamW(lp_params, lr = args.lp_lr)
-    optimizer["lp"] = lp_optim
-
+    optimizer, scheduler, text_freeze_parameters = config_lp_optimizer(model, data, args)
 
     scaler = GradScaler() if args.precision == "amp" else None
 

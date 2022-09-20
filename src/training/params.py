@@ -267,6 +267,18 @@ def parse_args():
         help="Name of the text backbone to use. Can be [transformer, bert, roberta, bart]",
     )
     parser.add_argument(
+        "--pretrained-audio",
+        default="",
+        type=str,
+        help="Use a pretrained audio model weights for the audio encoder of CLAP",
+    )
+    parser.add_argument(
+        "--pretrained-text",
+        default="",
+        type=str,
+        help="Use a pretrained text model weights for the text encoder of CLAP",
+    )
+    parser.add_argument(
         "--pretrained",
         default="",
         type=str,

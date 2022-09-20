@@ -73,7 +73,9 @@ def create_model(
     jit: bool = False,
     force_quick_gelu: bool = False,
     openai_model_cache_dir: str = os.path.expanduser("~/.cache/clip"),
-    skip_params=True
+    skip_params=True,
+    pretrained_audio: str = "",
+    pretrained_text: str = ""
     # pretrained_image: bool = False,
 ):
     amodel_name = amodel_name.replace(
@@ -149,6 +151,31 @@ def create_model(
                     f"Pretrained weights ({pretrained}) not found for model {amodel_name}."
                 )
 
+        if pretrained_audio:
+            if amodel_name.startswith('PANN'):
+                audio_ckpt = torch.load(pretrained_audio, map_location='cpu')
+                audio_ckpt = audio_ckpt['model']
+                keys = list(audio_ckpt.keys())
+                for key in keys:
+                    v = audio_ckpt.pop(key)
+                    audio_ckpt['audio_branch.' + key] = v
+            elif amodel_name.startswith('HTSAT'):
+                audio_ckpt = torch.load(pretrained_audio, map_location='cpu')
+                audio_ckpt = audio_ckpt['state_dict']
+                keys = list(audio_ckpt.keys())
+                for key in keys:
+                    if key.startswith('sed_model'):
+                        v = audio_ckpt.pop(key)
+                        audio_ckpt['audio_branch.' + key[10:]] = v
+            else:
+                raise f'this audio encoder pretrained checkpoint is not support'
+
+            model.load_state_dict(audio_ckpt, strict=False)
+            logging.info(f"Loading pretrained {amodel_name} weights ({pretrained_audio}).")
+            param_names = [n for n, p in model.named_parameters()]
+            for n in param_names:
+                print(n, "\t", "Loaded" if n in audio_ckpt else "Unloaded")
+            
         model.to(device=device)
         if precision == "fp16":
             assert device.type != "cpu"

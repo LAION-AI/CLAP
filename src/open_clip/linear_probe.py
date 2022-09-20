@@ -17,12 +17,13 @@ class LinearProbe(nn.Module):
         super().__init__()
         in_ch = 512
         self.clap_model = model
+        self.freeze = freeze
         if mlp:
             self.lp_layer = MLPLayers(units = [in_ch, in_ch * 2, out_ch])
         else:
             self.lp_layer = nn.Linear(in_ch, out_ch)
         
-        if freeze:
+        if self.freeze:
             for param in self.clap_model.parameters():
                 param.requires_grad = False
         
@@ -48,6 +49,10 @@ class LinearProbe(nn.Module):
             class_prob: torch.tensor [batch, class_num]
 
         """
+        # batchnorm cancel grandient
+        if self.freeze:
+            self.clap_model.eval()
+
         x = self.clap_model(audio=x, text=None)
         out = self.lp_layer(x)
         if self.act is not None:

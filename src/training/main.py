@@ -242,6 +242,9 @@ def main():
         jit=args.torchscript,
         force_quick_gelu=args.force_quick_gelu,
         openai_model_cache_dir=os.path.expanduser(args.openai_model_cache_dir),
+        skip_params=True,
+        pretrained_audio=args.pretrained_audio,
+        pretrained_text=args.pretrained_text
     )
 
     if args.horovod:
