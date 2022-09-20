@@ -69,7 +69,6 @@ def train_one_epoch(
     end = time.time()
 
     for i, batch in enumerate(dataloader):
-        logging.info(model.clap_model.audio_branch.conv_block1.bn2.running_mean.data)  # TODO: debug
         step = num_batches_per_epoch * epoch + i
 
         if isinstance(scheduler, dict):
