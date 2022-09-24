@@ -451,10 +451,17 @@ def preprocess(
         audio_data = audio_data[idx : idx + max_len]
     else:  # padding if too short
         if repeat_augment:
-            n_repeat = int(max_len/len(audio_data))
-            audio_data = audio_data.repeat(n_repeat)
-            audio_data = audio_data.unsqueeze(0).unsqueeze(0).unsqueeze(0)
-            audio_data = F.interpolate(audio_data,size=max_len,mode="bicubic")[0,0,0]
+            with torch.no_grad():
+                n_repeat = int(max_len/len(audio_data))
+                audio_data = audio_data.repeat(n_repeat)
+                # audio_data = audio_data.unsqueeze(0).unsqueeze(0).unsqueeze(0)
+                # audio_data = F.interpolate(audio_data,size=max_len,mode="bicubic")[0,0,0]
+                audio_data = F.pad(
+                    audio_data,
+                    (0, max_len - len(audio_data)),
+                    mode="constant",
+                    value=0,
+                )
         else:
             audio_data = F.pad(
                 audio_data,
