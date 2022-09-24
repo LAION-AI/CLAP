@@ -100,7 +100,8 @@ class ClipLoss(nn.Module):
             rank=0,
             world_size=1,
             use_horovod=False,
-            mlp_loss=False
+            mlp_loss=False,
+            weight_loss_kappa=0,
     ):
         super().__init__()
         self.local_loss = local_loss
@@ -110,6 +111,8 @@ class ClipLoss(nn.Module):
         self.world_size = world_size
         self.use_horovod = use_horovod
         self.mlp_loss = mlp_loss
+        self.weighted_loss = bool(weight_loss_kappa!=0)
+        self.weight_loss_kappa = weight_loss_kappa
         # cache state
         self.prev_num_logits = 0
         self.labels = {}
@@ -153,13 +156,24 @@ class ClipLoss(nn.Module):
             else:
                 labels = self.labels[device]
 
-
-            total_loss = (
-                F.cross_entropy(a_logits_per_audio, labels) +
-                F.cross_entropy(a_logits_per_text, labels) + 
-                F.cross_entropy(t_logits_per_audio, labels) +
-                F.cross_entropy(t_logits_per_text, labels) 
-                ) / 4
+            if not self.weighted_loss:
+                total_loss = (
+                    F.cross_entropy(a_logits_per_audio, labels) +
+                    F.cross_entropy(a_logits_per_text, labels) + 
+                    F.cross_entropy(t_logits_per_audio, labels) +
+                    F.cross_entropy(t_logits_per_text, labels) 
+                    ) / 4
+            else:
+                audio_weight = (audio_features@audio_features.T).detach()
+                audio_weight = (torch.exp(torch.sum(audio_weight, axis=1)/(self.weight_loss_kappa*len(audio_weight)))).detach()
+                text_weight = (text_features@text_features.T).detach()
+                text_weight = (torch.exp(torch.sum(text_weight, axis=1)/(self.weight_loss_kappa*len(text_features)))).detach()
+                total_loss = (
+                    F.cross_entropy(a_logits_per_audio, labels, weight=audio_weight) +
+                    F.cross_entropy(a_logits_per_text, labels, weight=audio_weight) + 
+                    F.cross_entropy(t_logits_per_audio, labels, weight=text_weight) +
+                    F.cross_entropy(t_logits_per_text, labels, weight=text_weight) 
+                    ) / 4
         else:
             if self.world_size > 1:
                 all_audio_features, all_text_features = gather_features(
@@ -190,10 +204,20 @@ class ClipLoss(nn.Module):
                     self.prev_num_logits = num_logits
             else:
                 labels = self.labels[device]
-            total_loss = (
-                F.cross_entropy(logits_per_audio, labels) +
-                F.cross_entropy(logits_per_text, labels)
-                ) / 2
+            if not self.weighted_loss:
+                total_loss = (
+                    F.cross_entropy(logits_per_audio, labels) +
+                    F.cross_entropy(logits_per_text, labels)
+                    ) / 2
+            else:
+                audio_weight = (all_audio_features@all_audio_features.T).detach()
+                audio_weight = (torch.exp(torch.sum(audio_weight, axis=1)/(self.weight_loss_kappa*len(all_audio_features)))).detach()
+                text_weight = (all_text_features@all_text_features.T).detach()
+                text_weight = (torch.exp(torch.sum(text_weight, axis=1)/(self.weight_loss_kappa*len(all_text_features)))).detach()
+                total_loss = (
+                    F.cross_entropy(logits_per_audio, labels, weight=text_weight) +
+                    F.cross_entropy(logits_per_text, labels, weight=audio_weight)
+                    ) / 2
         return total_loss
 
 def lp_gather_features(

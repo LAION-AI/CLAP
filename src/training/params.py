@@ -462,6 +462,16 @@ def parse_args():
     parser.add_argument(
         "--lp-lr", type=float, default=1e-4, help="learning rate of linear probe"
     )
+    parser.add_argument(
+        "--kappa", type=float, default=0, help="the kappa in the weighted contrastive loss, default is to turn off the weighted contrastive loss"
+    )
+
+    parser.add_argument(
+        "--repeat-augment",
+        default=False,
+        action="store_true",
+        help="Linear Probe using Freeze CLAP or not",
+    )
 
     parser.add_argument(
         "--clap-mlploss",
