@@ -86,8 +86,13 @@ torchrun --nproc_per_node 8  -m training.main \
     --resample-method="None" \
     --datasetnames "Clotho" "audiocaps" "BBCSoundEffects" "audioset" "free_to_use_sounds" "paramount_motion" "sonniss_game_effects" "wesoundeffects" \
     --datasetinfos "train" "unbalanced_train" "balanced_train" \
-    --datasetpath <webdataset_tar_path>
+    --datasetpath <webdataset_tar_path> \
+    --repeat-augment \
+    --kappa 1.0 \
 ```
+
+**kappa** is the temperature parameter for weighted contrastive CLIPLoss. Set **repeat-augment** to True means when you have a 3s audio, and the max_len is 10s, it will repeat 3 times to 9s and then pad to 10s with zeros.
+
 
 ## How to get audio feature?
 Please refer to the ``evaluation()`` function in the ``train.py`` and `audio_infer()` function in `model.py`.
