@@ -58,7 +58,8 @@ def train_one_epoch(
         rank=args.rank,
         world_size=args.world_size,
         use_horovod=args.horovod,
-        mlp_loss=args.clap_mlploss
+        mlp_loss=args.clap_mlploss,
+        weight_loss_kappa=args.kappa,
     )
 
     dataloader, sampler = data["train"].dataloader, data["train"].sampler

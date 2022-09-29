@@ -423,6 +423,7 @@ def preprocess(
     text_ext,
     max_len,
     class_index_dict=None,
+    repeat_augment=False
 ):
     """
     Preprocess a single sample for wdsdataloader.
@@ -449,12 +450,25 @@ def preprocess(
         idx = np.random.randint(0, overflow + 1)
         audio_data = audio_data[idx : idx + max_len]
     else:  # padding if too short
-        audio_data = F.pad(
-            audio_data,
-            (0, max_len - len(audio_data)),
-            mode="constant",
-            value=0,
-        )
+        if repeat_augment:
+            with torch.no_grad():
+                n_repeat = int(max_len/len(audio_data))
+                audio_data = audio_data.repeat(n_repeat)
+                # audio_data = audio_data.unsqueeze(0).unsqueeze(0).unsqueeze(0)
+                # audio_data = F.interpolate(audio_data,size=max_len,mode="bicubic")[0,0,0]
+                audio_data = F.pad(
+                    audio_data,
+                    (0, max_len - len(audio_data)),
+                    mode="constant",
+                    value=0,
+                )
+        else:
+            audio_data = F.pad(
+                audio_data,
+                (0, max_len - len(audio_data)),
+                mode="constant",
+                value=0,
+            )
 
     sample["waveform"] = audio_data
     del sample[audio_ext]
@@ -595,6 +609,7 @@ def get_wds_dataset(
                 text_ext=text_ext,
                 max_len=max_len,
                 class_index_dict=copy.deepcopy(args.class_index_dict),
+                repeat_augment=args.repeat_augment,
             )
         ),
     )

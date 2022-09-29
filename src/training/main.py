@@ -35,7 +35,7 @@ from training.logger import setup_logging
 from training.params import parse_args
 from training.scheduler import cosine_lr
 from training.train import train_one_epoch, evaluate
-from open_clip.utils import dataset_split
+from open_clip.utils import dataset_split, get_optimizer
 
 
 def maintain_ckpts(args, startidx, all_idx_len):
@@ -345,8 +345,7 @@ def main():
                 for n, p in named_parameters
                 if (include(n, p) and p.requires_grad) and (not is_pretrained_params(n))
             ]
-
-            pretrained_params_optimizer = optim.AdamW(
+            pretrained_params_optimizer = get_optimizer(
                 [
                     {"params": gain_or_bias_pretrained_params, "weight_decay": 0.0},
                     {
@@ -357,15 +356,17 @@ def main():
                 lr=args.lr_pretrained,
                 betas=(args.beta1_pretrained, args.beta2_pretrained),
                 eps=args.eps_pretrained,
-            )
+                momentum=args.momentum_pretrained,
+                optimizer_name=args.optimizer,
+                )
+
             pretrained_params_scheduler = cosine_lr(
                 pretrained_params_optimizer,
                 args.lr_pretrained,
                 args.warmup,
                 total_steps,
             )
-
-            new_params_optimizer = optim.AdamW(
+            pretrained_params_optimizer = get_optimizer(
                 [
                     {"params": gain_or_bias_new_params, "weight_decay": 0.0},
                     {"params": rest_new_params, "weight_decay": args.wd_new},
@@ -373,7 +374,10 @@ def main():
                 lr=args.lr_new,
                 betas=(args.beta1_new, args.beta2_new),
                 eps=args.eps_new,
-            )
+                momentum=args.momentum_new,
+                optimizer_name=args.optimizer,
+                )
+
             new_params_scheduler = cosine_lr(
                 new_params_optimizer, args.lr_new, args.warmup, total_steps
             )
@@ -399,7 +403,7 @@ def main():
                 hvd.broadcast_optimizer_state(pretrained_params_optimizer, root_rank=0)
                 hvd.broadcast_optimizer_state(new_params_optimizer, root_rank=0)
         else:
-            optimizer = optim.AdamW(
+            optimizer = get_optimizer(
                 [
                     {"params": gain_or_bias_params, "weight_decay": 0.0},
                     {"params": rest_params, "weight_decay": args.wd},
@@ -407,7 +411,10 @@ def main():
                 lr=args.lr,
                 betas=(args.beta1, args.beta2),
                 eps=args.eps,
+                momentum=args.momentum,
+                optimizer_name=args.optimizer,
             )
+
             scheduler = cosine_lr(optimizer, args.lr, args.warmup, total_steps)
 
             if args.horovod:

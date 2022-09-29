@@ -163,6 +163,7 @@ def parse_args():
     parser.add_argument("--beta1", type=float, default=None, help="Adam beta 1.")
     parser.add_argument("--beta2", type=float, default=None, help="Adam beta 2.")
     parser.add_argument("--eps", type=float, default=None, help="Adam epsilon.")
+    parser.add_argument("--momentum", type=float, default=None, help="SGD epsilon.")
     parser.add_argument("--wd", type=float, default=0.2, help="Weight decay.")
 
     parser.add_argument(
@@ -186,7 +187,9 @@ def parse_args():
     parser.add_argument(
         "--wd-pretrained", type=float, default=0.2, help="Weight decay for text."
     )
-
+    parser.add_argument(
+        "--momentum-pretrained", type=float, default=0.2, help="Momentum for text."
+    )
     parser.add_argument(
         "--lr-new", type=float, default=None, help="Learning rate for audio."
     )
@@ -202,7 +205,9 @@ def parse_args():
     parser.add_argument(
         "--wd-new", type=float, default=0.2, help="Weight decay for audio."
     )
-
+    parser.add_argument(
+        "--momentum-new", type=float, default=0.2, help="Momentum for audio."
+    )
     parser.add_argument(
         "--warmup", type=int, default=10000, help="Number of steps to warmup for."
     )
@@ -412,7 +417,12 @@ def parse_args():
         default="~/.cache/clip",
         help="Directory to download OpenAI models.",
     )
-
+    parser.add_argument(
+        "--optimizer",
+        type=str,
+        default="adamw",
+        help="can be AdamW or SGD",
+    )
     parser.add_argument(
         "--parallel-eval",
         default=False,
@@ -461,6 +471,16 @@ def parse_args():
 
     parser.add_argument(
         "--lp-lr", type=float, default=1e-4, help="learning rate of linear probe"
+    )
+    parser.add_argument(
+        "--kappa", type=float, default=0, help="the kappa in the weighted contrastive loss, default is to turn off the weighted contrastive loss"
+    )
+
+    parser.add_argument(
+        "--repeat-augment",
+        default=False,
+        action="store_true",
+        help="Linear Probe using Freeze CLAP or not",
     )
 
     parser.add_argument(
