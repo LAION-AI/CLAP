@@ -341,3 +341,17 @@ def load_class_label(path):
     #     key = Array(c_wchar, '\n'.join(list(out.keys())), lock=False)
     #     val = Array('i', out.values(), lock=False)
     #     return (key, val)
+
+from torch import optim
+def get_optimizer(params, lr, betas, eps, momentum, optimizer_name):
+    if optimizer_name.lower() == "adamw":
+        optimizer = optim.AdamW(
+            params, lr=lr, betas=betas, eps=eps
+        )
+    elif optimizer_name.lower() == "sgd":
+        optimizer = optim.SGD(
+            params, lr=lr, momentum=momentum
+        )
+    else:
+        raise ValueError("optimizer name is not correct")
+    return optimizer
