@@ -78,7 +78,8 @@ def train_one_epoch(
     end = time.time()
 
     for i, batch in enumerate(dataloader):
-        logging.info(model.text_branch.resblocks[11].attn.in_proj_weight.data[0])
+        logging.info(f"batch {i} of {num_batches_per_epoch}")
+        #logging.info(model.text_branch.resblocks[11].attn.in_proj_weight.data[0]) # TODO: debug
         step = num_batches_per_epoch * epoch + i
         if isinstance(scheduler, dict):
             for s in scheduler.values():
