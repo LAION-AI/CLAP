@@ -307,7 +307,7 @@ def main():
         print("Freeze Text!!!!")
         for k in text_freeze_parameters:
             k.requires_grad = False
-    print(named_parameters) # TODO: debug
+    print(text_freeze_parameters) # TODO: debug
 
     gain_or_bias_params = [
         p for n, p in named_parameters if exclude(n, p) and p.requires_grad
@@ -514,6 +514,7 @@ def main():
         if is_master(args):
             logging.info(f"Start epoch {epoch}")
 
+        #print(text_freeze_parameters)  # TODO: debug
         train_one_epoch(model, data, epoch, optimizer, scaler, scheduler, args, writer)
         completed_epoch = epoch + 1
 
