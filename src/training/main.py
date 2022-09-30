@@ -307,6 +307,7 @@ def main():
         print("Freeze Text!!!!")
         for k in text_freeze_parameters:
             k.requires_grad = False
+    print(named_parameters) # TODO: debug
 
     gain_or_bias_params = [
         p for n, p in named_parameters if exclude(n, p) and p.requires_grad
