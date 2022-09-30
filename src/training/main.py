@@ -356,17 +356,16 @@ def main():
                 lr=args.lr_pretrained,
                 betas=(args.beta1_pretrained, args.beta2_pretrained),
                 eps=args.eps_pretrained,
-                momentum=args.momentum_pretrained,
+                momentum=args.momentum_pretraatariined,
                 optimizer_name=args.optimizer,
                 )
-
             pretrained_params_scheduler = cosine_lr(
                 pretrained_params_optimizer,
                 args.lr_pretrained,
                 args.warmup,
                 total_steps,
             )
-            pretrained_params_optimizer = get_optimizer(
+            new_params_optimizer = get_optimizer(
                 [
                     {"params": gain_or_bias_new_params, "weight_decay": 0.0},
                     {"params": rest_new_params, "weight_decay": args.wd_new},
