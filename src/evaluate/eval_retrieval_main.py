@@ -121,6 +121,7 @@ if __name__ == '__main__':
         # you will have to configure this for your project!
         if args.wandb_id is not None:
             wandb.init(
+                project="clap",
                 id=args.wandb_id,
                 resume=True
             )
