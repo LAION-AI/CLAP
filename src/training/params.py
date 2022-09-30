@@ -490,6 +490,13 @@ def parse_args():
         help="Using MLP loss for CLAP model or not",
     )
 
+    parser.add_argument(
+        "--wandb-id",
+        type=str,
+        default=None,
+        help="the id of wandb experiment to restore.",
+    )
+
     args = parser.parse_args()
 
     # If some params are not passed, we use the default values based on model name.

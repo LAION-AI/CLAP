@@ -42,7 +42,7 @@ if __name__ == '__main__':
     setup_logging(log_path, args.log_level)
     params_file = os.path.join(log_dir, 'params.txt')
 
-    seed = 1234
+    seed = 3407
     random.seed(seed)
     torch.manual_seed(seed)
     torch.cuda.manual_seed(seed)
@@ -52,9 +52,10 @@ if __name__ == '__main__':
     cudnn.benchmark = True
     cudnn.deterministic = False
     pretrained = 'openai'
-    model_type = find_params_value(params_file, 'model')
+    amodel = find_params_value(params_file, 'amodel')
+    tmodel = find_params_value(params_file, 'tmodel')
 
-    if model_type is None:
+    if amodel is None or tmodel is None:
         raise ValueError('model type not found in params file')
 
     # set up dummy values for args
@@ -118,20 +119,27 @@ if __name__ == '__main__':
         if args.val_data is not None:
             args.val_sz = data["val"].dataloader.num_samples
         # you will have to configure this for your project!
-        wandb.init(
-            project="clap",
-            notes=wandb_notes,
-            name=wandb_notes,
-            tags=[],
-            config=vars(args),
-        )
+        if args.wandb_id is not None:
+            wandb.init(
+                id=args.wandb_id,
+                resume=True
+            )
+        else:
+            wandb.init(
+                project="clap",
+                notes=wandb_notes,
+                name=wandb_notes,
+                tags=[],
+                config=vars(args),
+            )
         logging.debug("Finished loading wandb.")
 
     all_model_checkpoints = sorted(glob.glob(os.path.join(log_dir, 'checkpoints', '*.pt')), key=os.path.getmtime)
     for model_path in all_model_checkpoints:
         args.checkpoint_path = os.path.dirname(model_path)
         model, model_cfg = create_model(
-            model_type,
+            amodel,
+            tmodel,
             pretrained,
             precision='fp32',
             device=device,

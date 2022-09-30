@@ -78,23 +78,6 @@ def train_one_epoch(
     end = time.time()
 
     for i, batch in enumerate(dataloader):
-        named_parameters = list(model.named_parameters())
-
-        # freeze text encoder
-        text_freeze_parameters = [
-            p
-            for n, p in named_parameters
-            if n.startswith("text_branch")
-               or n in ["positional_embedding", "text_projection"]
-               or n.startswith("token_embedding")
-               or n.startswith("ln_final")
-        ]
-        logging.info('rank: %d, batch: %d', args.rank, i)
-        logging.info(text_freeze_parameters)
-        # logging.info(f"rank: {args.rank} | batch {i} of {num_batches_per_epoch} | "
-        #              f"Requires Grad: {text_freeze_parameters[0].requires_grad}")
-        logging.info(model.state_dict()['module.text_branch.resblocks.4.attn.in_proj_bias'][:10]) # For debug
-
         step = num_batches_per_epoch * epoch + i
         if isinstance(scheduler, dict):
             for s in scheduler.values():
