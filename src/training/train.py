@@ -90,8 +90,9 @@ def train_one_epoch(
                or n.startswith("ln_final")
         ]
         logging.info('rank: %d, batch: %d', args.rank, i)
-        logging.info(f"rank: {args.rank} | batch {i} of {num_batches_per_epoch} | "
-                     f"Requires Grad: {text_freeze_parameters[0].requires_grad}")
+        logging.info(text_freeze_parameters)
+        # logging.info(f"rank: {args.rank} | batch {i} of {num_batches_per_epoch} | "
+        #              f"Requires Grad: {text_freeze_parameters[0].requires_grad}")
         logging.info(model.state_dict()['module.text_branch.resblocks.4.attn.in_proj_bias'][:10]) # For debug
 
         step = num_batches_per_epoch * epoch + i
