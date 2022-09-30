@@ -472,6 +472,10 @@ def preprocess(
         elif data_filling == "repeat":
             n_repeat = int(max_len/len(audio_data))
             audio_data = audio_data.repeat(n_repeat+1)[:max_len]
+        else:
+            raise NotImplementedError(
+                f"data_filling {data_filling} not implemented"
+            )
 
     sample["waveform"] = audio_data
     del sample[audio_ext]
