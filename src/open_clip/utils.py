@@ -24,6 +24,7 @@ dataset_split = {
     "freesound": ["train", "test"],
     "FSD50K": ["train", "test"],
     "esc50": ["train", "test"],
+    "audiostock": ["train", "test"],
 }
 
 
