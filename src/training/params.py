@@ -477,10 +477,10 @@ def parse_args():
     )
 
     parser.add_argument(
-        "--repeat-augment",
-        default=False,
-        action="store_true",
-        help="Linear Probe using Freeze CLAP or not",
+        "--data-filling",
+        type=str,
+        default="repeat",
+        help="type of data filling, can be one of the following: repeat, repeatpad, pad",
     )
 
     parser.add_argument(
