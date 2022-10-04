@@ -508,7 +508,15 @@ def preprocess(
     # TODO: (yusong) dataloader debug
     if torchaudio is not None:
         sample['waveform_16000'] = torchaudio.transforms.Resample(orig_sr, 16000)(audio_data)
-        sample['mel'] = torchaudio.transforms.MelSpectrogram()(sample['waveform_16000'])
+        sample['mel'] = torchaudio.transforms.MelSpectrogram(
+            sample_rate=48000,
+            n_fft=window_size,
+            win_length=window_size,
+            hop_length=480,
+            n_mels=64,
+            f_min=50,
+            f_max=14000
+        )(audio_data)
 
     try:
         json_dict_raw = json.loads(sample[text_ext].decode("utf-8"))
