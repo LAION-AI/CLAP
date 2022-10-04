@@ -510,8 +510,8 @@ def preprocess(
         #sample['waveform_16000'] = torchaudio.transforms.Resample(orig_sr, 16000)(audio_data)
         sample['mel'] = torchaudio.transforms.MelSpectrogram(
             sample_rate=48000,
-            n_fft=window_size,
-            win_length=window_size,
+            n_fft=1024,
+            win_length=1024,
             hop_length=480,
             n_mels=64,
             f_min=50,
