@@ -409,3 +409,11 @@ jsrun --launch_distribution=packed -bpacked:7 -n1 -r1 -a1 -g1 -c7 ./launch-smt1.
 
 num_nodes=1
 jsrun --launch_distribution=packed -bpacked:7 -n${num_nodes} -r1 -a6 -g6 -c42 ./launch-smt4.sh ./run_summit_clap.sh
+
+num_nodes=2
+jsrun --launch_distribution=packed -bpacked:7 -n${num_nodes} -r1 -a6 -g6 -c42 ./launch-smt4.sh ./run_summit_clap.sh
+
+jsrun --launch_distribution=packed -bpacked:7 -n1 -r1 -a1 -g1 -c7 ./launch-smt1.sh ./run_summit_clap_eval.sh
+
+num_nodes=1
+jsrun --launch_distribution=packed -bpacked:7 -n${num_nodes} -r1 -a6 -g6 -c42 ./launch-smt4.sh ./run_summit_clap.sh
