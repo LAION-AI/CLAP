@@ -92,20 +92,20 @@ elif args.tmodel == "bart":
 _AUDIOSET_MAP_PATH = os.path.join(Path(__file__).parent, "audioset_textmap.npy")
 _AUDIOSET_MAP = np.load(_AUDIOSET_MAP_PATH, allow_pickle=True)
 
-# TODO: (yusong) dataloader debug
-from torchlibrosa.stft import Spectrogram, LogmelFilterBank
-window = 'hann'
-center = True
-pad_mode = 'reflect'
-ref = 1.0
-amin = 1e-10
-top_db = None
-window_size=1024
-hop_size=480
-sample_rate=48000
-fmin=50
-fmax=14000
-mel_bins=64
+# # TODO: (yusong) dataloader debug
+# from torchlibrosa.stft import Spectrogram, LogmelFilterBank
+# window = 'hann'
+# center = True
+# pad_mode = 'reflect'
+# ref = 1.0
+# amin = 1e-10
+# top_db = None
+# window_size=1024
+# hop_size=480
+# sample_rate=48000
+# fmin=50
+# fmax=14000
+# mel_bins=64
 
 # Spectrogram extractor
 spectrogram_extractor = Spectrogram(n_fft=window_size, hop_length=hop_size,
@@ -507,17 +507,16 @@ def preprocess(
 
     # TODO: (yusong) dataloader debug
     if torchaudio is not None:
-        pass
         #sample['waveform_16000'] = torchaudio.transforms.Resample(orig_sr, 16000)(audio_data)
-        # sample['mel'] = torchaudio.transforms.MelSpectrogram(
-        #     sample_rate=48000,
-        #     n_fft=window_size,
-        #     win_length=window_size,
-        #     hop_length=480,
-        #     n_mels=64,
-        #     f_min=50,
-        #     f_max=14000
-        # )(audio_data)
+        sample['mel'] = torchaudio.transforms.MelSpectrogram(
+            sample_rate=48000,
+            n_fft=window_size,
+            win_length=window_size,
+            hop_length=480,
+            n_mels=64,
+            f_min=50,
+            f_max=14000
+        )(audio_data)
 
     try:
         json_dict_raw = json.loads(sample[text_ext].decode("utf-8"))
