@@ -445,6 +445,10 @@ def preprocess(
     #         audio_data, orig_sr = torchaudio.load(fname)
     #         audio_data = audio_data[0, :].float()
 
+    # TODO: (yusong) dataloader debug
+    if torchaudio is not None:
+        sample['waveform_16000'] = torchaudio.transforms.Resample(orig_sr, 16000)(audio_data)
+
     if len(audio_data) > max_len:  # random clip if too long
         overflow = len(audio_data) - max_len
         idx = np.random.randint(0, overflow + 1)
