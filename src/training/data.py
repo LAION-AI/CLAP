@@ -507,7 +507,7 @@ def preprocess(
 
     # TODO: (yusong) dataloader debug
     if torchaudio is not None:
-        sample['waveform_16000'] = torchaudio.transforms.Resample(orig_sr, 16000)(audio_data)
+        #sample['waveform_16000'] = torchaudio.transforms.Resample(orig_sr, 16000)(audio_data)
         sample['mel'] = torchaudio.transforms.MelSpectrogram(
             sample_rate=48000,
             n_fft=window_size,
