@@ -107,15 +107,15 @@ _AUDIOSET_MAP = np.load(_AUDIOSET_MAP_PATH, allow_pickle=True)
 # fmax=14000
 # mel_bins=64
 
-# Spectrogram extractor
-spectrogram_extractor = Spectrogram(n_fft=window_size, hop_length=hop_size,
-                                         win_length=window_size, window=window, center=center, pad_mode=pad_mode,
-                                         freeze_parameters=True)
-
-# Logmel feature extractor
-logmel_extractor = LogmelFilterBank(sr=48000, n_fft=window_size,
-                                         n_mels=mel_bins, fmin=fmin, fmax=fmax, ref=ref, amin=amin, top_db=top_db,
-                                         freeze_parameters=True)
+# # Spectrogram extractor
+# spectrogram_extractor = Spectrogram(n_fft=window_size, hop_length=hop_size,
+#                                          win_length=window_size, window=window, center=center, pad_mode=pad_mode,
+#                                          freeze_parameters=True)
+#
+# # Logmel feature extractor
+# logmel_extractor = LogmelFilterBank(sr=48000, n_fft=window_size,
+#                                          n_mels=mel_bins, fmin=fmin, fmax=fmax, ref=ref, amin=amin, top_db=top_db,
+#                                          freeze_parameters=True)
 
 
 def int16_to_float32(x):
