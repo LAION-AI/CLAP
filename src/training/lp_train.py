@@ -184,6 +184,7 @@ def train_one_epoch(
             # resetting batch / data time meters per log window
             batch_time_m.reset()
             data_time_m.reset()
+        logging.info(f"batch {i} of {num_batches_per_epoch} ends")  # TODO: debug
     # end for
 
 
