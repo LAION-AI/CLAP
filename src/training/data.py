@@ -668,6 +668,7 @@ def get_wds_dataset(
         num_samples, num_shards = get_dataset_size(
             input_shards, sizefilepath_=sizefilepath_, is_local=is_local
         )
+        logging.info(f"train: {is_train}, num_samples: {num_samples}, num_shards: {num_shards}")
 
     if not num_samples:
         if is_train:
