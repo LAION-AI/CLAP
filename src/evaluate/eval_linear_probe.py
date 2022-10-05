@@ -359,6 +359,8 @@ def lp_main(args, device, writer, pretrain_epoch, idx):
         )
 
     data = get_data(args, clap_model_cfg)
+    logging.info(f'training data: {args.train_data}')
+    logging.info(f'validation data: {args.val_data}')
     assert len(data), "At least one train or eval dataset must be specified."
     if args.trace:
         assert "train" not in data, "Cannot train with traced model"
