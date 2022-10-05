@@ -495,7 +495,7 @@ def preprocess(
                 mel = torchaudio.transforms.AmplitudeToDB(top_db=None)(mel)
 
                 # split to three parts
-                chunk_frames = max_len // audio_cfg.hop_size
+                chunk_frames = max_len // audio_cfg['hop_size']
                 total_frames = mel.shape[1]
                 ranges = np.linspace(0, total_frames-chunk_frames, 4, dtype=int)
                 # randomly choose index for each part
