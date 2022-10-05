@@ -347,11 +347,19 @@ def main():
         os.makedirs(log_base_path, exist_ok=True)
         log_filename = f"out-{args.rank}" if args.log_local else "out.log"
         args.log_path = os.path.join(log_base_path, log_filename)
-        if os.path.exists(args.log_path):
-            print(
-                "Error. Experiment already exists. Use --name {} to specify a new experiment."
-            )
-            return -1
+
+        # avoid log dir in same name:
+        postfix = 0
+        while os.path.exists(args.log_path):
+            postfix += 1
+            log_base_path_new = log_base_path+'-'+str(postfix)
+            os.makedirs(log_base_path_new, exist_ok=True)
+            log_filename = f"out-{args.rank}" if args.log_local else "out.log"
+            args.log_path = os.path.join(log_base_path_new, log_filename)
+            # print(
+            #     "Error. Experiment already exists. Use --name {} to specify a new experiment."
+            # )
+            # return -1
 
     # Set logger
     args.log_level = logging.DEBUG if args.debug else logging.INFO
