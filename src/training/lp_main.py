@@ -421,7 +421,9 @@ def main():
         openai_model_cache_dir=os.path.expanduser(args.openai_model_cache_dir),
         skip_params=False,
         pretrained_audio=args.pretrained_audio,
-        pretrained_text=args.pretrained_text
+        pretrained_text=args.pretrained_text,
+        enable_fusion=args.enable_fusion,
+        fusion_type=args.fusion_type
     )
 
     args.lp_out_ch = len(list(args.class_index_dict.keys()))

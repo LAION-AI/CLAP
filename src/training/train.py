@@ -84,9 +84,9 @@ def train_one_epoch(
                 s(step)
         else:
             scheduler(step)
-        audios = batch['waveform']
+        audios = batch # contains mel_spec, wavform, and longer list
         texts = batch['text']
-        audios = audios.to(device=device, non_blocking=True)
+        # audios = audios.to(device=device, non_blocking=True)
         # texts = texts.to(device=device, non_blocking=True)
 
         data_time_m.update(time.time() - end)
@@ -304,9 +304,9 @@ def evaluate(model, data, epoch, args, tb_writer=None):
         # all_audio_features, all_text_features, all_audio_features_mlp, all_text_features_mlp = [], [], [], []
         with torch.no_grad():
             for i, batch in enumerate(dataloader):
-                audios = batch['waveform']
+                audios = batch # contains mel_spec, wavform, and longer list
                 texts = batch['text']
-                audios = audios.to(device=device, non_blocking=True)
+                # audios = audios.to(device=device, non_blocking=True)
                 
                 all_names = list(set(["-".join(b.split("/")[-3:-1]) for b in batch['__url__']]))
                 for name in all_names:

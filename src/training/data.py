@@ -219,6 +219,11 @@ class ToyDataset(Dataset):
         #             target[add_key] = 1.0
 
         # missing the text input
+        mel_spec = get_mel(torch.from_numpy(waveform), self.audio_cfg)[None,:,:]
+        mel_spec = torch.cat([mel_spec, mel_spec.clone(),mel_spec.clone(),mel_spec.clone()], dim=0).cpu().numpy()
+        longer = random.choice([True, False])
+        if longer == False:
+            mel_spec[1:,:,:] = 0.0
         data_dict = {
             "hdf5_path": hdf5_path,
             "index_in_hdf5": r_idx,
@@ -226,6 +231,8 @@ class ToyDataset(Dataset):
             "waveform": waveform,
             "class_label": target,
             "text": text,
+            "longer": longer,
+            "mel_fusion": mel_spec
         }
         return data_dict
 

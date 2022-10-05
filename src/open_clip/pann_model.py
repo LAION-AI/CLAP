@@ -11,6 +11,7 @@ from torchlibrosa.stft import Spectrogram, LogmelFilterBank
 from torchlibrosa.augmentation import SpecAugmentation
 
 from .utils import do_mixup, interpolate, pad_framewise_output
+from .feature_fusion import iAFF, AFF, DAF
  
 
 def init_layer(layer):
@@ -144,7 +145,7 @@ class AttBlock(nn.Module):
 
 class Cnn14(nn.Module):
     def __init__(self, sample_rate, window_size, hop_size, mel_bins, fmin, 
-        fmax, classes_num):
+        fmax, classes_num, enable_fusion=False, fusion_type='None'):
         
         super(Cnn14, self).__init__()
 
@@ -154,6 +155,9 @@ class Cnn14(nn.Module):
         ref = 1.0
         amin = 1e-10
         top_db = None
+        
+        self.enable_fusion = enable_fusion
+        self.fusion_type = fusion_type
 
         # Spectrogram extractor
         self.spectrogram_extractor = Spectrogram(n_fft=window_size, hop_length=hop_size, 
@@ -171,7 +175,10 @@ class Cnn14(nn.Module):
 
         self.bn0 = nn.BatchNorm2d(64)
 
-        self.conv_block1 = ConvBlock(in_channels=1, out_channels=64)
+        if (self.enable_fusion) and (self.fusion_type == 'channel_map'):
+            self.conv_block1 = ConvBlock(in_channels=4, out_channels=64)
+        else:
+            self.conv_block1 = ConvBlock(in_channels=1, out_channels=64)
         self.conv_block2 = ConvBlock(in_channels=64, out_channels=128)
         self.conv_block3 = ConvBlock(in_channels=128, out_channels=256)
         self.conv_block4 = ConvBlock(in_channels=256, out_channels=512)
@@ -180,7 +187,33 @@ class Cnn14(nn.Module):
 
         self.fc1 = nn.Linear(2048, 2048, bias=True)
         self.fc_audioset = nn.Linear(2048, classes_num, bias=True)
-        
+
+        if (self.enable_fusion) and (self.fusion_type in ['daf_1d','aff_1d','iaff_1d']):
+            self.mel_conv1d = nn.Sequential(
+                nn.Conv1d(64, 64, kernel_size=5, stride=3, padding=2),
+                nn.BatchNorm1d(64),
+                nn.ReLU(inplace=True),
+            )
+            if self.fusion_type == 'daf_1d':
+                self.fusion_model = DAF()
+            elif self.fusion_type == 'aff_1d':
+                self.fusion_model = AFF(channels=64, type='1D')
+            elif self.fusion_type == 'iaff_1d':
+                self.fusion_model = iAFF(channels=64, type='1D')
+
+        if (self.enable_fusion) and (self.fusion_type in ['daf_2d','aff_2d','iaff_2d']):
+            self.mel_conv2d = nn.Sequential(
+                nn.Conv2d(1, 64, kernel_size=(5,5), stride=(6, 2), padding=(2,2)),
+                nn.BatchNorm2d(64),
+                nn.ReLU(inplace=True)
+            )
+            
+            if self.fusion_type == 'daf_2d':
+                self.fusion_model = DAF()
+            elif self.fusion_type == 'aff_2d':
+                self.fusion_model = AFF(channels=64, type='2D')
+            elif self.fusion_type == 'iaff_2d':
+                self.fusion_model = iAFF(channels=64, type='2D')    
         self.init_weight()
 
     def init_weight(self):
@@ -188,24 +221,81 @@ class Cnn14(nn.Module):
         init_layer(self.fc1)
         init_layer(self.fc_audioset)
  
-    def forward(self, input, mixup_lambda=None):
+    def forward(self, input, mixup_lambda=None, device=None):
         """
         Input: (batch_size, data_length)"""
-        x = self.spectrogram_extractor(input)   # (batch_size, 1, time_steps, freq_bins)
-        x = self.logmel_extractor(x)    # (batch_size, 1, time_steps, mel_bins)
 
-        x = x.transpose(1, 3)
-        x = self.bn0(x)
-        x = x.transpose(1, 3)
-        
+        if not self.enable_fusion:
+            x = self.spectrogram_extractor(input['waveform'].to(device=device, non_blocking=True))   # (batch_size, 1, time_steps, freq_bins)
+            x = self.logmel_extractor(x)    # (batch_size, 1, time_steps, mel_bins)
+
+            x = x.transpose(1, 3)
+            x = self.bn0(x)
+            x = x.transpose(1, 3)
+        else:
+            longer_list = input["longer"].to(device=device, non_blocking=True)
+            x = input["mel_fusion"]
+            longer_list_idx = torch.where(longer_list)[0]
+            if self.fusion_type in ['daf_1d','aff_1d','iaff_1d']:
+                new_x = x[:,0:1,:,:].clone().to(device=device, non_blocking=True)
+                
+                # global processing
+                new_x = new_x.transpose(1, 3)
+                new_x = self.bn0(new_x)
+                new_x = new_x.transpose(1, 3)
+                
+                # local processing
+                fusion_x_local = x[longer_list_idx,1:,:,:].clone().to(device=device, non_blocking=True)
+                FB,FC,FT,FF = fusion_x_local.size()
+                fusion_x_local = fusion_x_local.view(FB * FC, FT, FF)
+                fusion_x_local = torch.permute(fusion_x_local, (0,2,1)).contiguous()
+                fusion_x_local = self.mel_conv1d(fusion_x_local)
+                fusion_x_local = fusion_x_local.view(FB,FC,FF,fusion_x_local.size(-1))
+                fusion_x_local = torch.permute(fusion_x_local, (0,2,1,3)).contiguous().flatten(2)
+                if fusion_x_local.size(-1) < FT:
+                    fusion_x_local = torch.cat([fusion_x_local, torch.zeros((FB,FF,FT- fusion_x_local.size(-1)), device=device)], dim=-1)
+                else:
+                    fusion_x_local = fusion_x_local[:,:,:FT]
+                # 1D fusion
+                new_x = new_x.squeeze(1).permute((0,2,1)).contiguous()
+                new_x[longer_list_idx] = self.fusion_model(new_x[longer_list_idx], fusion_x_local)
+                x = new_x.permute((0,2,1)).contiguous()[:,None,:,:]
+
+            elif self.fusion_type in ['daf_2d','aff_2d','iaff_2d','channel_map']:
+                x = x.to(device=device, non_blocking=True)
+                x = x.transpose(1, 3)
+                x = self.bn0(x)
+                x = x.transpose(1, 3)
+
         if self.training:
             x = self.spec_augmenter(x)
 
         # Mixup on spectrogram
         if self.training and mixup_lambda is not None:
             x = do_mixup(x, mixup_lambda)
-
-        x = self.conv_block1(x, pool_size=(2, 2), pool_type='avg')
+        if (self.enable_fusion) and (self.fusion_type in ['daf_2d','aff_2d','iaff_2d']):
+            global_x = x[:,0:1,:,:]
+            local_x = x[longer_list_idx,1:,:,:].contiguous()
+             # global processing
+            B, C, H, W = global_x.shape
+            global_x = self.conv_block1(global_x, pool_size=(2, 2), pool_type='avg')
+            TH = global_x.size(-2)
+            # local processing
+            B, C, H, W = local_x.shape
+            local_x = local_x.view(B*C,1,H,W)
+            local_x = self.mel_conv2d(local_x)
+            local_x = local_x.view(B,C,local_x.size(1),local_x.size(2),local_x.size(3))
+            local_x = local_x.permute((0,2,1,3,4)).contiguous().flatten(2,3)
+            TB,TC,_,TW = local_x.size()
+            if local_x.size(-2) < TH:
+                local_x = torch.cat([local_x, torch.zeros((TB,TC,TH-local_x.size(-2),TW), device=global_x.device)], dim=-2)
+            else:
+                local_x = local_x[:,:,:TH,:]
+            
+            global_x[longer_list_idx] = self.fusion_model(global_x[longer_list_idx],local_x)
+            x = global_x
+        else:
+            x = self.conv_block1(x, pool_size=(2, 2), pool_type='avg') 
         x = F.dropout(x, p=0.2, training=self.training)
         x = self.conv_block2(x, pool_size=(2, 2), pool_type='avg')
         x = F.dropout(x, p=0.2, training=self.training)
@@ -241,7 +331,7 @@ class Cnn14(nn.Module):
 
 class Cnn6(nn.Module):
     def __init__(self, sample_rate, window_size, hop_size, mel_bins, fmin, 
-        fmax, classes_num):
+        fmax, classes_num, enable_fusion=False, fusion_type='None'):
         
         super(Cnn6, self).__init__()
 
@@ -251,6 +341,9 @@ class Cnn6(nn.Module):
         ref = 1.0
         amin = 1e-10
         top_db = None
+
+        self.enable_fusion = enable_fusion
+        self.fusion_type = fusion_type
 
         # Spectrogram extractor
         self.spectrogram_extractor = Spectrogram(n_fft=window_size, hop_length=hop_size, 
@@ -283,7 +376,7 @@ class Cnn6(nn.Module):
         init_layer(self.fc1)
         init_layer(self.fc_audioset)
  
-    def forward(self, input, mixup_lambda=None):
+    def forward(self, input, mixup_lambda=None, device=None):
         """
         Input: (batch_size, data_length)"""
 
@@ -333,7 +426,7 @@ class Cnn6(nn.Module):
 
 class Cnn10(nn.Module):
     def __init__(self, sample_rate, window_size, hop_size, mel_bins, fmin, 
-        fmax, classes_num):
+        fmax, classes_num, enable_fusion=False, fusion_type='None'):
         
         super(Cnn10, self).__init__()
 
@@ -343,6 +436,9 @@ class Cnn10(nn.Module):
         ref = 1.0
         amin = 1e-10
         top_db = None
+
+        self.enable_fusion = enable_fusion
+        self.fusion_type = fusion_type
 
         # Spectrogram extractor
         self.spectrogram_extractor = Spectrogram(n_fft=window_size, hop_length=hop_size, 
@@ -376,7 +472,7 @@ class Cnn10(nn.Module):
         init_layer(self.fc1)
         init_layer(self.fc_audioset)
  
-    def forward(self, input, mixup_lambda=None):
+    def forward(self, input, mixup_lambda=None, device=None):
         """
         Input: (batch_size, data_length)"""
 
@@ -426,7 +522,7 @@ class Cnn10(nn.Module):
         return output_dict
 
 
-def create_pann_model(audio_cfg):
+def create_pann_model(audio_cfg, enable_fusion=False, fusion_type='None'):
     try:
         ModelProto = eval(audio_cfg.model_name)
         model = ModelProto(
@@ -436,7 +532,9 @@ def create_pann_model(audio_cfg):
             mel_bins = audio_cfg.mel_bins,
             fmin = audio_cfg.fmin,
             fmax = audio_cfg.fmax,
-            classes_num = audio_cfg.class_num
+            classes_num = audio_cfg.class_num,
+            enable_fusion = enable_fusion, 
+            fusion_type = fusion_type
         )
         return model
     except:
