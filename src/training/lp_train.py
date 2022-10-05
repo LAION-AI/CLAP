@@ -69,7 +69,6 @@ def train_one_epoch(
     end = time.time()
 
     for i, batch in enumerate(dataloader):
-        logging.info(f"batch {i} of {num_batches_per_epoch}") # TODO: debug
         step = num_batches_per_epoch * epoch + i
 
         if isinstance(scheduler, dict):
@@ -184,7 +183,6 @@ def train_one_epoch(
             # resetting batch / data time meters per log window
             batch_time_m.reset()
             data_time_m.reset()
-        logging.info(f"batch {i} of {num_batches_per_epoch} ends")  # TODO: debug
     # end for
 
 
