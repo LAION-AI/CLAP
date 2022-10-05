@@ -15,6 +15,7 @@ from torch.cuda.amp import GradScaler
 import faulthandler
 import pathlib
 import argparse
+import time
 
 try:
     import wandb
@@ -38,7 +39,7 @@ from training.distributed import is_master, init_distributed_device, world_info_
 from training.logger import setup_logging
 from training.scheduler import cosine_lr
 from training.lp_train import train_one_epoch, evaluate
-from open_clip.utils import get_tar_path_from_dataset_name, dataset_split
+from open_clip.utils import get_tar_path_from_dataset_name, dataset_split, get_optimizer
 from open_clip.utils import load_p, load_class_label
 from open_clip.linear_probe import LinearProbe
 
@@ -140,7 +141,7 @@ def config_lp_optimizer(model, data, args):
 
     optimizer = {}
     scheduler = {}
-    
+
     # freeze text encoder
     text_freeze_parameters = [
         p
@@ -150,7 +151,7 @@ def config_lp_optimizer(model, data, args):
         or n.startswith("clap_model.token_embedding")
         or n.startswith("clap_model.ln_final")
     ]
-    
+
     if args.freeze_text:
         logging.info("Freeze Text!!!!")
         for k in text_freeze_parameters:
@@ -204,7 +205,7 @@ def config_lp_optimizer(model, data, args):
                     if (include(n, p) and p.requires_grad) and (not is_pretrained_params(n))
                 ]
 
-                pretrained_params_optimizer = optim.AdamW(
+                pretrained_params_optimizer = get_optimizer(
                     [
                         {"params": gain_or_bias_pretrained_params, "weight_decay": 0.0},
                         {
@@ -215,6 +216,8 @@ def config_lp_optimizer(model, data, args):
                     lr=args.lr_pretrained,
                     betas=(args.beta1_pretrained, args.beta2_pretrained),
                     eps=args.eps_pretrained,
+                    momentum=args.momentum_pretrained,
+                    optimizer_name=args.optimizer,
                 )
                 pretrained_params_scheduler = cosine_lr(
                     pretrained_params_optimizer,
@@ -223,7 +226,7 @@ def config_lp_optimizer(model, data, args):
                     total_steps,
                 )
 
-                new_params_optimizer = optim.AdamW(
+                new_params_optimizer = get_optimizer(
                     [
                         {"params": gain_or_bias_new_params, "weight_decay": 0.0},
                         {"params": rest_new_params, "weight_decay": args.wd_new},
@@ -231,6 +234,8 @@ def config_lp_optimizer(model, data, args):
                     lr=args.lr_new,
                     betas=(args.beta1_new, args.beta2_new),
                     eps=args.eps_new,
+                    momentum=args.momentum_new,
+                    optimizer_name=args.optimizer,
                 )
                 new_params_scheduler = cosine_lr(
                     new_params_optimizer, args.lr_new, args.warmup, total_steps
@@ -253,8 +258,8 @@ def config_lp_optimizer(model, data, args):
                     hvd.broadcast_optimizer_state(pretrained_params_optimizer, root_rank=0)
                     hvd.broadcast_optimizer_state(new_params_optimizer, root_rank=0)
             else:
-                                
-                optimizer["clap"] = optim.AdamW(
+
+                optimizer["clap"] = get_optimizer(
                     [
                         {"params": gain_or_bias_params, "weight_decay": 0.0},
                         {"params": rest_params, "weight_decay": args.wd},
@@ -262,7 +267,9 @@ def config_lp_optimizer(model, data, args):
                     lr=args.lr,
                     betas=(args.beta1, args.beta2),
                     eps=args.eps,
-                )
+                    momentum=args.momentum,
+                    optimizer_name=args.optimizer,
+            )
                 scheduler["clap"] = cosine_lr(optimizer["clap"], args.lr, args.warmup, total_steps)
 
                 if args.horovod:
@@ -274,7 +281,8 @@ def config_lp_optimizer(model, data, args):
 
     # linear probe optimizer
     lp_params = [p for n,p in named_parameters if (not in_clap(n,p)) and p.requires_grad]
-    lp_optim = optim.AdamW(lp_params, lr = args.lp_lr)
+    lp_optim = get_optimizer(lp_params, lr=args.lp_lr, betas=(args.beta1, args.beta2), eps=args.eps, momentum=0.9,
+                             optimizer_name=args.optimizer)
     optimizer["lp"] = lp_optim
 
     return optimizer, scheduler, text_freeze_parameters
@@ -282,6 +290,9 @@ def config_lp_optimizer(model, data, args):
 
 def main():
     args = parse_args()
+
+    time.sleep(args.sleep)
+
     # sanitize model name for filesystem / uri use, easier if we don't use / in name as a rule?
     args.amodel = args.amodel.replace("/", "-")
     # download sizes.json file
@@ -398,7 +409,7 @@ def main():
         pretrained_audio=args.pretrained_audio,
         pretrained_text=args.pretrained_text
     )
-    
+
     args.lp_out_ch = len(list(args.class_index_dict.keys()))
     # Linear Probe 
     logging.info(f"linear probe using mlp: {args.lp_mlp}")
@@ -410,13 +421,13 @@ def main():
     logging.info(f"linear probe lp_metrics: {args.lp_metrics}")
 
     model = LinearProbe(
-        clap_model, 
-        mlp=args.lp_mlp, freeze=args.lp_freeze, 
+        clap_model,
+        mlp=args.lp_mlp, freeze=args.lp_freeze,
         in_ch=512, out_ch=args.lp_out_ch,
         act=args.lp_act
     ) # in_ch is fixed (i.e., 512)
     model = model.to(device)
-    
+
     if args.horovod:
         with torch.no_grad():
             for param in model.parameters():
@@ -452,7 +463,7 @@ def main():
     if args.trace:
         assert "train" not in data, "Cannot train with traced model"
 
-    
+
     optimizer, scheduler, text_freeze_parameters = config_lp_optimizer(model, data, args)
 
 

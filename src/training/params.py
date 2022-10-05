@@ -512,6 +512,10 @@ def parse_args():
         help="the id of wandb experiment to restore.",
     )
 
+    parser.add_argument(
+        "--sleep", type=float, default=0, help="sleep n seconds before start training"
+    )
+
     args = parser.parse_args()
 
     # If some params are not passed, we use the default values based on model name.
