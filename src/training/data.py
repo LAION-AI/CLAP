@@ -451,7 +451,7 @@ def get_mel(audio_data,audio_cfg):
     # )
     # we use log mel spectrogram as input
     mel = torchaudio.transforms.AmplitudeToDB(top_db=None)(mel)
-    return mel
+    return mel.T  # (T, n_mels)
 
 
 def preprocess(
