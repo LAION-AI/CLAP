@@ -467,6 +467,7 @@ def preprocess(
     """
     Preprocess a single sample for wdsdataloader.
     """
+    logging.info(f"start preprocessing {sample['id']}")
     audio_data, orig_sr = sf.read(io.BytesIO(sample[audio_ext]))
     audio_data = torch.tensor(audio_data).float()
     # TODO: (yusong) to be include in the future
@@ -568,6 +569,8 @@ def preprocess(
                 sample["mel_fusion"] = mel_fusion
             longer = torch.tensor([False])
 
+    logging.info(f"done filling {sample['id']}")
+
     sample["longer"] = longer
 
     sample["waveform"] = audio_data
@@ -597,6 +600,7 @@ def preprocess(
     sample["audio_name"] = sample["__key__"].split("/")[-1] + "." + audio_ext
     sample["text_name"] = sample["__key__"].split("/")[-1] + "." + text_ext
     sample["audio_orig_sr"] = orig_sr
+    logging.info(f"done preprocessing {sample['id']}")
     return sample
 
 
