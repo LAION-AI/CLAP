@@ -451,10 +451,6 @@ def preprocess(
 
     with torch.no_grad():
         if len(audio_data) > max_len:
-            # random clip if too long
-            overflow = len(audio_data) - max_len
-            idx = np.random.randint(0, overflow + 1)
-            audio_data = audio_data[idx: idx + max_len]
             if data_truncating == "rand_trunc":
                 pass
             elif data_truncating == "fusion":
@@ -495,30 +491,41 @@ def preprocess(
                 mel = torchaudio.transforms.AmplitudeToDB(top_db=None)(mel)
 
                 # split to three parts
-                chunk_frames = max_len // audio_cfg['hop_size']
+                chunk_frames = max_len // audio_cfg['hop_size']+1
                 total_frames = mel.shape[1]
-                ranges = np.linspace(0, total_frames-chunk_frames, 4, dtype=int)
-                # randomly choose index for each part
-                idx_front = np.random.randint(ranges[0], ranges[1])
-                idx_middle = np.random.randint(ranges[1], ranges[2])
-                idx_back = np.random.randint(ranges[2], ranges[3])
-                # select mel
-                mel_chunk_front = mel[:, idx_front:idx_front+chunk_frames]
-                mel_chunk_middle = mel[:, idx_middle:idx_middle+chunk_frames]
-                mel_chunk_back = mel[:, idx_back:idx_back+chunk_frames]
+                if chunk_frames == total_frames:
+                    # there is a corner case where the audio length is
+                    # larger than max_len but smaller than max_len+hop_size.
+                    # In this case, we just use the whole audio.
+                    mel_fusion = torch.stack([mel, mel, mel, mel], dim=0)
+                    sample["mel_fusion"] = mel_fusion
+                    longer = torch.tensor([False])
+                else:
+                    ranges = np.array_split(list(range(0, total_frames-chunk_frames)), 3)
+                    # randomly choose index for each part
+                    idx_front = np.random.choice(ranges[0])
+                    idx_middle = np.random.choice(ranges[1])
+                    idx_back = np.random.choice(ranges[2])
+                    # select mel
+                    mel_chunk_front = mel[:, idx_front:idx_front+chunk_frames]
+                    mel_chunk_middle = mel[:, idx_middle:idx_middle+chunk_frames]
+                    mel_chunk_back = mel[:, idx_back:idx_back+chunk_frames]
 
-                # shrink the mel
-                mel_shrink = torchvision.transforms.Resize(size=[64, chunk_frames])(mel[None])[0]
+                    # shrink the mel
+                    mel_shrink = torchvision.transforms.Resize(size=[64, chunk_frames])(mel[None])[0]
 
-                # stack
-                mel_fusion = torch.stack([mel_chunk_front, mel_chunk_middle, mel_chunk_back, mel_shrink], dim=0)
-                sample["mel_fusion"] = mel_fusion
-
+                    # stack
+                    mel_fusion = torch.stack([mel_chunk_front, mel_chunk_middle, mel_chunk_back, mel_shrink], dim=0)
+                    sample["mel_fusion"] = mel_fusion
+                    longer = torch.tensor([True])
             else:
                 raise NotImplementedError(
                     f"data_truncating {data_truncating} not implemented"
                 )
-            longer = torch.tensor([True])
+            # random crop to max_len (for compatibility)
+            overflow = len(audio_data) - max_len
+            idx = np.random.randint(0, overflow + 1)
+            audio_data = audio_data[idx: idx + max_len]
 
         elif len(audio_data) == max_len:  # do nothing if equal
             longer = torch.tensor([False])
