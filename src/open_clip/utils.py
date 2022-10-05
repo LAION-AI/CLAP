@@ -85,46 +85,39 @@ def get_tar_path_from_dataset_name(
         islocal,
         dataset_path,
         proportion=1,
+        full_train_dataset=None
 ):
     """
     Get tar path from dataset name and type
     """
-    if islocal:
-        output = []
-        for n in dataset_names:
-            for s in dataset_types:
-                tmp = []
+    output = []
+    for n in dataset_names:
+        if full_train_dataset is not None and n in full_train_dataset:
+            current_dataset_types = dataset_split[n]
+        else:
+            current_dataset_types = dataset_types
+        for s in current_dataset_types:
+            tmp = []
+            if islocal:
                 sizefilepath_ = f"{dataset_path}/{n}/{s}/sizes.json"
                 if not os.path.exists(sizefilepath_):
                     sizefilepath_ = f"./json_files/{n}/{s}/sizes.json"
-                if not os.path.exists(sizefilepath_):
-                    continue
-                sizes = json.load(open(sizefilepath_, "r"))
-                for k in sizes.keys():
-                    tmp.append(f"{dataset_path}/{n}/{s}/{k}")
-                if proportion != 1:
-                    tmp = random.sample(tmp, int(proportion * len(tmp)))
-                output.append(tmp)
-        return sum(output, [])
-    else:
-
-        output = []
-        for n in dataset_names:
-            for s in dataset_types:
-                tmp = []
+            else:
                 sizefilepath_ = f"./json_files/{n}/{s}/sizes.json"
-                if not os.path.exists(sizefilepath_):
-                    continue
-                sizes = json.load(open(sizefilepath_, "r"))
-                for k in sizes.keys():
+            if not os.path.exists(sizefilepath_):
+                continue
+            sizes = json.load(open(sizefilepath_, "r"))
+            for k in sizes.keys():
+                if islocal:
+                    tmp.append(f"{dataset_path}/{n}/{s}/{k}")
+                else:
                     tmp.append(
                         f"pipe:aws s3 --cli-connect-timeout 0 cp s3://s-laion-audio/webdataset_tar/{n}/{s}/{k} -"
                     )
-                    # TODO: add dataset_path to remote dataset in the future.
-                if proportion != 1:
-                    tmp = random.sample(tmp, int(proportion * len(tmp)))
-                output.append(tmp)
-        return sum(output, [])
+            if proportion != 1:
+                tmp = random.sample(tmp, int(proportion * len(tmp)))
+            output.append(tmp)
+    return sum(output, [])
 
 
 def get_tar_path_from_txts(txt_path, islocal, proportion=1):
@@ -343,7 +336,10 @@ def load_class_label(path):
     #     val = Array('i', out.values(), lock=False)
     #     return (key, val)
 
+
 from torch import optim
+
+
 def get_optimizer(params, lr, betas, eps, momentum, optimizer_name):
     if optimizer_name.lower() == "adamw":
         optimizer = optim.AdamW(
@@ -352,6 +348,10 @@ def get_optimizer(params, lr, betas, eps, momentum, optimizer_name):
     elif optimizer_name.lower() == "sgd":
         optimizer = optim.SGD(
             params, lr=lr, momentum=momentum
+        )
+    elif optimizer_name.lower() == "adam":
+        optimizer = optim.Adam(
+            params, lr=lr, betas=betas, eps=eps
         )
     else:
         raise ValueError("optimizer name is not correct")

@@ -445,13 +445,13 @@ def preprocess(
     #         audio_data, orig_sr = torchaudio.load(fname)
     #         audio_data = audio_data[0, :].float()
 
-    if len(audio_data) > max_len:  # random clip if too long
-        overflow = len(audio_data) - max_len
-        idx = np.random.randint(0, overflow + 1)
-        audio_data = audio_data[idx : idx + max_len]
-    else:  # padding if too short
-        if data_filling == "repeatpad":
-            with torch.no_grad():
+    with torch.no_grad():
+        if len(audio_data) > max_len:  # random clip if too long
+            overflow = len(audio_data) - max_len
+            idx = np.random.randint(0, overflow + 1)
+            audio_data = audio_data[idx : idx + max_len]
+        else:  # padding if too short
+            if data_filling == "repeatpad":
                 n_repeat = int(max_len/len(audio_data))
                 audio_data = audio_data.repeat(n_repeat)
                 # audio_data = audio_data.unsqueeze(0).unsqueeze(0).unsqueeze(0)
@@ -462,20 +462,20 @@ def preprocess(
                     mode="constant",
                     value=0,
                 )
-        elif data_filling == "pad":
-            audio_data = F.pad(
-                audio_data,
-                (0, max_len - len(audio_data)),
-                mode="constant",
-                value=0,
-            )
-        elif data_filling == "repeat":
-            n_repeat = int(max_len/len(audio_data))
-            audio_data = audio_data.repeat(n_repeat+1)[:max_len]
-        else:
-            raise NotImplementedError(
-                f"data_filling {data_filling} not implemented"
-            )
+            elif data_filling == "pad":
+                audio_data = F.pad(
+                    audio_data,
+                    (0, max_len - len(audio_data)),
+                    mode="constant",
+                    value=0,
+                )
+            elif data_filling == "repeat":
+                n_repeat = int(max_len/len(audio_data))
+                audio_data = audio_data.repeat(n_repeat+1)[:max_len]
+            else:
+                raise NotImplementedError(
+                    f"data_filling {data_filling} not implemented"
+                )
 
     sample["waveform"] = audio_data
     del sample[audio_ext]
@@ -792,6 +792,7 @@ def get_data(args, model_cfg):
             islocal=not args.remotedata,
             proportion=args.dataset_proportion,
             dataset_path=args.datasetpath,
+            full_train_dataset=args.full_train_dataset,
         )
         args.val_data = get_tar_path_from_dataset_name(
             args.datasetnames,
@@ -799,6 +800,7 @@ def get_data(args, model_cfg):
             islocal=not args.remotedata,
             proportion=1,
             dataset_path=args.datasetpath,
+            full_train_dataset=args.full_train_dataset,
         )
 
     if args.train_data:

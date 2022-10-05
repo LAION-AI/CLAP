@@ -103,6 +103,12 @@ def parse_args():
         help="If loading webdataset, spedify the dataset names to load. Can be some of these: Clotho, audioset, audiocaps, BBCSoundEffects",
     )
     parser.add_argument(
+        "--full-train-dataset",
+        nargs="+",
+        default=None,
+        help="Which dataset will be trained with all the subsets. (train+test)",
+    )
+    parser.add_argument(
         "--datasetinfos",
         nargs="+",
         default=None,
@@ -188,7 +194,7 @@ def parse_args():
         "--wd-pretrained", type=float, default=0.2, help="Weight decay for text."
     )
     parser.add_argument(
-        "--momentum-pretrained", type=float, default=0.2, help="Momentum for text."
+        "--momentum-pretrained", type=float, default=0.9, help="Momentum for text."
     )
     parser.add_argument(
         "--lr-new", type=float, default=None, help="Learning rate for audio."
@@ -206,7 +212,7 @@ def parse_args():
         "--wd-new", type=float, default=0.2, help="Weight decay for audio."
     )
     parser.add_argument(
-        "--momentum-new", type=float, default=0.2, help="Momentum for audio."
+        "--momentum-new", type=float, default=0.9, help="Momentum for audio."
     )
     parser.add_argument(
         "--warmup", type=int, default=10000, help="Number of steps to warmup for."
@@ -473,13 +479,14 @@ def parse_args():
         "--lp-lr", type=float, default=1e-4, help="learning rate of linear probe"
     )
     parser.add_argument(
-        "--kappa", type=float, default=0, help="the kappa in the weighted contrastive loss, default is to turn off the weighted contrastive loss"
+        "--kappa", type=float, default=0,
+        help="the kappa in the weighted contrastive loss, default is to turn off the weighted contrastive loss"
     )
 
     parser.add_argument(
         "--data-filling",
         type=str,
-        default="repeat",
+        default="pad",
         help="type of data filling, can be one of the following: repeat, repeatpad, pad",
     )
 

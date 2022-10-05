@@ -310,6 +310,12 @@ def main():
     ]
     rest_params = [p for n, p in named_parameters if include(n, p) and p.requires_grad]
 
+    # set wd-related params to 0 if use adam optimizer
+    if args.optimizer == "adam":
+        args.wd = 0
+        args.wd_pretrained = 0
+        args.wd_new = 0
+
     if args.train_data is None:
         optimizer = None
         scheduler = None
@@ -353,7 +359,7 @@ def main():
                 lr=args.lr_pretrained,
                 betas=(args.beta1_pretrained, args.beta2_pretrained),
                 eps=args.eps_pretrained,
-                momentum=args.momentum_pretraatariined,
+                momentum=args.momentum_pretrained,
                 optimizer_name=args.optimizer,
                 )
             pretrained_params_scheduler = cosine_lr(
