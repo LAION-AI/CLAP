@@ -85,14 +85,14 @@ def get_tar_path_from_dataset_name(
         islocal,
         dataset_path,
         proportion=1,
-        full_train_dataset=None
+        full_dataset=None
 ):
     """
     Get tar path from dataset name and type
     """
     output = []
     for n in dataset_names:
-        if full_train_dataset is not None and n in full_train_dataset:
+        if full_dataset is not None and n in full_dataset:
             current_dataset_types = dataset_split[n]
         else:
             current_dataset_types = dataset_types

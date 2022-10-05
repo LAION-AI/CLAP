@@ -792,15 +792,15 @@ def get_data(args, model_cfg):
             islocal=not args.remotedata,
             proportion=args.dataset_proportion,
             dataset_path=args.datasetpath,
-            full_train_dataset=args.full_train_dataset,
+            full_dataset=args.full_train_dataset,
         )
         args.val_data = get_tar_path_from_dataset_name(
-            args.datasetnames,
+            [n for n in args.datasetnames if n not in args.full_train_dataset],
             ["valid", "test", "eval"],
             islocal=not args.remotedata,
             proportion=1,
             dataset_path=args.datasetpath,
-            full_train_dataset=args.full_train_dataset,
+            full_dataset=None,
         )
 
     if args.train_data:
