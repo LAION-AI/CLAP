@@ -133,6 +133,12 @@ def random_seed(seed=42, rank=0):
     random.seed(seed + rank)
 
 def config_lp_optimizer(model, data, args):
+    # set wd-related params to 0 if use adam optimizer
+    if args.optimizer == "adam":
+        args.wd = 0
+        args.wd_pretrained = 0
+        args.wd_new = 0
+
     in_clap = (
         lambda n, p: n.startswith("clap_model")
     )
