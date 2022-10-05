@@ -14,6 +14,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torchvision.datasets as datasets
+import torchvision.transforms
 import webdataset as wds
 from PIL import Image
 from torch.utils.data import Dataset, DataLoader, SubsetRandomSampler
@@ -422,8 +423,10 @@ def preprocess(
     audio_ext,
     text_ext,
     max_len,
+    audio_cfg,
     class_index_dict=None,
-    data_filling="repeat"
+    data_filling="pad",
+    data_truncating="rand_trunc",
 ):
     """
     Preprocess a single sample for wdsdataloader.
@@ -445,11 +448,80 @@ def preprocess(
     #         audio_data, orig_sr = torchaudio.load(fname)
     #         audio_data = audio_data[0, :].float()
 
+
     with torch.no_grad():
-        if len(audio_data) > max_len:  # random clip if too long
+        if len(audio_data) > max_len:
+            # random clip if too long
             overflow = len(audio_data) - max_len
             idx = np.random.randint(0, overflow + 1)
-            audio_data = audio_data[idx : idx + max_len]
+            audio_data = audio_data[idx: idx + max_len]
+            if data_truncating == "rand_trunc":
+                pass
+            elif data_truncating == "fusion":
+                # fusion
+                # mel shape: (n_mels, T)
+                mel = torchaudio.transforms.MelSpectrogram(
+                    sample_rate=audio_cfg.sample_rate,
+                    n_fft=audio_cfg.window_size,
+                    win_length=audio_cfg.window_size,
+                    hop_length=audio_cfg.hop_size,
+                    center=True,
+                    pad_mode="reflect",
+                    power=2.0,
+                    norm=None,
+                    onesided=True,
+                    n_mels=64,
+                    f_min=audio_cfg.fmin,
+                    f_max=audio_cfg.fmax
+                )(audio_data)
+                # Align to librosa:
+                # librosa_melspec = librosa.feature.melspectrogram(
+                #     waveform,
+                #     sr=audio_cfg.sample_rate,
+                #     n_fft=audio_cfg.window_size,
+                #     hop_length=audio_cfg.hop_size,
+                #     win_length=audio_cfg.window_size,
+                #     center=True,
+                #     pad_mode="reflect",
+                #     power=2.0,
+                #     n_mels=64,
+                #     norm=None,
+                #     htk=True,
+                #     fmin=audio_cfg.fmin,
+                #     fmax=audio_cfg.fmax
+                # )
+
+                # we use log mel spectrogram as input
+                mel = torchaudio.transforms.AmplitudeToDB(top_db=None)(mel)
+
+                # split to three parts
+                chunk_frames = max_len // audio_cfg.hop_size
+                total_frames = mel.shape[1]
+                ranges = np.linspace(0, total_frames-chunk_frames, 4, dtype=int)
+                # randomly choose index for each part
+                idx_front = np.random.randint(ranges[0], ranges[1])
+                idx_middle = np.random.randint(ranges[1], ranges[2])
+                idx_back = np.random.randint(ranges[2], ranges[3])
+                # select mel
+                mel_chunk_front = mel[:, idx_front:idx_front+chunk_frames]
+                mel_chunk_middle = mel[:, idx_middle:idx_middle+chunk_frames]
+                mel_chunk_back = mel[:, idx_back:idx_back+chunk_frames]
+
+                # shrink the mel
+                mel_shrink = torchvision.transforms.Resize(size=[64, chunk_frames])(mel[None])[0]
+
+                # stack
+                mel_fusion = torch.stack([mel_chunk_front, mel_chunk_middle, mel_chunk_back, mel_shrink], dim=0)
+                sample["mel_fusion"] = mel_fusion
+
+            else:
+                raise NotImplementedError(
+                    f"data_truncating {data_truncating} not implemented"
+                )
+            longer = torch.tensor([True])
+
+        elif len(audio_data) == max_len:  # do nothing if equal
+            longer = torch.tensor([False])
         else:  # padding if too short
             if data_filling == "repeatpad":
                 n_repeat = int(max_len/len(audio_data))
@@ -476,6 +548,9 @@ def preprocess(
                 raise NotImplementedError(
                     f"data_filling {data_filling} not implemented"
                 )
+            longer = torch.tensor([False])
+
+    sample["longer"] = longer
 
     sample["waveform"] = audio_data
     del sample[audio_ext]
@@ -615,8 +690,10 @@ def get_wds_dataset(
                 audio_ext=audio_ext,
                 text_ext=text_ext,
                 max_len=max_len,
+                audio_cfg=model_cfg['audio_cfg'],
                 class_index_dict=copy.deepcopy(args.class_index_dict),
                 data_filling=args.data_filling,
+                data_truncating=args.data_truncating,
             )
         ),
     )

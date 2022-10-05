@@ -487,7 +487,15 @@ def parse_args():
         "--data-filling",
         type=str,
         default="pad",
-        help="type of data filling, can be one of the following: repeat, repeatpad, pad",
+        help="type of data filling when the audio length is shorter than the max length."
+             "Can be one of the following: repeat, repeatpad, pad",
+    )
+    parser.add_argument(
+        "--data-truncating",
+        type=str,
+        default="rand_trunc",
+        help="type of data truncation when the audio length is longer than the max length."
+             "Can be one of the following: rand_trunc, fusion",
     )
 
     parser.add_argument(
