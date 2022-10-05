@@ -474,7 +474,6 @@ def preprocess(
     """
     Preprocess a single sample for wdsdataloader.
     """
-    #logging.info(f"start preprocessing {sample['__key__']}")
     audio_data, orig_sr = sf.read(io.BytesIO(sample[audio_ext]))
     audio_data = torch.tensor(audio_data).float()
     # TODO: (yusong) to be include in the future
@@ -493,99 +492,90 @@ def preprocess(
     #         audio_data = audio_data[0, :].float()
 
 
-    # with torch.no_grad():
-    #     if len(audio_data) > max_len:
-    #         if data_truncating == "rand_trunc":
-    #             longer = torch.tensor([True])
-    #         elif data_truncating == "fusion":
-    #             # fusion
-    #             mel = get_mel(audio_data, audio_cfg)
-    #             # split to three parts
-    #             chunk_frames = max_len // audio_cfg['hop_size']+1
-    #             total_frames = mel.shape[1]
-    #             if chunk_frames == total_frames:
-    #                 # there is a corner case where the audio length is
-    #                 # larger than max_len but smaller than max_len+hop_size.
-    #                 # In this case, we just use the whole audio.
-    #                 mel_fusion = torch.stack([mel, mel, mel, mel], dim=0)
-    #                 sample["mel_fusion"] = mel_fusion
-    #                 longer = torch.tensor([False])
-    #             else:
-    #                 ranges = np.array_split(list(range(0, total_frames-chunk_frames)), 3)
-    #                 if len(ranges[1]) == 0:
-    #                     # if the audio is too short, we just use the first chunk
-    #                     ranges[1] = [0]
-    #                 if len(ranges[2]) == 0:
-    #                     # if the audio is too short, we just use the first chunk
-    #                     ranges[2] = [0]
-    #                 # randomly choose index for each part
-    #                 idx_front = np.random.choice(ranges[0])
-    #                 idx_middle = np.random.choice(ranges[1])
-    #                 idx_back = np.random.choice(ranges[2])
-    #                 # select mel
-    #                 mel_chunk_front = mel[:, idx_front:idx_front+chunk_frames]
-    #                 mel_chunk_middle = mel[:, idx_middle:idx_middle+chunk_frames]
-    #                 mel_chunk_back = mel[:, idx_back:idx_back+chunk_frames]
-    #
-    #                 # shrink the mel
-    #                 mel_shrink = torchvision.transforms.Resize(size=[64, chunk_frames])(mel[None])[0]
-    #
-    #                 # stack
-    #                 mel_fusion = torch.stack([mel_chunk_front, mel_chunk_middle, mel_chunk_back, mel_shrink], dim=0)
-    #                 sample["mel_fusion"] = mel_fusion
-    #                 longer = torch.tensor([True])
-    #         else:
-    #             raise NotImplementedError(
-    #                 f"data_truncating {data_truncating} not implemented"
-    #             )
-    #         # random crop to max_len (for compatibility)
-    #         overflow = len(audio_data) - max_len
-    #         idx = np.random.randint(0, overflow + 1)
-    #         audio_data = audio_data[idx: idx + max_len]
-    #
-    #     else:  # padding if too short
-    #         if len(audio_data) < max_len:  # do nothing if equal
-    #             if data_filling == "repeatpad":
-    #                 n_repeat = int(max_len/len(audio_data))
-    #                 audio_data = audio_data.repeat(n_repeat)
-    #                 # audio_data = audio_data.unsqueeze(0).unsqueeze(0).unsqueeze(0)
-    #                 # audio_data = F.interpolate(audio_data,size=max_len,mode="bicubic")[0,0,0]
-    #                 audio_data = F.pad(
-    #                     audio_data,
-    #                     (0, max_len - len(audio_data)),
-    #                     mode="constant",
-    #                     value=0,
-    #                 )
-    #             elif data_filling == "pad":
-    #                 audio_data = F.pad(
-    #                     audio_data,
-    #                     (0, max_len - len(audio_data)),
-    #                     mode="constant",
-    #                     value=0,
-    #                 )
-    #             elif data_filling == "repeat":
-    #                 n_repeat = int(max_len/len(audio_data))
-    #                 audio_data = audio_data.repeat(n_repeat+1)[:max_len]
-    #             else:
-    #                 raise NotImplementedError(
-    #                     f"data_filling {data_filling} not implemented"
-    #                 )
-    #         if data_truncating == 'fusion':
-    #             mel = get_mel(audio_data, audio_cfg)
-    #             mel_fusion = torch.stack([mel, mel, mel, mel], dim=0)
-    #             sample["mel_fusion"] = mel_fusion
-    #         longer = torch.tensor([False])
-    #
-    # sample["longer"] = longer
+    with torch.no_grad():
+        if len(audio_data) > max_len:
+            if data_truncating == "rand_trunc":
+                longer = torch.tensor([True])
+            elif data_truncating == "fusion":
+                # fusion
+                mel = get_mel(audio_data, audio_cfg)
+                # split to three parts
+                chunk_frames = max_len // audio_cfg['hop_size']+1
+                total_frames = mel.shape[1]
+                if chunk_frames == total_frames:
+                    # there is a corner case where the audio length is
+                    # larger than max_len but smaller than max_len+hop_size.
+                    # In this case, we just use the whole audio.
+                    mel_fusion = torch.stack([mel, mel, mel, mel], dim=0)
+                    sample["mel_fusion"] = mel_fusion
+                    longer = torch.tensor([False])
+                else:
+                    ranges = np.array_split(list(range(0, total_frames-chunk_frames)), 3)
+                    if len(ranges[1]) == 0:
+                        # if the audio is too short, we just use the first chunk
+                        ranges[1] = [0]
+                    if len(ranges[2]) == 0:
+                        # if the audio is too short, we just use the first chunk
+                        ranges[2] = [0]
+                    # randomly choose index for each part
+                    idx_front = np.random.choice(ranges[0])
+                    idx_middle = np.random.choice(ranges[1])
+                    idx_back = np.random.choice(ranges[2])
+                    # select mel
+                    mel_chunk_front = mel[:, idx_front:idx_front+chunk_frames]
+                    mel_chunk_middle = mel[:, idx_middle:idx_middle+chunk_frames]
+                    mel_chunk_back = mel[:, idx_back:idx_back+chunk_frames]
 
-    audio_data = F.pad(
-        audio_data,
-        (0, max_len - len(audio_data)),
-        mode="constant",
-        value=0,
-    )
+                    # shrink the mel
+                    mel_shrink = torchvision.transforms.Resize(size=[64, chunk_frames])(mel[None])[0]
 
-    #logging.info(f"done filling {sample['__key__']}")
+                    # stack
+                    mel_fusion = torch.stack([mel_chunk_front, mel_chunk_middle, mel_chunk_back, mel_shrink], dim=0)
+                    sample["mel_fusion"] = mel_fusion
+                    longer = torch.tensor([True])
+            else:
+                raise NotImplementedError(
+                    f"data_truncating {data_truncating} not implemented"
+                )
+            # random crop to max_len (for compatibility)
+            overflow = len(audio_data) - max_len
+            idx = np.random.randint(0, overflow + 1)
+            audio_data = audio_data[idx: idx + max_len]
+
+        else:  # padding if too short
+            if len(audio_data) < max_len:  # do nothing if equal
+                if data_filling == "repeatpad":
+                    n_repeat = int(max_len/len(audio_data))
+                    audio_data = audio_data.repeat(n_repeat)
+                    # audio_data = audio_data.unsqueeze(0).unsqueeze(0).unsqueeze(0)
+                    # audio_data = F.interpolate(audio_data,size=max_len,mode="bicubic")[0,0,0]
+                    audio_data = F.pad(
+                        audio_data,
+                        (0, max_len - len(audio_data)),
+                        mode="constant",
+                        value=0,
+                    )
+                elif data_filling == "pad":
+                    audio_data = F.pad(
+                        audio_data,
+                        (0, max_len - len(audio_data)),
+                        mode="constant",
+                        value=0,
+                    )
+                elif data_filling == "repeat":
+                    n_repeat = int(max_len/len(audio_data))
+                    audio_data = audio_data.repeat(n_repeat+1)[:max_len]
+                else:
+                    raise NotImplementedError(
+                        f"data_filling {data_filling} not implemented"
+                    )
+            if data_truncating == 'fusion':
+                mel = get_mel(audio_data, audio_cfg)
+                mel_fusion = torch.stack([mel, mel, mel, mel], dim=0)
+                sample["mel_fusion"] = mel_fusion
+            longer = torch.tensor([False])
+
+    sample["longer"] = longer
 
     sample["waveform"] = audio_data
     del sample[audio_ext]
@@ -614,7 +604,6 @@ def preprocess(
     sample["audio_name"] = sample["__key__"].split("/")[-1] + "." + audio_ext
     sample["text_name"] = sample["__key__"].split("/")[-1] + "." + text_ext
     sample["audio_orig_sr"] = orig_sr
-    #logging.info(f"done preprocessing {sample['__key__']}")
     return sample
 
 
