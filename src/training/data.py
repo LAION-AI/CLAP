@@ -452,7 +452,7 @@ def preprocess(
     with torch.no_grad():
         if len(audio_data) > max_len:
             if data_truncating == "rand_trunc":
-                pass
+                longer = torch.tensor([True])
             elif data_truncating == "fusion":
                 # fusion
                 # mel shape: (n_mels, T)
