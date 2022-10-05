@@ -502,6 +502,12 @@ def preprocess(
                     longer = torch.tensor([False])
                 else:
                     ranges = np.array_split(list(range(0, total_frames-chunk_frames)), 3)
+                    if len(ranges[1]) == 0:
+                        # if the audio is too short, we just use the first chunk
+                        ranges[1] = [0]
+                    if len(ranges[2]) == 0:
+                        # if the audio is too short, we just use the first chunk
+                        ranges[2] = [0]
                     # randomly choose index for each part
                     idx_front = np.random.choice(ranges[0])
                     idx_middle = np.random.choice(ranges[1])
