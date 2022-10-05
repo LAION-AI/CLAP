@@ -527,34 +527,50 @@ def preprocess(
             idx = np.random.randint(0, overflow + 1)
             audio_data = audio_data[idx: idx + max_len]
 
-        elif len(audio_data) == max_len:  # do nothing if equal
-            longer = torch.tensor([False])
         else:  # padding if too short
-            if data_filling == "repeatpad":
-                n_repeat = int(max_len/len(audio_data))
-                audio_data = audio_data.repeat(n_repeat)
-                # audio_data = audio_data.unsqueeze(0).unsqueeze(0).unsqueeze(0)
-                # audio_data = F.interpolate(audio_data,size=max_len,mode="bicubic")[0,0,0]
-                audio_data = F.pad(
-                    audio_data,
-                    (0, max_len - len(audio_data)),
-                    mode="constant",
-                    value=0,
-                )
-            elif data_filling == "pad":
-                audio_data = F.pad(
-                    audio_data,
-                    (0, max_len - len(audio_data)),
-                    mode="constant",
-                    value=0,
-                )
-            elif data_filling == "repeat":
-                n_repeat = int(max_len/len(audio_data))
-                audio_data = audio_data.repeat(n_repeat+1)[:max_len]
-            else:
-                raise NotImplementedError(
-                    f"data_filling {data_filling} not implemented"
-                )
+            if len(audio_data) < max_len:  # do nothing if equal
+                if data_filling == "repeatpad":
+                    n_repeat = int(max_len/len(audio_data))
+                    audio_data = audio_data.repeat(n_repeat)
+                    # audio_data = audio_data.unsqueeze(0).unsqueeze(0).unsqueeze(0)
+                    # audio_data = F.interpolate(audio_data,size=max_len,mode="bicubic")[0,0,0]
+                    audio_data = F.pad(
+                        audio_data,
+                        (0, max_len - len(audio_data)),
+                        mode="constant",
+                        value=0,
+                    )
+                elif data_filling == "pad":
+                    audio_data = F.pad(
+                        audio_data,
+                        (0, max_len - len(audio_data)),
+                        mode="constant",
+                        value=0,
+                    )
+                elif data_filling == "repeat":
+                    n_repeat = int(max_len/len(audio_data))
+                    audio_data = audio_data.repeat(n_repeat+1)[:max_len]
+                else:
+                    raise NotImplementedError(
+                        f"data_filling {data_filling} not implemented"
+                    )
+
+            mel = torchaudio.transforms.MelSpectrogram(
+                sample_rate=audio_cfg['sample_rate'],
+                n_fft=audio_cfg['window_size'],
+                win_length=audio_cfg['window_size'],
+                hop_length=audio_cfg['hop_size'],
+                center=True,
+                pad_mode="reflect",
+                power=2.0,
+                norm=None,
+                onesided=True,
+                n_mels=64,
+                f_min=audio_cfg['fmin'],
+                f_max=audio_cfg['fmax']
+            )(audio_data)
+            mel_fusion = torch.stack([mel, mel, mel, mel], dim=0)
+            sample["mel_fusion"] = mel_fusion
             longer = torch.tensor([False])
 
     sample["longer"] = longer
