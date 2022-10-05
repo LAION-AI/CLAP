@@ -461,34 +461,34 @@ def preprocess(
                 # fusion
                 # mel shape: (n_mels, T)
                 mel = torchaudio.transforms.MelSpectrogram(
-                    sample_rate=audio_cfg.sample_rate,
-                    n_fft=audio_cfg.window_size,
-                    win_length=audio_cfg.window_size,
-                    hop_length=audio_cfg.hop_size,
+                    sample_rate=audio_cfg['sample_rate'],
+                    n_fft=audio_cfg['window_size'],
+                    win_length=audio_cfg['window_size'],
+                    hop_length=audio_cfg['hop_size'],
                     center=True,
                     pad_mode="reflect",
                     power=2.0,
                     norm=None,
                     onesided=True,
                     n_mels=64,
-                    f_min=audio_cfg.fmin,
-                    f_max=audio_cfg.fmax
+                    f_min=audio_cfg['fmin'],
+                    f_max=audio_cfg['fmax']
                 )(audio_data)
                 # Align to librosa:
                 # librosa_melspec = librosa.feature.melspectrogram(
                 #     waveform,
-                #     sr=audio_cfg.sample_rate,
-                #     n_fft=audio_cfg.window_size,
-                #     hop_length=audio_cfg.hop_size,
-                #     win_length=audio_cfg.window_size,
+                #     sr=audio_cfg['sample_rate'],
+                #     n_fft=audio_cfg['window_size'],
+                #     hop_length=audio_cfg['hop_size'],
+                #     win_length=audio_cfg['window_size'],
                 #     center=True,
                 #     pad_mode="reflect",
                 #     power=2.0,
                 #     n_mels=64,
                 #     norm=None,
                 #     htk=True,
-                #     fmin=audio_cfg.fmin,
-                #     fmax=audio_cfg.fmax
+                #     f_min=audio_cfg['fmin'],
+                #     f_max=audio_cfg['fmax']
                 # )
 
                 # we use log mel spectrogram as input
