@@ -417,6 +417,42 @@ def sample_prop(sizefile, inputs, proportion, is_local=True):
         sampled_size_dict,
     )
 
+def get_mel(audio_data,audio_cfg):
+    # mel shape: (n_mels, T)
+    mel = torchaudio.transforms.MelSpectrogram(
+        sample_rate=audio_cfg['sample_rate'],
+        n_fft=audio_cfg['window_size'],
+        win_length=audio_cfg['window_size'],
+        hop_length=audio_cfg['hop_size'],
+        center=True,
+        pad_mode="reflect",
+        power=2.0,
+        norm=None,
+        onesided=True,
+        n_mels=64,
+        f_min=audio_cfg['fmin'],
+        f_max=audio_cfg['fmax']
+    )(audio_data)
+    # Align to librosa:
+    # librosa_melspec = librosa.feature.melspectrogram(
+    #     waveform,
+    #     sr=audio_cfg['sample_rate'],
+    #     n_fft=audio_cfg['window_size'],
+    #     hop_length=audio_cfg['hop_size'],
+    #     win_length=audio_cfg['window_size'],
+    #     center=True,
+    #     pad_mode="reflect",
+    #     power=2.0,
+    #     n_mels=64,
+    #     norm=None,
+    #     htk=True,
+    #     f_min=audio_cfg['fmin'],
+    #     f_max=audio_cfg['fmax']
+    # )
+    # we use log mel spectrogram as input
+    mel = torchaudio.transforms.AmplitudeToDB(top_db=None)(mel)
+    return mel
+
 
 def preprocess(
     sample,
@@ -455,41 +491,7 @@ def preprocess(
                 longer = torch.tensor([True])
             elif data_truncating == "fusion":
                 # fusion
-                # mel shape: (n_mels, T)
-                mel = torchaudio.transforms.MelSpectrogram(
-                    sample_rate=audio_cfg['sample_rate'],
-                    n_fft=audio_cfg['window_size'],
-                    win_length=audio_cfg['window_size'],
-                    hop_length=audio_cfg['hop_size'],
-                    center=True,
-                    pad_mode="reflect",
-                    power=2.0,
-                    norm=None,
-                    onesided=True,
-                    n_mels=64,
-                    f_min=audio_cfg['fmin'],
-                    f_max=audio_cfg['fmax']
-                )(audio_data)
-                # Align to librosa:
-                # librosa_melspec = librosa.feature.melspectrogram(
-                #     waveform,
-                #     sr=audio_cfg['sample_rate'],
-                #     n_fft=audio_cfg['window_size'],
-                #     hop_length=audio_cfg['hop_size'],
-                #     win_length=audio_cfg['window_size'],
-                #     center=True,
-                #     pad_mode="reflect",
-                #     power=2.0,
-                #     n_mels=64,
-                #     norm=None,
-                #     htk=True,
-                #     f_min=audio_cfg['fmin'],
-                #     f_max=audio_cfg['fmax']
-                # )
-
-                # we use log mel spectrogram as input
-                mel = torchaudio.transforms.AmplitudeToDB(top_db=None)(mel)
-
+                mel = get_mel(audio_data, audio_cfg)
                 # split to three parts
                 chunk_frames = max_len // audio_cfg['hop_size']+1
                 total_frames = mel.shape[1]
@@ -560,23 +562,10 @@ def preprocess(
                     raise NotImplementedError(
                         f"data_filling {data_filling} not implemented"
                     )
-
-            mel = torchaudio.transforms.MelSpectrogram(
-                sample_rate=audio_cfg['sample_rate'],
-                n_fft=audio_cfg['window_size'],
-                win_length=audio_cfg['window_size'],
-                hop_length=audio_cfg['hop_size'],
-                center=True,
-                pad_mode="reflect",
-                power=2.0,
-                norm=None,
-                onesided=True,
-                n_mels=64,
-                f_min=audio_cfg['fmin'],
-                f_max=audio_cfg['fmax']
-            )(audio_data)
-            mel_fusion = torch.stack([mel, mel, mel, mel], dim=0)
-            sample["mel_fusion"] = mel_fusion
+            if data_truncating == 'fusion':
+                mel = get_mel(audio_data, audio_cfg)
+                mel_fusion = torch.stack([mel, mel, mel, mel], dim=0)
+                sample["mel_fusion"] = mel_fusion
             longer = torch.tensor([False])
 
     sample["longer"] = longer
