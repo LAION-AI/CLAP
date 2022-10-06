@@ -525,9 +525,9 @@ def preprocess(
                     idx_middle = np.random.choice(ranges[1])
                     idx_back = np.random.choice(ranges[2])
                     # select mel
-                    mel_chunk_front = mel[:, idx_front:idx_front+chunk_frames]
-                    mel_chunk_middle = mel[:, idx_middle:idx_middle+chunk_frames]
-                    mel_chunk_back = mel[:, idx_back:idx_back+chunk_frames]
+                    mel_chunk_front = mel[idx_front:idx_front+chunk_frames, :]
+                    mel_chunk_middle = mel[idx_middle:idx_middle+chunk_frames, :]
+                    mel_chunk_back = mel[idx_back:idx_back+chunk_frames, :]
 
                     # shrink the mel
                     mel_shrink = torchvision.transforms.Resize(size=[chunk_frames, 64])(mel[None])[0]
