@@ -510,10 +510,10 @@ def preprocess(
                     longer = torch.tensor([False])
                 else:
                     ranges = np.array_split(list(range(0, total_frames-chunk_frames+1)), 3)
-                    print('total_frames-chunk_frames:', total_frames-chunk_frames,
-                          'len(audio_data):', len(audio_data),
-                          'chunk_frames:', chunk_frames,
-                          'total_frames:', total_frames)
+                    # print('total_frames-chunk_frames:', total_frames-chunk_frames,
+                    #       'len(audio_data):', len(audio_data),
+                    #       'chunk_frames:', chunk_frames,
+                    #       'total_frames:', total_frames)
                     if len(ranges[1]) == 0:
                         # if the audio is too short, we just use the first chunk
                         ranges[1] = [0]
@@ -531,7 +531,7 @@ def preprocess(
 
                     # shrink the mel
                     mel_shrink = torchvision.transforms.Resize(size=[chunk_frames, 64])(mel[None])[0]
-                    logging.info(f"mel_shrink.shape: {mel_shrink.shape}")
+                    # logging.info(f"mel_shrink.shape: {mel_shrink.shape}")
 
                     # stack
                     mel_fusion = torch.stack([mel_chunk_front, mel_chunk_middle, mel_chunk_back, mel_shrink], dim=0)
