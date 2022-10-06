@@ -500,7 +500,7 @@ def preprocess(
                 mel = get_mel(audio_data, audio_cfg)
                 # split to three parts
                 chunk_frames = max_len // audio_cfg['hop_size']+1  # the +1 related to how the spectrogram is computed
-                total_frames = mel.shape[1]
+                total_frames = mel.shape[0]
                 if chunk_frames == total_frames:
                     # there is a corner case where the audio length is
                     # larger than max_len but smaller than max_len+hop_size.
