@@ -162,7 +162,10 @@ def train_one_epoch(
         end = time.time()
         batch_count = i + 1
         if is_master(args) and (i % 100 == 0 or batch_count == num_batches_per_epoch):
-            batch_size = len(audios)
+            if isinstance(audios, dict):
+                batch_size = len(audios["audio"])
+            else:
+                batch_size = len(audios)
             num_samples = batch_count * batch_size * args.world_size
             samples_per_epoch = dataloader.num_samples
             percent_complete = 100.0 * batch_count / num_batches_per_epoch
