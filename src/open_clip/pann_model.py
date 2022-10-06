@@ -191,8 +191,7 @@ class Cnn14(nn.Module):
         if (self.enable_fusion) and (self.fusion_type in ['daf_1d','aff_1d','iaff_1d']):
             self.mel_conv1d = nn.Sequential(
                 nn.Conv1d(64, 64, kernel_size=5, stride=3, padding=2),
-                nn.BatchNorm1d(64),
-                nn.ReLU(inplace=True),
+                nn.BatchNorm1d(64) # No Relu 
             )
             if self.fusion_type == 'daf_1d':
                 self.fusion_model = DAF()
@@ -234,18 +233,16 @@ class Cnn14(nn.Module):
             x = x.transpose(1, 3)
         else:
             longer_list = input["longer"].to(device=device, non_blocking=True)
-            x = input["mel_fusion"]
+            x = input["mel_fusion"].to(device=device, non_blocking=True)
             longer_list_idx = torch.where(longer_list)[0]
+            x = x.transpose(1, 3)
+            x = self.bn0(x)
+            x = x.transpose(1, 3)
             if self.fusion_type in ['daf_1d','aff_1d','iaff_1d']:
-                new_x = x[:,0:1,:,:].clone().to(device=device, non_blocking=True)
-                
-                # global processing
-                new_x = new_x.transpose(1, 3)
-                new_x = self.bn0(new_x)
-                new_x = new_x.transpose(1, 3)
+                new_x = x[:,0:1,:,:].clone()
                 
                 # local processing
-                fusion_x_local = x[longer_list_idx,1:,:,:].clone().to(device=device, non_blocking=True)
+                fusion_x_local = x[longer_list_idx,1:,:,:].clone()
                 FB,FC,FT,FF = fusion_x_local.size()
                 fusion_x_local = fusion_x_local.view(FB * FC, FT, FF)
                 fusion_x_local = torch.permute(fusion_x_local, (0,2,1)).contiguous()
@@ -262,10 +259,7 @@ class Cnn14(nn.Module):
                 x = new_x.permute((0,2,1)).contiguous()[:,None,:,:]
 
             elif self.fusion_type in ['daf_2d','aff_2d','iaff_2d','channel_map']:
-                x = x.to(device=device, non_blocking=True)
-                x = x.transpose(1, 3)
-                x = self.bn0(x)
-                x = x.transpose(1, 3)
+                x = x # no change
 
         if self.training:
             x = self.spec_augmenter(x)

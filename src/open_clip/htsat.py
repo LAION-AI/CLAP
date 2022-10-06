@@ -742,8 +742,7 @@ class HTSAT_Swin_Transformer(nn.Module):
         if (self.enable_fusion) and (self.fusion_type in ['daf_1d','aff_1d','iaff_1d']):
             self.mel_conv1d = nn.Sequential(
                 nn.Conv1d(64, 64, kernel_size=5, stride=3, padding=2),
-                nn.BatchNorm1d(64),
-                nn.ReLU(inplace=True),
+                nn.BatchNorm1d(64)
             )
             if self.fusion_type == 'daf_1d':
                 self.fusion_model = DAF()
@@ -883,18 +882,16 @@ class HTSAT_Swin_Transformer(nn.Module):
             output_dict = self.forward_features(x)
         else:
             longer_list = x["longer"].to(device=device, non_blocking=True)
-            x = x["mel_fusion"]
+            x = x["mel_fusion"].to(device=device, non_blocking=True)
+            x = x.transpose(1, 3)
+            x = self.bn0(x)
+            x = x.transpose(1, 3)
             longer_list_idx = torch.where(longer_list)[0]
             if self.fusion_type in ['daf_1d','aff_1d','iaff_1d']:
-                new_x = x[:,0:1,:,:].clone().to(device=device, non_blocking=True)
-                
-                # global processing
-                new_x = new_x.transpose(1, 3)
-                new_x = self.bn0(new_x)
-                new_x = new_x.transpose(1, 3)
+                new_x = x[:,0:1,:,:].clone()
                 
                 # local processing
-                fusion_x_local = x[longer_list_idx,1:,:,:].clone().to(device=device, non_blocking=True)
+                fusion_x_local = x[longer_list_idx,1:,:,:].clone()
                 FB,FC,FT,FF = fusion_x_local.size()
                 fusion_x_local = fusion_x_local.view(FB * FC, FT, FF)
                 fusion_x_local = torch.permute(fusion_x_local, (0,2,1)).contiguous()
@@ -910,25 +907,15 @@ class HTSAT_Swin_Transformer(nn.Module):
                 new_x[longer_list_idx] = self.fusion_model(new_x[longer_list_idx], fusion_x_local)
                 x = new_x.permute((0,2,1)).contiguous()[:,None,:,:]
 
-                if self.training:
-                    x = self.spec_augmenter(x)
-                if self.training and mixup_lambda is not None:
-                    x = do_mixup(x, mixup_lambda)
-
-                x = self.reshape_wav2img(x)
-
             elif self.fusion_type in ['daf_2d','aff_2d','iaff_2d','channel_map']:
-                x = x.to(device=device, non_blocking=True)
-                x = x.transpose(1, 3)
-                x = self.bn0(x)
-                x = x.transpose(1, 3)
+                x = x # no change
 
-                if self.training:
-                    x = self.spec_augmenter(x)
-                if self.training and mixup_lambda is not None:
-                    x = do_mixup(x, mixup_lambda)
+            if self.training:
+                x = self.spec_augmenter(x)
+            if self.training and mixup_lambda is not None:
+                x = do_mixup(x, mixup_lambda)
 
-                x = self.reshape_wav2img(x)
+            x = self.reshape_wav2img(x)
             output_dict = self.forward_features(x, longer_idx = longer_list_idx)
        
         # if infer_mode:
