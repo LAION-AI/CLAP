@@ -673,6 +673,7 @@ def get_wds_dataset(
 
     pipeline = [wds.SimpleShardList(input_shards)]
     # at this point we have an iterator over all the shards
+    # TODO: (yusong): add a if statement of distributed. If not, we don't need to split_by_node
     if is_train or args.parallel_eval:
         pipeline.extend(
             [
