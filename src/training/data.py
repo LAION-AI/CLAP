@@ -491,7 +491,6 @@ def preprocess(
     #         audio_data, orig_sr = torchaudio.load(fname)
     #         audio_data = audio_data[0, :].float()
 
-
     with torch.no_grad():
         if len(audio_data) > max_len:
             if data_truncating == "rand_trunc":
@@ -500,7 +499,7 @@ def preprocess(
                 # fusion
                 mel = get_mel(audio_data, audio_cfg)
                 # split to three parts
-                chunk_frames = max_len // audio_cfg['hop_size']+1
+                chunk_frames = max_len // audio_cfg['hop_size']+1  # the +1 related to how the spectrogram is computed
                 total_frames = mel.shape[1]
                 if chunk_frames == total_frames:
                     # there is a corner case where the audio length is
@@ -510,7 +509,8 @@ def preprocess(
                     sample["mel_fusion"] = mel_fusion
                     longer = torch.tensor([False])
                 else:
-                    ranges = np.array_split(list(range(0, total_frames-chunk_frames)), 3)
+                    ranges = np.array_split(list(range(0, total_frames-chunk_frames+1)), 3)
+                    print('total_frames-chunk_frames', total_frames-chunk_frames)
                     if len(ranges[1]) == 0:
                         # if the audio is too short, we just use the first chunk
                         ranges[1] = [0]
@@ -527,7 +527,8 @@ def preprocess(
                     mel_chunk_back = mel[:, idx_back:idx_back+chunk_frames]
 
                     # shrink the mel
-                    mel_shrink = torchvision.transforms.Resize(size=[64, chunk_frames])(mel[None])[0]
+                    mel_shrink = torchvision.transforms.Resize(size=[chunk_frames, 64])(mel[None])[0]
+                    logging.info(f"mel_shrink.shape: {mel_shrink.shape}")
 
                     # stack
                     mel_fusion = torch.stack([mel_chunk_front, mel_chunk_middle, mel_chunk_back, mel_shrink], dim=0)
