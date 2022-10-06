@@ -12,8 +12,8 @@ from tqdm import tqdm
 import numpy as np
 
 
-def get_output_from_single_audio(audio, text, model):
-    audio_embedding = model.audio_infer(audio, hopsize=5 * 48000, key="embedding")['embedding']
+def get_output_from_single_audio(audio, text, model, device):
+    audio_embedding = model.audio_infer(audio, hopsize=5 * 48000, key="embedding", device=device)['embedding']
     if audio_embedding.ndim > 1:
         audio_embedding = audio_embedding.mean(dim=0, keepdim=True)
     else:
@@ -261,7 +261,7 @@ if __name__ == '__main__':
                 text = tokenize(text).to(device)
 
                 audio_features, text_features, audio_features_mlp, text_features_mlp, logit_scale_a, logit_scale_t = \
-                    get_output_from_single_audio(audio, text, model)
+                    get_output_from_single_audio(audio, text, model, device)
 
                 audio_features_all.append(audio_features.detach().cpu())
                 text_features_all.append(text_features.detach().cpu())

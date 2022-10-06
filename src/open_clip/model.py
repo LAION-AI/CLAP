@@ -426,6 +426,8 @@ class CLAP(nn.Module):
         audio_cfg: CLAPAudioCfp,
         text_cfg: CLAPTextCfg,
         quick_gelu: bool = False,
+        enable_fusion: bool = False,
+        fusion_type: str = 'None'
     ):
         super().__init__()
         if isinstance(audio_cfg, dict):
@@ -435,6 +437,8 @@ class CLAP(nn.Module):
 
         self.audio_cfg = audio_cfg
         self.text_cfg = text_cfg
+        self.enable_fusion = enable_fusion
+        self.fusion_type = fusion_type
 
         self.context_length = text_cfg.context_length
 
@@ -446,9 +450,9 @@ class CLAP(nn.Module):
         # audio branch
         # audio branch parameters
         if audio_cfg.model_type == "PANN":
-            self.audio_branch = create_pann_model(audio_cfg)
+            self.audio_branch = create_pann_model(audio_cfg, enable_fusion, fusion_type)
         elif audio_cfg.model_type == "HTSAT":
-            self.audio_branch = create_htsat_model(audio_cfg)
+            self.audio_branch = create_htsat_model(audio_cfg, enable_fusion, fusion_type)
         else:
             logging.error(f"Model config for {audio_cfg.model_type} not found")
             raise RuntimeError(f"Model config for {audio_cfg.model_type} not found.")
@@ -548,8 +552,8 @@ class CLAP(nn.Module):
         mask.triu_(1)  # zero out the lower diagonal
         return mask
 
-    def encode_audio(self, audio):
-        return self.audio_branch(audio, None)  # mix lambda needs to add
+    def encode_audio(self, audio, device):
+        return self.audio_branch(audio, mixup_lambda=None, device=device)  # mix lambda needs to add
 
     # def list_of_dict_of_tensor2dict_of_tensor(self, x, device):
     #     tmp = {}
@@ -615,7 +619,7 @@ class CLAP(nn.Module):
         Parameters
         ----------
         audio: torch.Tensor (batch_size, audio_length)
-            the time-domain audio input
+            the time-domain audio input / the batch of mel_spec and longer list.
         text: torch.Tensor () // need to add
             the text token input
         """
@@ -627,8 +631,8 @@ class CLAP(nn.Module):
         if audio is None:
             return self.encode_text(text, device=device)
         elif text is None:
-            return self.audio_projection(self.encode_audio(audio)["embedding"])
-        audio_features = self.audio_projection(self.encode_audio(audio)["embedding"])
+            return self.audio_projection(self.encode_audio(audio, device=device)["embedding"])
+        audio_features = self.audio_projection(self.encode_audio(audio, device=device)["embedding"])
         audio_features = F.normalize(audio_features, dim=-1)
 
         text_features = self.encode_text(
@@ -651,7 +655,7 @@ class CLAP(nn.Module):
             self.logit_scale_t.exp(),
         )
 
-    def audio_infer(self, audio, hopsize=None, key="embedding"):
+    def audio_infer(self, audio, hopsize=None, key="embedding", device=None):
         """Forward one audio and produce the audio embedding
 
         Parameters
@@ -679,7 +683,7 @@ class CLAP(nn.Module):
         # PANN
         if self.audio_cfg.model_type == "PANN":
             audio_input = audio.unsqueeze(dim=0)
-            output_dict[key] = self.encode_audio(audio_input)[key].squeeze(dim=0)
+            output_dict[key] = self.encode_audio(audio_input, device=device)[key].squeeze(dim=0)
         elif self.audio_cfg.model_type == "HTSAT":
             # repeat
             audio_len = len(audio)
@@ -700,10 +704,10 @@ class CLAP(nn.Module):
                 ]
                 audio_input.append(audio[-self.audio_cfg.clip_samples :].clone())
                 audio_input = torch.stack(audio_input)
-                output_dict[key] = self.encode_audio(audio_input)[key]
+                output_dict[key] = self.encode_audio(audio_input, device=device)[key]
             else:
                 audio_input = audio.unsqueeze(dim=0)
-                output_dict[key] = self.encode_audio(audio_input)[key].squeeze(dim=0)
+                output_dict[key] = self.encode_audio(audio_input, device=device)[key].squeeze(dim=0)
 
         return output_dict
 
@@ -738,7 +742,7 @@ def convert_weights_to_fp16(model: nn.Module):
 
 
 # Ignore the state dict of the vision part
-def build_model_from_openai_state_dict(state_dict: dict, model_cfg):
+def build_model_from_openai_state_dict(state_dict: dict, model_cfg, enable_fusion: bool = False, fusion_type: str = 'None'):
 
     embed_dim = model_cfg["embed_dim"]
     audio_cfg = model_cfg["audio_cfg"]
@@ -763,6 +767,8 @@ def build_model_from_openai_state_dict(state_dict: dict, model_cfg):
         audio_cfg=audio_cfg,
         text_cfg=text_cfg,
         quick_gelu=True,  # OpenAI models were trained with QuickGELU
+        enable_fusion=enable_fusion,
+        fusion_type=fusion_type
     )
     state_dict["logit_scale_a"] = state_dict["logit_scale"]
     state_dict["logit_scale_t"] = state_dict["logit_scale"]

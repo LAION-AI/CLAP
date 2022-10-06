@@ -249,7 +249,7 @@ def main():
     ]
 
     # construct data
-    output_dict = model.audio_infer(torch.rand(960000).cuda(), hopsize=120000, key ="fine_grained_embedding")
+    output_dict = model.audio_infer(torch.rand(960000).cuda(), hopsize=120000, key ="fine_grained_embedding", device=device)
     print(output_dict["fine_grained_embedding"].size())
 
     # inference

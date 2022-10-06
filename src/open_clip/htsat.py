@@ -5,6 +5,7 @@
 # below codes are based and referred from https://github.com/microsoft/Swin-Transformer
 # Swin Transformer for Computer Vision: https://arxiv.org/pdf/2103.14030.pdf
 
+from tkinter import X
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -24,6 +25,7 @@ from torchlibrosa.augmentation import SpecAugmentation
 from itertools import repeat
 from .utils import do_mixup, interpolate
 
+from .feature_fusion import iAFF, AFF, DAF
 
 # from PyTorch internals
 def _ntuple(n):
@@ -70,7 +72,8 @@ class DropPath(nn.Module):
 class PatchEmbed(nn.Module):
     """ 2D Image to Patch Embedding
     """
-    def __init__(self, img_size=224, patch_size=16, in_chans=3, embed_dim=768, norm_layer=None, flatten=True, patch_stride = 16):
+    def __init__(self, img_size=224, patch_size=16, in_chans=3, embed_dim=768, norm_layer=None, flatten=True, patch_stride = 16,
+        enable_fusion=False, fusion_type='None'):
         super().__init__()
         img_size = to_2tuple(img_size)
         patch_size = to_2tuple(patch_size)
@@ -83,17 +86,58 @@ class PatchEmbed(nn.Module):
         self.flatten = flatten
         self.in_chans = in_chans
         self.embed_dim = embed_dim
+
+        self.enable_fusion = enable_fusion
+        self.fusion_type = fusion_type
         
         padding = ((patch_size[0] - patch_stride[0]) // 2, (patch_size[1] - patch_stride[1]) // 2)
 
-        self.proj = nn.Conv2d(in_chans, embed_dim, kernel_size=patch_size, stride=patch_stride, padding=padding)
+        if (self.enable_fusion) and (self.fusion_type == 'channel_map'):
+            self.proj = nn.Conv2d(in_chans*4, embed_dim, kernel_size=patch_size, stride=patch_stride, padding=padding)
+        else:
+            self.proj = nn.Conv2d(in_chans, embed_dim, kernel_size=patch_size, stride=patch_stride, padding=padding)
         self.norm = norm_layer(embed_dim) if norm_layer else nn.Identity()
 
-    def forward(self, x):
-        B, C, H, W = x.shape
-        assert H == self.img_size[0] and W == self.img_size[1], \
-            f"Input image size ({H}*{W}) doesn't match model ({self.img_size[0]}*{self.img_size[1]})."
-        x = self.proj(x)
+        if (self.enable_fusion) and (self.fusion_type in ['daf_2d','aff_2d','iaff_2d']):
+            self.mel_conv2d = nn.Conv2d(in_chans, embed_dim, kernel_size=(patch_size[0], patch_size[1]*3), stride=(patch_stride[0], patch_stride[1] * 3), padding=padding)
+            if self.fusion_type == 'daf_2d':
+                self.fusion_model = DAF()
+            elif self.fusion_type == 'aff_2d':
+                self.fusion_model = AFF(channels=embed_dim, type='2D')
+            elif self.fusion_type == 'iaff_2d':
+                self.fusion_model = iAFF(channels=embed_dim, type='2D')    
+    def forward(self, x, longer_idx = None):
+        if (self.enable_fusion) and (self.fusion_type in ['daf_2d','aff_2d','iaff_2d']):
+            global_x = x[:,0:1,:,:]
+            local_x = x[longer_idx,1:,:,:].contiguous()
+
+            # global processing
+            B, C, H, W = global_x.shape
+            assert H == self.img_size[0] and W == self.img_size[1], \
+                f"Input image size ({H}*{W}) doesn't match model ({self.img_size[0]}*{self.img_size[1]})."
+            global_x = self.proj(global_x)
+            TW = global_x.size(-1)
+
+            # local processing
+            B, C, H, W = local_x.shape
+            local_x = local_x.view(B*C,1,H,W)
+            local_x = self.mel_conv2d(local_x)
+            local_x = local_x.view(B,C,local_x.size(1),local_x.size(2),local_x.size(3))
+            local_x = local_x.permute((0,2,3,1,4)).contiguous().flatten(3)
+            TB,TC,TH,_ = local_x.size()
+            if local_x.size(-1) < TW:
+                local_x = torch.cat([local_x, torch.zeros((TB,TC,TH,TW-local_x.size(-1)), device=global_x.device)], dim=-1)
+            else:
+                local_x = local_x[:,:,:,:TW]
+            
+            global_x[longer_idx] = self.fusion_model(global_x[longer_idx],local_x)
+            x = global_x
+        else:
+            B, C, H, W = x.shape
+            assert H == self.img_size[0] and W == self.img_size[1], \
+                f"Input image size ({H}*{W}) doesn't match model ({self.img_size[0]}*{self.img_size[1]})."
+            x = self.proj(x)
+        
         if self.flatten:
             x = x.flatten(2).transpose(1, 2)  # BCHW -> BNC
         x = self.norm(x)
@@ -584,7 +628,8 @@ class HTSAT_Swin_Transformer(nn.Module):
                  drop_rate=0., attn_drop_rate=0., drop_path_rate=0.1,
                  norm_layer=nn.LayerNorm, 
                  ape=False, patch_norm=True,
-                 use_checkpoint=False, norm_before_mlp='ln', config = None, **kwargs):
+                 use_checkpoint=False, norm_before_mlp='ln', config = None, 
+                 enable_fusion = False, fusion_type = 'None', **kwargs):
         super(HTSAT_Swin_Transformer, self).__init__()
 
         self.config = config
@@ -615,6 +660,9 @@ class HTSAT_Swin_Transformer(nn.Module):
 
         self.use_checkpoint = use_checkpoint
 
+        self.enable_fusion = enable_fusion
+        self.fusion_type = fusion_type
+
         #  process mel-spec ; used only once
         self.freq_ratio = self.spec_size // self.config.mel_bins
         window = 'hann'
@@ -641,7 +689,9 @@ class HTSAT_Swin_Transformer(nn.Module):
         # split spctrogram into non-overlapping patches
         self.patch_embed = PatchEmbed(
             img_size=self.spec_size, patch_size=self.patch_size, in_chans=self.in_chans, 
-            embed_dim=self.embed_dim, norm_layer=self.norm_layer, patch_stride = patch_stride)
+            embed_dim=self.embed_dim, norm_layer=self.norm_layer, patch_stride = patch_stride,
+            enable_fusion=self.enable_fusion, fusion_type=self.fusion_type
+            )
 
         num_patches = self.patch_embed.num_patches
         patches_resolution = self.patch_embed.grid_size
@@ -688,6 +738,19 @@ class HTSAT_Swin_Transformer(nn.Module):
             padding = (0,1)
         )
         self.head = nn.Linear(num_classes, num_classes)
+
+        if (self.enable_fusion) and (self.fusion_type in ['daf_1d','aff_1d','iaff_1d']):
+            self.mel_conv1d = nn.Sequential(
+                nn.Conv1d(64, 64, kernel_size=5, stride=3, padding=2),
+                nn.BatchNorm1d(64)
+            )
+            if self.fusion_type == 'daf_1d':
+                self.fusion_model = DAF()
+            elif self.fusion_type == 'aff_1d':
+                self.fusion_model = AFF(channels=64, type='1D')
+            elif self.fusion_type == 'iaff_1d':
+                self.fusion_model = iAFF(channels=64, type='1D')
+                
         self.apply(self._init_weights)
 
     def _init_weights(self, m):
@@ -708,11 +771,11 @@ class HTSAT_Swin_Transformer(nn.Module):
         return {'relative_position_bias_table'}
 
 
-    def forward_features(self, x):
+    def forward_features(self, x, longer_idx = None):
         # A deprecated optimization for using a hierarchical output from different blocks
 
         frames_num = x.shape[2]        
-        x = self.patch_embed(x)
+        x = self.patch_embed(x, longer_idx = longer_idx)
         if self.ape:
             x = x + self.absolute_pos_embed
         x = self.pos_drop(x)
@@ -800,59 +863,107 @@ class HTSAT_Swin_Transformer(nn.Module):
         x = x.repeat(repeats = (1,1,4,1))
         return x
 
-    def forward(self, x: torch.Tensor, mixup_lambda = None, infer_mode = False):# out_feat_keys: List[str] = None):
-        x = self.spectrogram_extractor(x)   # (batch_size, 1, time_steps, freq_bins)
-        x = self.logmel_extractor(x)    # (batch_size, 1, time_steps, mel_bins)
-
-        x = x.transpose(1, 3)
-        x = self.bn0(x)
-        x = x.transpose(1, 3)
-        if self.training:
-            x = self.spec_augmenter(x)
-        if self.training and mixup_lambda is not None:
-            x = do_mixup(x, mixup_lambda)
+    def forward(self, x: torch.Tensor, mixup_lambda = None, infer_mode = False, device=None):# out_feat_keys: List[str] = None):
         
-        if infer_mode:
-            # in infer mode. we need to handle different length audio input
-            frame_num = x.shape[2]
-            target_T = int(self.spec_size * self.freq_ratio)
-            repeat_ratio = math.floor(target_T / frame_num)
-            x = x.repeat(repeats=(1,1,repeat_ratio,1))
+        if not self.enable_fusion:
+            x = x["waveform"].to(device=device, non_blocking=True)
+            x = self.spectrogram_extractor(x)   # (batch_size, 1, time_steps, freq_bins)
+            x = self.logmel_extractor(x)    # (batch_size, 1, time_steps, mel_bins)
+            x = x.transpose(1, 3)
+            x = self.bn0(x)
+            x = x.transpose(1, 3)
+            if self.training:
+                x = self.spec_augmenter(x)
+
+            if self.training and mixup_lambda is not None:
+                x = do_mixup(x, mixup_lambda)
+                
             x = self.reshape_wav2img(x)
             output_dict = self.forward_features(x)
         else:
-            if x.shape[2] > self.freq_ratio * self.spec_size:
-                if self.training:
-                    x = self.crop_wav(x, crop_size=self.freq_ratio * self.spec_size)
-                    x = self.reshape_wav2img(x)
-                    output_dict = self.forward_features(x)
+            longer_list = x["longer"].to(device=device, non_blocking=True)
+            x = x["mel_fusion"].to(device=device, non_blocking=True)
+            x = x.transpose(1, 3)
+            x = self.bn0(x)
+            x = x.transpose(1, 3)
+            longer_list_idx = torch.where(longer_list)[0]
+            if self.fusion_type in ['daf_1d','aff_1d','iaff_1d']:
+                new_x = x[:,0:1,:,:].clone()
+                
+                # local processing
+                fusion_x_local = x[longer_list_idx,1:,:,:].clone()
+                FB,FC,FT,FF = fusion_x_local.size()
+                fusion_x_local = fusion_x_local.view(FB * FC, FT, FF)
+                fusion_x_local = torch.permute(fusion_x_local, (0,2,1)).contiguous()
+                fusion_x_local = self.mel_conv1d(fusion_x_local)
+                fusion_x_local = fusion_x_local.view(FB,FC,FF,fusion_x_local.size(-1))
+                fusion_x_local = torch.permute(fusion_x_local, (0,2,1,3)).contiguous().flatten(2)
+                if fusion_x_local.size(-1) < FT:
+                    fusion_x_local = torch.cat([fusion_x_local, torch.zeros((FB,FF,FT- fusion_x_local.size(-1)), device=device)], dim=-1)
                 else:
-                    # Change: Hard code here
-                    overlap_size = (x.shape[2] - 1) // 4
-                    output_dicts = []
-                    crop_size = (x.shape[2] - 1) // 2
-                    for cur_pos in range(0, x.shape[2] - crop_size - 1, overlap_size):
-                        tx = self.crop_wav(x, crop_size = crop_size, spe_pos = cur_pos)
-                        tx = self.reshape_wav2img(tx)
-                        output_dicts.append(self.forward_features(tx))
-                    clipwise_output = torch.zeros_like(output_dicts[0]["clipwise_output"]).float().to(x.device)
-                    framewise_output = torch.zeros_like(output_dicts[0]["framewise_output"]).float().to(x.device)
-                    for d in output_dicts:
-                        clipwise_output += d["clipwise_output"]
-                        framewise_output += d["framewise_output"]
-                    clipwise_output  = clipwise_output / len(output_dicts)
-                    framewise_output = framewise_output / len(output_dicts)
-                    output_dict = {
-                        'framewise_output': framewise_output, 
-                        'clipwise_output': clipwise_output
-                    }
-            else: # this part is typically used, and most easy one
-                x = self.reshape_wav2img(x)
-                output_dict = self.forward_features(x)
+                    fusion_x_local = fusion_x_local[:,:,:FT]
+                # 1D fusion
+                new_x = new_x.squeeze(1).permute((0,2,1)).contiguous()
+                new_x[longer_list_idx] = self.fusion_model(new_x[longer_list_idx], fusion_x_local)
+                x = new_x.permute((0,2,1)).contiguous()[:,None,:,:]
+
+            elif self.fusion_type in ['daf_2d','aff_2d','iaff_2d','channel_map']:
+                x = x # no change
+
+            if self.training:
+                x = self.spec_augmenter(x)
+            if self.training and mixup_lambda is not None:
+                x = do_mixup(x, mixup_lambda)
+
+            x = self.reshape_wav2img(x)
+            output_dict = self.forward_features(x, longer_idx = longer_list_idx)
+       
+        # if infer_mode:
+        #     # in infer mode. we need to handle different length audio input
+        #     frame_num = x.shape[2]
+        #     target_T = int(self.spec_size * self.freq_ratio)
+        #     repeat_ratio = math.floor(target_T / frame_num)
+        #     x = x.repeat(repeats=(1,1,repeat_ratio,1))
+        #     x = self.reshape_wav2img(x)
+        #     output_dict = self.forward_features(x)
+        # else:
+        #     if x.shape[2] > self.freq_ratio * self.spec_size:
+        #         if self.training:
+        #             x = self.crop_wav(x, crop_size=self.freq_ratio * self.spec_size)
+        #             x = self.reshape_wav2img(x)
+        #             output_dict = self.forward_features(x)
+        #         else:
+        #             # Change: Hard code here
+        #             overlap_size = (x.shape[2] - 1) // 4
+        #             output_dicts = []
+        #             crop_size = (x.shape[2] - 1) // 2
+        #             for cur_pos in range(0, x.shape[2] - crop_size - 1, overlap_size):
+        #                 tx = self.crop_wav(x, crop_size = crop_size, spe_pos = cur_pos)
+        #                 tx = self.reshape_wav2img(tx)
+        #                 output_dicts.append(self.forward_features(tx))
+        #             clipwise_output = torch.zeros_like(output_dicts[0]["clipwise_output"]).float().to(x.device)
+        #             framewise_output = torch.zeros_like(output_dicts[0]["framewise_output"]).float().to(x.device)
+        #             for d in output_dicts:
+        #                 clipwise_output += d["clipwise_output"]
+        #                 framewise_output += d["framewise_output"]
+        #             clipwise_output  = clipwise_output / len(output_dicts)
+        #             framewise_output = framewise_output / len(output_dicts)
+        #             output_dict = {
+        #                 'framewise_output': framewise_output, 
+        #                 'clipwise_output': clipwise_output
+        #             }
+        #     else: # this part is typically used, and most easy one
+        #         x = self.reshape_wav2img(x)
+        #         output_dict = self.forward_features(x)
         # x = self.head(x)
+
+        # We process the data in the dataloader part, in that here we only consider the input_T < fixed_T
+        
+        
+
         return output_dict
 
-def create_htsat_model(audio_cfg):
+def create_htsat_model(audio_cfg, enable_fusion=False, fusion_type='None'):
     try:
 
         assert audio_cfg.model_name in ["tiny", "base", "large"], "model name for HTS-AT is wrong!"
@@ -866,7 +977,9 @@ def create_htsat_model(audio_cfg):
                 depths=[2,2,6,2],
                 num_heads=[4,8,16,32],
                 window_size=8,
-                config = audio_cfg
+                config = audio_cfg,
+                enable_fusion = enable_fusion,
+                fusion_type = fusion_type
             )
         elif audio_cfg.model_name == "base":
             model = HTSAT_Swin_Transformer(
@@ -878,7 +991,9 @@ def create_htsat_model(audio_cfg):
                 depths=[2,2,12,2],
                 num_heads=[4,8,16,32],
                 window_size=8,
-                config = audio_cfg
+                config = audio_cfg,
+                enable_fusion = enable_fusion,
+                fusion_type = fusion_type
             )
         elif audio_cfg.model_name == "large":
             model = HTSAT_Swin_Transformer(
@@ -890,7 +1005,9 @@ def create_htsat_model(audio_cfg):
                 depths=[2,2,12,2],
                 num_heads=[4,8,16,32],
                 window_size=8,
-                config = audio_cfg
+                config = audio_cfg,
+                enable_fusion = enable_fusion,
+                fusion_type = fusion_type
             )
         
         return model

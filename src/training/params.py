@@ -516,6 +516,21 @@ def parse_args():
         "--sleep", type=float, default=0, help="sleep n seconds before start training"
     )
 
+    # variable length processing
+    parser.add_argument(
+        "--enable-fusion",
+        default=False,
+        action="store_true",
+        help="Enable feature funsion for variable-length data",
+    )
+
+    parser.add_argument(
+        "--fusion-type",
+        type=str,
+        default='None',
+        help="Type is among ['channel_map', 'daf_1d','aff_1d','iaff_1d','daf_2d','aff_2d','iaff_2d']",
+    )
+
     args = parser.parse_args()
 
     # If some params are not passed, we use the default values based on model name.

@@ -77,10 +77,10 @@ def train_one_epoch(
         else:
             scheduler(step)
 
-        audio = batch['waveform']
+        audio = batch # contains mel_spec, wavform, and longer list
         class_label = batch['class_label']
 
-        audio = audio.to(device=device, non_blocking=True)
+        # audio = audio.to(device=device, non_blocking=True)
         class_label = class_label.to(device=device, non_blocking=True)
 
         data_time_m.update(time.time() - end)
@@ -91,7 +91,7 @@ def train_one_epoch(
             optimizer.zero_grad()
 
         with autocast():
-            pred = model(audio)
+            pred = model(audio, device=device)
             total_loss = loss(pred, class_label)
 
         if isinstance(optimizer, dict):
@@ -223,14 +223,14 @@ def evaluate(model, data, epoch, args, tb_writer=None, extra_suffix=""):
         }
         with torch.no_grad():
             for i, batch in enumerate(dataloader):
-                audio = batch['waveform']
+                audio = batch # contains mel_spec, wavform, and longer list
                 class_label = batch['class_label']
                            
-                audio = audio.to(device=device, non_blocking=True)
+                # audio = audio.to(device=device, non_blocking=True)
                 class_label = class_label.to(device=device, non_blocking=True)
 
                 with autocast():
-                    pred = model(audio)
+                    pred = model(audio, device=device)
                     if args.parallel_eval:
                         pred, class_label = lp_gather_features(pred, class_label, args.world_size, args.horovod)
                     eval_info['pred'].append(pred)

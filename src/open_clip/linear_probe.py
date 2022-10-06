@@ -40,10 +40,10 @@ class LinearProbe(nn.Module):
         elif act == 'sigmoid':
             self.act = nn.Sigmoid()
 
-    def forward(self, x):
+    def forward(self, x, device=None):
         """
         Args:
-            x: waveform, torch.tensor [batch, t_samples]
+            x: waveform, torch.tensor [batch, t_samples] / batch of mel_spec and longer list
                 
         Returns:
             class_prob: torch.tensor [batch, class_num]
@@ -53,7 +53,7 @@ class LinearProbe(nn.Module):
         if self.freeze:
             self.clap_model.eval()
 
-        x = self.clap_model(audio=x, text=None)
+        x = self.clap_model(audio=x, text=None, device=device)
         out = self.lp_layer(x)
         if self.act is not None:
             out = self.act(out)

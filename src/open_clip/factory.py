@@ -75,7 +75,9 @@ def create_model(
     openai_model_cache_dir: str = os.path.expanduser("~/.cache/clip"),
     skip_params=True,
     pretrained_audio: str = "",
-    pretrained_text: str = ""
+    pretrained_text: str = "",
+    enable_fusion: bool = False,
+    fusion_type: str = 'None'
     # pretrained_image: bool = False,
 ):
     amodel_name = amodel_name.replace(
@@ -102,6 +104,8 @@ def create_model(
             device=device,
             jit=jit,
             cache_dir=openai_model_cache_dir,
+            enable_fusion=enable_fusion,
+            fusion_type=fusion_type
         )
         # See https://discuss.pytorch.org/t/valueerror-attemting-to-unscale-fp16-gradients/81372
         if precision == "amp" or precision == "fp32":
@@ -127,6 +131,8 @@ def create_model(
         #     else:
         #         assert False, 'pretrained image towers currently only supported for timm models'
         model_cfg["text_cfg"]["model_type"] = tmodel_name
+        model_cfg["enable_fusion"] = enable_fusion
+        model_cfg["fusion_type"] = fusion_type
         model = CLAP(**model_cfg)
 
         if pretrained:
