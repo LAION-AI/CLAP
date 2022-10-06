@@ -136,7 +136,7 @@ def train_one_epoch(
 
         if is_master(args) and (i % 100 == 0 or batch_count == num_batches_per_epoch):
             if isinstance(audio, dict):
-                batch_size = len(audio["audio"])
+                batch_size = len(audio["waveform"])
             else:
                 batch_size = len(audio)
             num_samples = batch_count * batch_size * args.world_size
