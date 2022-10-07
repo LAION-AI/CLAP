@@ -108,7 +108,7 @@ class PatchEmbed(nn.Module):
     def forward(self, x, longer_idx = None):
         if (self.enable_fusion) and (self.fusion_type in ['daf_2d','aff_2d','iaff_2d']):
             global_x = x[:,0:1,:,:]
-            local_x = x[longer_idx,1:,:,:].contiguous()
+            
 
             # global processing
             B, C, H, W = global_x.shape
@@ -116,20 +116,21 @@ class PatchEmbed(nn.Module):
                 f"Input image size ({H}*{W}) doesn't match model ({self.img_size[0]}*{self.img_size[1]})."
             global_x = self.proj(global_x)
             TW = global_x.size(-1)
-
-            # local processing
-            B, C, H, W = local_x.shape
-            local_x = local_x.view(B*C,1,H,W)
-            local_x = self.mel_conv2d(local_x)
-            local_x = local_x.view(B,C,local_x.size(1),local_x.size(2),local_x.size(3))
-            local_x = local_x.permute((0,2,3,1,4)).contiguous().flatten(3)
-            TB,TC,TH,_ = local_x.size()
-            if local_x.size(-1) < TW:
-                local_x = torch.cat([local_x, torch.zeros((TB,TC,TH,TW-local_x.size(-1)), device=global_x.device)], dim=-1)
-            else:
-                local_x = local_x[:,:,:,:TW]
-            
-            global_x[longer_idx] = self.fusion_model(global_x[longer_idx],local_x)
+            if len(longer_idx) > 0:
+                # local processing
+                local_x = x[longer_idx,1:,:,:].contiguous()
+                B, C, H, W = local_x.shape
+                local_x = local_x.view(B*C,1,H,W)
+                local_x = self.mel_conv2d(local_x)
+                local_x = local_x.view(B,C,local_x.size(1),local_x.size(2),local_x.size(3))
+                local_x = local_x.permute((0,2,3,1,4)).contiguous().flatten(3)
+                TB,TC,TH,_ = local_x.size()
+                if local_x.size(-1) < TW:
+                    local_x = torch.cat([local_x, torch.zeros((TB,TC,TH,TW-local_x.size(-1)), device=global_x.device)], dim=-1)
+                else:
+                    local_x = local_x[:,:,:,:TW]
+                
+                global_x[longer_idx] = self.fusion_model(global_x[longer_idx],local_x)
             x = global_x
         else:
             B, C, H, W = x.shape
@@ -887,24 +888,26 @@ class HTSAT_Swin_Transformer(nn.Module):
             x = x.transpose(1, 3)
             longer_list_idx = torch.where(longer_list)[0]
             if self.fusion_type in ['daf_1d','aff_1d','iaff_1d']:
-                new_x = x[:,0:1,:,:].clone()
-                
+                new_x = x[:,0:1,:,:].clone().contiguous()
+                if len(longer_list_idx) > 0:
                 # local processing
-                fusion_x_local = x[longer_list_idx,1:,:,:].clone()
-                FB,FC,FT,FF = fusion_x_local.size()
-                fusion_x_local = fusion_x_local.reshape(FB * FC, FT, FF)
-                fusion_x_local = torch.permute(fusion_x_local, (0,2,1)).contiguous()
-                fusion_x_local = self.mel_conv1d(fusion_x_local)
-                fusion_x_local = fusion_x_local.view(FB,FC,FF,fusion_x_local.size(-1))
-                fusion_x_local = torch.permute(fusion_x_local, (0,2,1,3)).contiguous().flatten(2)
-                if fusion_x_local.size(-1) < FT:
-                    fusion_x_local = torch.cat([fusion_x_local, torch.zeros((FB,FF,FT- fusion_x_local.size(-1)), device=device)], dim=-1)
+                    fusion_x_local = x[longer_list_idx,1:,:,:].clone().contiguous()
+                    FB,FC,FT,FF = fusion_x_local.size()
+                    fusion_x_local = fusion_x_local.view(FB * FC, FT, FF)
+                    fusion_x_local = torch.permute(fusion_x_local, (0,2,1)).contiguous()
+                    fusion_x_local = self.mel_conv1d(fusion_x_local)
+                    fusion_x_local = fusion_x_local.view(FB,FC,FF,fusion_x_local.size(-1))
+                    fusion_x_local = torch.permute(fusion_x_local, (0,2,1,3)).contiguous().flatten(2)
+                    if fusion_x_local.size(-1) < FT:
+                        fusion_x_local = torch.cat([fusion_x_local, torch.zeros((FB,FF,FT- fusion_x_local.size(-1)), device=device)], dim=-1)
+                    else:
+                        fusion_x_local = fusion_x_local[:,:,:FT]
+                    # 1D fusion
+                    new_x = new_x.squeeze(1).permute((0,2,1)).contiguous()
+                    new_x[longer_list_idx] = self.fusion_model(new_x[longer_list_idx], fusion_x_local)
+                    x = new_x.permute((0,2,1)).contiguous()[:,None,:,:]
                 else:
-                    fusion_x_local = fusion_x_local[:,:,:FT]
-                # 1D fusion
-                new_x = new_x.squeeze(1).permute((0,2,1)).contiguous()
-                new_x[longer_list_idx] = self.fusion_model(new_x[longer_list_idx], fusion_x_local)
-                x = new_x.permute((0,2,1)).contiguous()[:,None,:,:]
+                    x = new_x
 
             elif self.fusion_type in ['daf_2d','aff_2d','iaff_2d','channel_map']:
                 x = x # no change
