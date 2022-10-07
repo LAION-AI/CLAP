@@ -565,8 +565,8 @@ class CLAP(nn.Module):
         # if hasattr(self.visual, 'init_parameters'):
         # self.visual.init_parameters()
 
-        if self.text_projection is not None:
-            nn.init.normal_(self.text_projection, std=width**-0.5)
+        # if self.text_projection is not None:
+        #     nn.init.normal_(self.text_projection, std=width**-0.5)
 
     def build_attention_mask(self):
         # lazily create causal attention mask, with full attention between the vision tokens
