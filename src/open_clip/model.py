@@ -439,6 +439,8 @@ class CLAP(nn.Module):
         self.text_cfg = text_cfg
         self.enable_fusion = enable_fusion
         self.fusion_type = fusion_type
+        self.joint_embed_shape = 512  # hardcoded as 512
+
 
         self.context_length = text_cfg.context_length
 
@@ -472,28 +474,44 @@ class CLAP(nn.Module):
                 torch.empty(self.context_length, text_cfg.width)
             )
             self.ln_final = LayerNorm(text_cfg.width)
-            self.text_transform = MLPLayers(units=[512, 512, 512], dropout=0.1)
-            self.text_projection = nn.Parameter(
-                torch.empty(text_cfg.width, 512)
-            )  # HARDCORE as 512
+            self.text_transform = MLPLayers(units=[self.joint_embed_shape,
+                                                   self.joint_embed_shape,
+                                                   self.joint_embed_shape], dropout=0.1)
+            self.text_projection = nn.Sequential(
+                nn.Linear(text_cfg.width, self.joint_embed_shape),
+                nn.ReLU(),
+                nn.Linear(self.joint_embed_shape, self.joint_embed_shape)
+            )
         elif text_cfg.model_type == "bert":
             self.text_branch = BertModel.from_pretrained("bert-base-uncased")
-            self.text_transform = MLPLayers(units=[512, 512, 512], dropout=0.1)
-            self.text_projection = nn.Parameter(
-                torch.empty(768, 512)
-            )  # HARDCORE as 512
+            self.text_transform = MLPLayers(units=[self.joint_embed_shape,
+                                                   self.joint_embed_shape,
+                                                   self.joint_embed_shape], dropout=0.1)
+            self.text_projection = nn.Sequential(
+                nn.Linear(text_cfg.width, self.joint_embed_shape),
+                nn.ReLU(),
+                nn.Linear(self.joint_embed_shape, self.joint_embed_shape)
+            )
         elif text_cfg.model_type == "roberta":
             self.text_branch = RobertaModel.from_pretrained('roberta-base')
-            self.text_transform = MLPLayers(units=[512, 512, 512], dropout=0.1)
-            self.text_projection = nn.Parameter(
-                torch.empty(768, 512)
-            )  # HARDCORE as 512
+            self.text_transform = MLPLayers(units=[self.joint_embed_shape,
+                                                   self.joint_embed_shape,
+                                                   self.joint_embed_shape], dropout=0.1)
+            self.text_projection = nn.Sequential(
+                nn.Linear(text_cfg.width, self.joint_embed_shape),
+                nn.ReLU(),
+                nn.Linear(self.joint_embed_shape, self.joint_embed_shape)
+            )
         elif text_cfg.model_type == "bart":
             self.text_branch = BartModel.from_pretrained('facebook/bart-base')
-            self.text_transform = MLPLayers(units=[512, 512, 512], dropout=0.1)
-            self.text_projection = nn.Parameter(
-                torch.empty(768, 512)
-            )  # HARDCORE as 512
+            self.text_transform = MLPLayers(units=[self.joint_embed_shape,
+                                                   self.joint_embed_shape,
+                                                   self.joint_embed_shape], dropout=0.1)
+            self.text_projection = nn.Sequential(
+                nn.Linear(text_cfg.width, self.joint_embed_shape),
+                nn.ReLU(),
+                nn.Linear(self.joint_embed_shape, self.joint_embed_shape)
+            )
         else:
             logging.error(f"Model config for {text_cfg.model_type} not found")
             raise RuntimeError(f"Model config for {text_cfg.model_type} not found.")
@@ -501,12 +519,18 @@ class CLAP(nn.Module):
         # text branch parameters
 
         # audio branch parameters
-        self.audio_transform = MLPLayers(units=[512, 512, 512], dropout=0.1)
+        self.audio_transform = MLPLayers(units=[self.joint_embed_shape,
+                                                self.joint_embed_shape,
+                                                self.joint_embed_shape], dropout=0.1)
 
         # below here is text branch parameters
 
         # ============================================================================================================
-        self.audio_projection = MLPLayers(units=[embed_dim, 512, 512], dropout=0.1)
+        self.audio_projection = nn.Sequential(
+                nn.Linear(embed_dim, self.joint_embed_shape),
+                nn.ReLU(),
+                nn.Linear(self.joint_embed_shape, self.joint_embed_shape)
+            )
 
         self.logit_scale_a = nn.Parameter(torch.ones([]) * np.log(1 / 0.07))
         self.logit_scale_t = nn.Parameter(torch.ones([]) * np.log(1 / 0.07))
