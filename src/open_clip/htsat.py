@@ -892,7 +892,7 @@ class HTSAT_Swin_Transformer(nn.Module):
                 # local processing
                 fusion_x_local = x[longer_list_idx,1:,:,:].clone()
                 FB,FC,FT,FF = fusion_x_local.size()
-                fusion_x_local = fusion_x_local.view(FB * FC, FT, FF)
+                fusion_x_local = fusion_x_local.reshape(FB * FC, FT, FF)
                 fusion_x_local = torch.permute(fusion_x_local, (0,2,1)).contiguous()
                 fusion_x_local = self.mel_conv1d(fusion_x_local)
                 fusion_x_local = fusion_x_local.view(FB,FC,FF,fusion_x_local.size(-1))
