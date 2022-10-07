@@ -5,7 +5,6 @@
 # below codes are based and referred from https://github.com/microsoft/Swin-Transformer
 # Swin Transformer for Computer Vision: https://arxiv.org/pdf/2103.14030.pdf
 
-from tkinter import X
 import torch
 import torch.nn as nn
 import torch.nn.functional as F

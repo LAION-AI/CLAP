@@ -491,7 +491,6 @@ def preprocess(
     #         audio_data, orig_sr = torchaudio.load(fname)
     #         audio_data = audio_data[0, :].float()
 
-
     with torch.no_grad():
         if len(audio_data) > max_len:
             if data_truncating == "rand_trunc":
@@ -500,8 +499,8 @@ def preprocess(
                 # fusion
                 mel = get_mel(audio_data, audio_cfg)
                 # split to three parts
-                chunk_frames = max_len // audio_cfg['hop_size']+1
-                total_frames = mel.shape[1]
+                chunk_frames = max_len // audio_cfg['hop_size']+1  # the +1 related to how the spectrogram is computed
+                total_frames = mel.shape[0]
                 if chunk_frames == total_frames:
                     # there is a corner case where the audio length is
                     # larger than max_len but smaller than max_len+hop_size.
@@ -510,7 +509,11 @@ def preprocess(
                     sample["mel_fusion"] = mel_fusion
                     longer = torch.tensor([False])
                 else:
-                    ranges = np.array_split(list(range(0, total_frames-chunk_frames)), 3)
+                    ranges = np.array_split(list(range(0, total_frames-chunk_frames+1)), 3)
+                    # print('total_frames-chunk_frames:', total_frames-chunk_frames,
+                    #       'len(audio_data):', len(audio_data),
+                    #       'chunk_frames:', chunk_frames,
+                    #       'total_frames:', total_frames)
                     if len(ranges[1]) == 0:
                         # if the audio is too short, we just use the first chunk
                         ranges[1] = [0]
@@ -522,12 +525,13 @@ def preprocess(
                     idx_middle = np.random.choice(ranges[1])
                     idx_back = np.random.choice(ranges[2])
                     # select mel
-                    mel_chunk_front = mel[:, idx_front:idx_front+chunk_frames]
-                    mel_chunk_middle = mel[:, idx_middle:idx_middle+chunk_frames]
-                    mel_chunk_back = mel[:, idx_back:idx_back+chunk_frames]
+                    mel_chunk_front = mel[idx_front:idx_front+chunk_frames, :]
+                    mel_chunk_middle = mel[idx_middle:idx_middle+chunk_frames, :]
+                    mel_chunk_back = mel[idx_back:idx_back+chunk_frames, :]
 
                     # shrink the mel
-                    mel_shrink = torchvision.transforms.Resize(size=[64, chunk_frames])(mel[None])[0]
+                    mel_shrink = torchvision.transforms.Resize(size=[chunk_frames, 64])(mel[None])[0]
+                    # logging.info(f"mel_shrink.shape: {mel_shrink.shape}")
 
                     # stack
                     mel_fusion = torch.stack([mel_chunk_front, mel_chunk_middle, mel_chunk_back, mel_shrink], dim=0)
@@ -680,6 +684,7 @@ def get_wds_dataset(
 
     pipeline = [wds.SimpleShardList(input_shards)]
     # at this point we have an iterator over all the shards
+    # TODO: (yusong): add a if statement of distributed. If not, we don't need to split_by_node
     if is_train or args.parallel_eval:
         pipeline.extend(
             [
