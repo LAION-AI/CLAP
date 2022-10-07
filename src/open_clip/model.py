@@ -488,7 +488,7 @@ class CLAP(nn.Module):
                                                    self.joint_embed_shape,
                                                    self.joint_embed_shape], dropout=0.1)
             self.text_projection = nn.Sequential(
-                nn.Linear(text_cfg.width, self.joint_embed_shape),
+                nn.Linear(768, self.joint_embed_shape),
                 nn.ReLU(),
                 nn.Linear(self.joint_embed_shape, self.joint_embed_shape)
             )
@@ -498,7 +498,7 @@ class CLAP(nn.Module):
                                                    self.joint_embed_shape,
                                                    self.joint_embed_shape], dropout=0.1)
             self.text_projection = nn.Sequential(
-                nn.Linear(text_cfg.width, self.joint_embed_shape),
+                nn.Linear(768, self.joint_embed_shape),
                 nn.ReLU(),
                 nn.Linear(self.joint_embed_shape, self.joint_embed_shape)
             )
@@ -508,7 +508,7 @@ class CLAP(nn.Module):
                                                    self.joint_embed_shape,
                                                    self.joint_embed_shape], dropout=0.1)
             self.text_projection = nn.Sequential(
-                nn.Linear(text_cfg.width, self.joint_embed_shape),
+                nn.Linear(768, self.joint_embed_shape),
                 nn.ReLU(),
                 nn.Linear(self.joint_embed_shape, self.joint_embed_shape)
             )
