@@ -602,7 +602,7 @@ class CLAP(nn.Module):
 
             # x.shape = [batch_size, n_ctx, transformer.width]
             # take features from the eot embedding (eot_token is the highest number in each sequence)
-            x = x[torch.arange(x.shape[0]), text.argmax(dim=-1)] @ self.text_projection
+            x = self.text_projection(x[torch.arange(x.shape[0]), text.argmax(dim=-1)])
         elif self.text_branch_type == "bert":
             # text = self.list_of_dict_of_tensor2dict_of_tensor(text, device)
             # text = BatchEncoding(text)
@@ -615,7 +615,7 @@ class CLAP(nn.Module):
                     device=device, non_blocking=True
                 ),
             )["pooler_output"]
-            x = x @ self.text_projection
+            x = self.text_projection(x)
         elif self.text_branch_type == "roberta":
             x = self.text_branch(
                 input_ids=text["input_ids"].to(device=device, non_blocking=True),
@@ -623,7 +623,7 @@ class CLAP(nn.Module):
                     device=device, non_blocking=True
                 ),
             )["pooler_output"]
-            x = x @ self.text_projection
+            x = self.text_projection(x)
         elif self.text_branch_type == "bart":
             x = torch.mean(self.text_branch(
                 input_ids=text["input_ids"].to(device=device, non_blocking=True),
@@ -631,7 +631,7 @@ class CLAP(nn.Module):
                     device=device, non_blocking=True
                 ),
             )["encoder_last_hidden_state"],axis=1)
-            x = x @ self.text_projection
+            x = self.text_projection(x)
         else:
             logging.error(f"Model type {self.text_branch_type} not found")
             raise RuntimeError(f"Model type {self.text_branch_type} not found.")
