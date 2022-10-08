@@ -589,8 +589,7 @@ def evaluate_clotho_audiocaps(
             texts = {k: torch.stack([t[k] for t in texts]) for k in texts[0].keys()}
 
             text_shape = texts["input_ids"].shape
-            print(texts)
-            logging.info(f"batch {i} of {len(dataloader)}, texts shape: {text_shape}")
+            logging.info(f"batch {i} of {dataloader.num_samples}, texts shape: {text_shape}")
             # audios = audios.to(device=device, non_blocking=True)
 
             all_names = list(set(["-".join(b.split("/")[-3:-1]) for b in batch['__url__']]))
