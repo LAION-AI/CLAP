@@ -287,7 +287,7 @@ def evaluate(model, data, epoch, args, tb_writer=None):
         if args.parallel_eval:
             # (yusong): just a hack here. Don't use parallel eval when evaluating only clotho and audiocaps.
             raise NotImplementedError("Parallel evaluation not supported for eval only Clotho and audiocaps.")
-        metrics = evaluate_clotho_audiocaps(model, data, epoch, args, tb_writer)
+        metrics = evaluate_clotho_audiocaps(model, data, epoch, args, autocast, device, tb_writer)
     elif "val" in data and (
             args.val_frequency
             and ((epoch % args.val_frequency) == 0 or epoch == args.epochs)
@@ -577,7 +577,7 @@ def get_metrics(
     return metrics
 
 def evaluate_clotho_audiocaps(
-    model, data, epoch, args,autocast,device, tb_writer=None
+    model, data, epoch, args, autocast, device, tb_writer=None
 ):
     # only support single GPU evaluation
     dataloader = data["val"].dataloader
