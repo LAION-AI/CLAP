@@ -17,6 +17,7 @@ except ImportError:
 from open_clip import ClipLoss, gather_features
 from .distributed import is_master
 from .zero_shot import zero_shot_eval
+from .data import tokenizer
 
 
 class AverageMeter(object):
@@ -278,7 +279,16 @@ def evaluate(model, data, epoch, args, tb_writer=None):
     if is_master(args):
         print('Evaluating...')
     autocast = torch.cuda.amp.autocast if args.precision == "amp" else suppress
-    if "val" in data and (
+    val_dataset_names = [n for n in args.datasetnames if n not in args.full_train_dataset] \
+        if args.full_train_dataset else args.datasetnames
+    if val_dataset_names ==['Clotho','audiocaps']:
+        # if only clotho and audiocaps are used, then we will use a different evaluation function.
+        # This is because in the Clotho and audiocaps valid and test set, there are 5 text for 1 audio.
+        if args.parallel_eval:
+            # (yusong): just a hack here. Don't use parallel eval when evaluating only clotho and audiocaps.
+            raise NotImplementedError("Parallel evaluation not supported for eval only Clotho and audiocaps.")
+        metrics = evaluate_clotho_audiocaps(model, data, epoch, args, tb_writer)
+    elif "val" in data and (
             args.val_frequency
             and ((epoch % args.val_frequency) == 0 or epoch == args.epochs)
     ):
@@ -311,7 +321,7 @@ def evaluate(model, data, epoch, args, tb_writer=None):
                 audios = batch # contains mel_spec, wavform, and longer list
                 texts = batch['text']
                 # audios = audios.to(device=device, non_blocking=True)
-                
+
                 all_names = list(set(["-".join(b.split("/")[-3:-1]) for b in batch['__url__']]))
                 for name in all_names:
                     if name not in eval_info.keys():
@@ -547,7 +557,7 @@ def get_metrics(
 
 
         logits = {"audio_to_text": logits_per_audio, "text_to_audio": logits_per_text}
-        
+
         ground_truth = torch.arange(len(text_features)).view(-1, 1)
 
     for name, logit in logits.items():
@@ -565,4 +575,75 @@ def get_metrics(
 
 
     return metrics
-    
+
+def evaluate_clotho_audiocaps(
+    model, data, epoch, args,autocast,device, tb_writer=None
+):
+    # only support single GPU evaluation
+    dataloader = data["val"].dataloader
+    with torch.no_grad():
+        eval_info = {}
+        for i, batch in enumerate(dataloader):
+            audios = batch  # contains mel_spec, wavform, and longer list
+            texts = tokenizer(batch['text_all'])
+            logging.info(f"batch {i} of {len(dataloader)}, texts shape: {texts.shape}")
+            # audios = audios.to(device=device, non_blocking=True)
+
+            all_names = list(set(["-".join(b.split("/")[-3:-1]) for b in batch['__url__']]))
+            for name in all_names:
+                if name not in eval_info.keys():
+                    # we will not use mlp outputs even if args.clap_mlploss=True
+                    eval_info[name] = {
+                        "cumulative_loss": 0.0,
+                        "num_samples": 0,
+                        "all_audio_features": [],
+                        "all_text_features": []
+                    }
+            with autocast():
+                audio_features = model(audios, None, device)
+                text_features = model(None, texts, device)
+                audio_features = F.normalize(audio_features, dim=-1)
+                text_features = F.normalize(text_features, dim=-1)
+
+                logging.info(f"audio_features shape: {audio_features.shape}, "
+                             f"text_features shape: {text_features.shape}")
+
+                all_names = list(set(["-".join(b.split("/")[-3:-1]) for b in batch['__url__']]))
+                for n in all_names:
+                    idx = np.where(
+                        np.array(
+                            ["-".join(b.split("/")[-3:-1]) for b in batch['__url__']]
+                        )
+                        == n
+                    )[0]
+                    eval_info[n]["all_audio_features"].append(
+                        audio_features.cpu().index_select(
+                            0, torch.tensor(idx).long()
+                        )
+                    )
+                    eval_info[n]["all_text_features"].append(
+                        text_features.cpu().index_select(
+                            0, torch.tensor(idx).long()
+                        )
+                    )
+
+            logit_scale_a = model.logit_scale_a.exp()
+            logits_per_audio = (logit_scale_a * audio_features @ text_features.t()).detach().cpu()
+            logits_per_text = logits_per_audio.t().detach().cpu()
+
+            logging.info(f"logits_per_audio shape: {logits_per_audio.shape}, "
+                         "logits_per_text shape: {logits_per_text.shape}")
+            import sys
+            sys.exit(0)
+
+            # labels = torch.arange(audio_features.shape[0]).long()
+            # # Change the loss from two terms into four terms with 2x2 combined CE loss
+            # total_loss = (
+            #                  F.cross_entropy(logits_per_audio, labels)
+            #                  + F.cross_entropy(logits_per_text, labels)
+            #              ) / 2
+            #
+            # metrics[f"cumulative_loss"] = total_loss.item()
+            # metrics[f"num_samples"] = audio_features.shape[0]
+
+

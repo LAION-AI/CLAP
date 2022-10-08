@@ -589,6 +589,7 @@ def preprocess(
     except:
         print("sample[__url__]:", sample["__url__"])
     texts = json_dict_raw["text"]
+    sample["full_text"] = texts
 
     if isinstance(texts, list) and isinstance(texts[0], str) and len(texts) > 1:
         texts = random.choice(texts)
