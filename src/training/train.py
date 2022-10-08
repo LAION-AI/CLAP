@@ -589,7 +589,7 @@ def evaluate_clotho_audiocaps(
             texts = {k: torch.cat([t[k] for t in texts]) for k in texts[0].keys()}
 
             text_shape = texts["input_ids"].shape
-            logging.info(f"batch {i} of {dataloader.num_samples}, texts shape: {text_shape}")
+            logging.info(f"batch {i}, texts shape: {text_shape}")
             # audios = audios.to(device=device, non_blocking=True)
 
             all_names = list(set(["-".join(b.split("/")[-3:-1]) for b in batch['__url__']]))
@@ -630,12 +630,21 @@ def evaluate_clotho_audiocaps(
                         )
                     )
 
+
+
+        for n in eval_info.keys():
             logit_scale_a = model.logit_scale_a.exp()
+
+            audio_features = torch.cat(eval_info[n]["all_audio_features"], dim=0)
+            text_features = torch.cat(eval_info[n]["all_text_features"], dim=0)
             logits_per_audio = (logit_scale_a * audio_features @ text_features.t()).detach().cpu()
             logits_per_text = logits_per_audio.t().detach().cpu()
 
-            logging.info(f"logits_per_audio shape: {logits_per_audio.shape}, "
-                         "logits_per_text shape: {logits_per_text.shape}")
+            # logits_per_audio shape: [num_samples, num_samples*5]
+            # logits_per_text shape: [num_samples*5, num_samples]
+
+            logging.info(f"dataset {n}, logits_per_audio shape: {logits_per_audio.shape}, "
+                         f"logits_per_text shape: {logits_per_text.shape}")
             import sys
             sys.exit(0)
 
