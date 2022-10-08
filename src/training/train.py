@@ -586,7 +586,7 @@ def evaluate_clotho_audiocaps(
         for i, batch in enumerate(dataloader):
             audios = batch  # contains mel_spec, wavform, and longer list
             texts = [tokenizer(t) for t in batch['full_text']]
-            texts = {k: torch.stack([t[k] for t in texts]) for k in texts[0].keys()}
+            texts = {k: torch.cat([t[k] for t in texts]) for k in texts[0].keys()}
 
             text_shape = texts["input_ids"].shape
             logging.info(f"batch {i} of {dataloader.num_samples}, texts shape: {text_shape}")
