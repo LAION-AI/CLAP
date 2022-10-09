@@ -664,7 +664,7 @@ def evaluate_clotho_audiocaps(
             ]
             text_to_audio_loss = [
                 F.cross_entropy(
-                    logits_per_text.reshape(5, num_samples, num_samples)[d, :, :], labels) for d in range(5)
+                    logits_per_text.reshape(num_samples, 5, num_samples)[:, d, :], labels) for d in range(5)
             ]
             total_loss = (
                              np.mean(audio_to_text_loss) + np.mean(text_to_audio_loss)
@@ -675,7 +675,7 @@ def evaluate_clotho_audiocaps(
             # text to audio: do 5 times
             pred_text = []
             for d in range(5):
-                logit = logits_per_text.reshape(5, num_samples, num_samples)[d, :, :]
+                logit = logits_per_text.reshape(num_samples, 5, num_samples)[:, d, :]
                 ground_truth = torch.arange(len(logit)).view(-1, 1)
                 ranking = torch.argsort(logit, descending=True)
                 preds = torch.where(ranking == ground_truth)[1]
