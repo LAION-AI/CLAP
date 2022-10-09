@@ -638,6 +638,9 @@ def evaluate_clotho_audiocaps(
 
             audio_features = torch.cat(eval_info[n]["all_audio_features"], dim=0)
             text_features = torch.cat(eval_info[n]["all_text_features"], dim=0)
+
+            logging.info(f"dataset {n}, audio_features shape: {audio_features.shape},"
+                            f" text_features shape: {text_features.shape}")
             logits_per_audio = (logit_scale_a * audio_features @ text_features.t()).detach().cpu()
             logits_per_text = logits_per_audio.t().detach().cpu()
 
