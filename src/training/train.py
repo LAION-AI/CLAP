@@ -721,7 +721,7 @@ def evaluate_clotho_audiocaps(
                 pred_audio.append(preds.detach().cpu().numpy())
 
             # for audio to text map 10, sort and assign descending ground truth.
-            # see https://github.com/XinhaoMei/audio-text_retrieval/blob/13c21d9a37392b7fc45ed4f91581ce4caf0bc9bd/tools/utils.py#L103
+            # see https://github.com/XinhaoMei/audio-text_retrieval/blob/main/tools/utils.py#L103
             # map@10
             map_all = []
             pred_audio_stack = np.stack(pred_audio, axis=0)
