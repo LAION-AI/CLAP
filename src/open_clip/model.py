@@ -679,6 +679,9 @@ class CLAP(nn.Module):
             self.logit_scale_t.exp(),
         )
 
+    def get_logit_scale(self):
+        return self.logit_scale_a.exp(), self.logit_scale_t.exp()
+
     def audio_infer(self, audio, hopsize=None, key="embedding", device=None):
         """Forward one audio and produce the audio embedding
 

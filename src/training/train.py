@@ -583,7 +583,7 @@ def get_metrics(
 def evaluate_clotho_audiocaps(
     model, data, epoch, args, autocast, device, tb_writer=None
 ):
-    # only support single GPU evaluation
+    # TODO: (yusong) only support single GPU evaluation and only support non-mlp case for now.
     dataloader = data["val"].dataloader
     with torch.no_grad():
         eval_info = {}
@@ -638,7 +638,8 @@ def evaluate_clotho_audiocaps(
         val_metrics_all = {}
 
         for n in eval_info.keys():
-            logit_scale_a = model.logit_scale_a.exp().cpu()
+            logit_scale_a, logit_scale_t = model.get_logit_scale()
+            logit_scale_a = logit_scale_a.cpu()
 
             audio_features = torch.cat(eval_info[n]["all_audio_features"], dim=0)
             text_features = torch.cat(eval_info[n]["all_text_features"], dim=0)
