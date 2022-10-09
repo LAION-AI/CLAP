@@ -636,9 +636,13 @@ def evaluate_clotho_audiocaps(
                             0, torch.tensor(idx).long()
                         )
                     )
+                    # (yusong) please double-check. This is for selecting 5 text features at once.
+                    # because idx is a list of indices in size of num_samples,
+                    # and text_features is a tensor of size (5*num_samples, dim)
+                    # so we need to select 5 consecutive indices at once for a single index in idx.
                     eval_info[n]["all_text_features"].append(
-                        text_features.cpu().reshape([5, -1, text_features.shape[1]]).index_select(
-                            1, torch.tensor(idx).long()
+                        text_features.cpu().reshape([-1, 5, text_features.shape[1]]).index_select(
+                            0, torch.tensor(idx).long()
                         ).reshape([-1, text_features.shape[1]])
                     )
 
