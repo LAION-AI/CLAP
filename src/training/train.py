@@ -476,7 +476,7 @@ def evaluate(model, data, epoch, args, tb_writer=None):
             + "\n".join(
                 [
                     "\t".join([f"{k}: {round(v, 4):.4f}" for k, v in m.items()])
-                    for m in val_metrics_s.values()
+                    for m in metrics.values()
                 ]
             )
         )
