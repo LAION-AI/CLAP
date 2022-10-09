@@ -593,8 +593,6 @@ def evaluate_clotho_audiocaps(
             # print([{k: v.shape for k, v in t.items()} for t in texts])
             texts = {k: torch.cat([t[k] for t in texts]) for k in texts[0].keys()}
 
-            text_shape = texts["input_ids"].shape
-            # logging.info(f"batch {i}, texts shape: {text_shape}")
             # audios = audios.to(device=device, non_blocking=True)
 
             all_names = list(set(["-".join(b.split("/")[-3:-1]) for b in batch['__url__']]))
@@ -638,7 +636,7 @@ def evaluate_clotho_audiocaps(
         val_metrics_all = {}
 
         for n in eval_info.keys():
-            logit_scale_a, logit_scale_t = model.get_logit_scale()
+            logit_scale_a, logit_scale_t = model(None, None, device)
             logit_scale_a = logit_scale_a.cpu()
 
             audio_features = torch.cat(eval_info[n]["all_audio_features"], dim=0)

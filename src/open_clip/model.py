@@ -652,7 +652,10 @@ class CLAP(nn.Module):
                 device = audio.device
             elif text is not None:
                 device = text.device
-        if audio is None:
+        if audio is None and text is None:
+            # a hack to get the logit scale
+            return self.logit_scale_a.exp(), self.logit_scale_t.exp()
+        elif audio is None:
             return self.encode_text(text, device=device)
         elif text is None:
             return self.audio_projection(self.encode_audio(audio, device=device)["embedding"])
