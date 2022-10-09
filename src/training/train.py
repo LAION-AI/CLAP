@@ -656,16 +656,11 @@ def evaluate_clotho_audiocaps(
             logits_per_audio = (logit_scale_a * audio_features @ text_features.t()).detach().cpu()
             logits_per_text = logits_per_audio.t().detach().cpu()
 
-            np.save(f"/fsx/yusong/logits_per_audio.npy", logits_per_audio.numpy())
-            np.save(f"/fsx/yusong/audio_features.npy", audio_features.detach().cpu())
-            np.save(f"/fsx/yusong/text_features.npy", text_features.detach().cpu())
-            import sys ; sys.exit(0)
-
-            num_samples = audio_features.shape[0]
-            logging.info(f"logits_per_audio: {logits_per_audio[15,:10]}, "
-                         f"{logits_per_audio.reshape(num_samples, 5, num_samples)[3, 0, :10]}")
-            logging.info(f"logits_per_text: {logits_per_text[15,:10]}, "
-                         f"{logits_per_text.reshape(5, num_samples, num_samples)[0, 3, :10]}")
+            # num_samples = audio_features.shape[0]
+            # logging.info(f"logits_per_audio: {logits_per_audio[15,:10]}, "
+            #              f"{logits_per_audio.reshape(num_samples, 5, num_samples)[3, 0, :10]}")
+            # logging.info(f"logits_per_text: {logits_per_text[15,:10]}, "
+            #              f"{logits_per_text.reshape(5, num_samples, num_samples)[0, 3, :10]}")
 
             # logits_per_audio shape: [num_samples, num_samples*5]
             # logits_per_text shape: [num_samples*5, num_samples]
@@ -678,17 +673,17 @@ def evaluate_clotho_audiocaps(
             metrics[f"num_samples"] = num_samples
 
             # (yusong) the following code is very important, please double-check:
-            # logits_per_audio.reshape(num_samples, 5, num_samples)[:, d, :]
-            # logits_per_text.reshape(5, num_samples, num_samples)[d, :, :]
+            # logits_per_audio.reshape(num_samples, num_samples, 5)[:, :, d]
+            # logits_per_text.reshape(num_samples, 5, num_samples)[:, d, :]
             # Those two are retrieving one of the 5 text for each audio.
             labels = torch.arange(audio_features.shape[0]).long()
             audio_to_text_loss = [
                 F.cross_entropy(
-                    logits_per_audio.reshape(num_samples, 5, num_samples)[:, d, :], labels) for d in range(5)
+                    logits_per_audio.reshape(num_samples, num_samples, 5)[:, :, d], labels) for d in range(5)
             ]
             text_to_audio_loss = [
                 F.cross_entropy(
-                    logits_per_text.reshape(5, num_samples, num_samples)[d, :, :], labels) for d in range(5)
+                    logits_per_text.reshape(num_samples, 5, num_samples)[:, d, :], labels) for d in range(5)
             ]
             total_loss = (
                              np.mean(audio_to_text_loss) + np.mean(text_to_audio_loss)
@@ -699,7 +694,7 @@ def evaluate_clotho_audiocaps(
             # text to audio: do 5 times
             pred_text = []
             for d in range(5):
-                logit = logits_per_text.reshape(5, num_samples, num_samples)[d, :, :]
+                logit = logits_per_text.reshape(num_samples, 5, num_samples)[:, d, :]
                 ground_truth = torch.arange(len(logit)).view(-1, 1)
                 ranking = torch.argsort(logit, descending=True)
                 preds = torch.where(ranking == ground_truth)[1]
@@ -715,7 +710,7 @@ def evaluate_clotho_audiocaps(
             # audio to text: take the best result
             pred_audio = []
             for d in range(5):
-                logit = logits_per_audio.reshape(num_samples, 5, num_samples)[:, d, :]
+                logit = logits_per_audio.reshape(num_samples, num_samples, 5)[:, :, d]
                 ground_truth = torch.arange(len(logit)).view(-1, 1)
                 ranking = torch.argsort(logit, descending=True)
                 preds = torch.where(ranking == ground_truth)[1]
@@ -731,8 +726,7 @@ def evaluate_clotho_audiocaps(
                 rank_single = np.sort(rank_single)
                 rank_single = rank_single[rank_single < 10]
                 # /5 because we have 5 text, so it means for the text rank >=10 we count as 0.
-                # TODO: divide by 0
-                map_single = np.sum((np.arange(1, len(rank_single) + 1) / rank_single)) / 5
+                map_single = np.sum((np.arange(1, len(rank_single) + 1) / (rank_single + 1))) / 5
                 map_all.append(map_single)
             metrics[f"audio_to_text_mAP@10"] = np.mean(map_all)
             # mean and median rank take the mean result
