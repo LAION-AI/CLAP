@@ -708,3 +708,8 @@ def evaluate_clotho_audiocaps(
             pred_audio_min = np.mean(np.stack(pred_audio, axis=0), axis=0)
             for k in [1, 5, 10]:
                 metrics[f"audio_to_text_R@{k}"] = np.mean(pred_audio_min < k)
+
+            val_metrics_all[n] = {
+                n + "/" + k: v for k, v in metrics.items()
+            }
+    return val_metrics_all
