@@ -631,7 +631,7 @@ def evaluate_clotho_audiocaps(
                         ).reshape([-1, text_features.shape[1]])
                     )
 
-
+        val_metrics_all = {}
 
         for n in eval_info.keys():
             logit_scale_a = model.logit_scale_a.exp().cpu()
@@ -649,17 +649,62 @@ def evaluate_clotho_audiocaps(
 
             logging.info(f"dataset {n}, logits_per_audio shape: {logits_per_audio.shape}, "
                          f"logits_per_text shape: {logits_per_text.shape}")
-            import sys
-            sys.exit(0)
 
-            # labels = torch.arange(audio_features.shape[0]).long()
-            # # Change the loss from two terms into four terms with 2x2 combined CE loss
-            # total_loss = (
-            #                  F.cross_entropy(logits_per_audio, labels)
-            #                  + F.cross_entropy(logits_per_text, labels)
-            #              ) / 2
-            #
-            # metrics[f"cumulative_loss"] = total_loss.item()
-            # metrics[f"num_samples"] = audio_features.shape[0]
+            metrics = {}
+            num_samples = audio_features.shape[0]
+            metrics[f"num_samples"] = num_samples
 
+            labels = torch.arange(audio_features.shape[0]).long()
+            audio_to_text_loss = [
+                F.cross_entropy(
+                    logits_per_audio.reshape(num_samples, num_samples, 5)[:, :, d], labels) for d in range(5)
+            ]
+            text_to_audio_loss = [
+                F.cross_entropy(
+                    logits_per_text.reshape(5, num_samples, num_samples)[d, :, :], labels) for d in range(5)
+            ]
+            total_loss = (
+                             np.mean(audio_to_text_loss) + np.mean(text_to_audio_loss)
+                         ) / 2
 
+            metrics[f"cumulative_loss"] = total_loss.item()
+
+            # text to audio: do 5 times
+            pred_text = []
+            for d in range(5):
+                logit = logits_per_text.reshape(5, num_samples, num_samples)[d, :, :]
+                ground_truth = torch.arange(len(logit)).view(-1, 1)
+                ranking = torch.argsort(logit, descending=True)
+                preds = torch.where(ranking == ground_truth)[1]
+                pred_text.append(preds.detach().cpu().numpy())
+            pred_text = np.concatenate(pred_text, axis=0)
+            metrics[f"text_to_audio_mean_rank"] = pred_text.mean() + 1
+            metrics[f"text_to_audio_median_rank"] = np.floor(np.median(pred_text)) + 1
+            for k in [1, 5, 10]:
+                metrics[f"text_to_audio_R@{k}"] = np.mean(pred_text < k)
+            # map@10
+            metrics[f"text_to_audio_mAP@10"] = np.mean(np.where(pred_text < 10, 1 / (pred_text + 1), 0.0))
+
+            # audio to text: take the best result
+            pred_audio = []
+            for d in range(5):
+                logit = logits_per_audio.reshape(num_samples, num_samples, 5)[:, :, d]
+                ground_truth = torch.arange(len(logit)).view(-1, 1)
+                ranking = torch.argsort(logit, descending=True)
+                preds = torch.where(ranking == ground_truth)[1]
+                pred_audio.append(preds.detach().cpu().numpy())
+
+            # for audio to text map 10, take the mean result.
+            # see https://github.com/XinhaoMei/audio-text_retrieval/blob/13c21d9a37392b7fc45ed4f91581ce4caf0bc9bd/tools/utils.py#L103
+            # map@10
+            pred_audio_concat = np.concatenate(pred_audio, axis=0)
+            metrics[f"audio_to_text_mAP@10"] = np.mean(
+                np.where(pred_audio_concat < 10, 1 / (pred_audio_concat + 1), 0.0))
+            # mean and median rank also take the mean result
+            metrics[f"audio_to_text_mean_rank"] = pred_audio_concat.mean() + 1
+            metrics[f"text_to_audio_median_rank"] = np.floor(np.median(pred_audio_concat)) + 1
+
+            # for audio to text recall, take the best result.
+            pred_audio_min = np.mean(np.stack(pred_audio, axis=0), axis=0)
+            for k in [1, 5, 10]:
+                metrics[f"audio_to_text_R@{k}"] = np.mean(pred_audio_min < k)
