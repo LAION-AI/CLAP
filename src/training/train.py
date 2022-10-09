@@ -287,7 +287,9 @@ def evaluate(model, data, epoch, args, tb_writer=None):
         if args.parallel_eval:
             # (yusong): just a hack here. Don't use parallel eval when evaluating only clotho and audiocaps.
             raise NotImplementedError("Parallel evaluation not supported for eval only Clotho and audiocaps.")
-        metrics = evaluate_clotho_audiocaps(model, data, epoch, args, autocast, device, tb_writer)
+        val_metrics_s = evaluate_clotho_audiocaps(model, data, epoch, args, autocast, device, tb_writer)
+        for m in val_metrics_s:
+            metrics.update(m)
     elif "val" in data and (
             args.val_frequency
             and ((epoch % args.val_frequency) == 0 or epoch == args.epochs)
@@ -471,14 +473,12 @@ def evaluate(model, data, epoch, args, tb_writer=None):
         if not metrics:
             return metrics
 
-        logging.info(metrics)
-
         logging.info(
             f"Eval Epoch: {epoch} "
             + "\n".join(
                 [
                     "\t".join([f"{k}: {round(v, 4):.4f}" for k, v in m.items()])
-                    for m in metrics.values()
+                    for m in val_metrics_s.values()
                 ]
             )
         )
