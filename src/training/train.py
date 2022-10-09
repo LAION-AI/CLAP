@@ -471,6 +471,8 @@ def evaluate(model, data, epoch, args, tb_writer=None):
         if not metrics:
             return metrics
 
+        logging.info(metrics)
+
         logging.info(
             f"Eval Epoch: {epoch} "
             + "\n".join(
