@@ -281,7 +281,7 @@ def evaluate(model, data, epoch, args, tb_writer=None):
     autocast = torch.cuda.amp.autocast if args.precision == "amp" else suppress
     val_dataset_names = [n for n in args.datasetnames if n not in args.full_train_dataset] \
         if args.full_train_dataset else args.datasetnames
-    if val_dataset_names == ['Clotho','audiocaps']:
+    if val_dataset_names == ['Clotho', 'audiocaps']:
         # if only clotho and audiocaps are used, then we will use a different evaluation function.
         # This is because in the Clotho and audiocaps valid and test set, there are 5 text for 1 audio.
         if args.parallel_eval:
@@ -566,9 +566,7 @@ def get_metrics(
 
     for name, logit in logits.items():
         ranking = torch.argsort(logit, descending=True)
-        preds = torch.where(ranking == ground_truth)[
-            1
-        ]  # (yusong) this line is slow because it uses single thread
+        preds = torch.where(ranking == ground_truth)[1]  # (yusong) this line is slow because it uses single thread
         preds = preds.detach().cpu().numpy()
         metrics[f"{name}_mean_rank"] = preds.mean() + 1
         metrics[f"{name}_median_rank"] = np.floor(np.median(preds)) + 1
@@ -583,6 +581,17 @@ def get_metrics(
 def evaluate_clotho_audiocaps(
     model, data, epoch, args, autocast, device, tb_writer=None
 ):
+    """
+    Adapted from https://github.com/XinhaoMei/audio-text_retrieval/blob/main/tools/utils.py.
+    1. for text-to-audio retrieval, do 5 times and average the results
+    2. for R@1, R@5, R@10 in audio-to-text retrieval, take the best rank among 5 text
+    3. for map@10 in audio-to-text retrieval:
+        3.1: sort the rank of 5 text
+        3.2: exclude the rank >=10 (0-index)
+        3.3: compute the map regarding the remaining ranks: np.mean(np.arange(1, len(ranks)+1) / ranks).
+        (3.3) That is, take the top ranks of 5 text that is < 10, and assign the descending number as ground truth.
+        (3.3) E.g.: the ground truth of first rank of the 5 text should be 1, the second rank should be 2, etc.
+    """
     # TODO: (yusong) only support single GPU evaluation and only support non-mlp case for now.
     dataloader = data["val"].dataloader
     with torch.no_grad():
@@ -647,6 +656,9 @@ def evaluate_clotho_audiocaps(
             logits_per_audio = (logit_scale_a * audio_features @ text_features.t()).detach().cpu()
             logits_per_text = logits_per_audio.t().detach().cpu()
 
+            logging.info(f"{logits_per_audio[0,:10]}, "
+                         f"{logits_per_audio.reshape(num_samples, 5, num_samples)[0, 0, :10]}")
+
             # logits_per_audio shape: [num_samples, num_samples*5]
             # logits_per_text shape: [num_samples*5, num_samples]
 
@@ -660,11 +672,11 @@ def evaluate_clotho_audiocaps(
             labels = torch.arange(audio_features.shape[0]).long()
             audio_to_text_loss = [
                 F.cross_entropy(
-                    logits_per_audio.reshape(num_samples, num_samples, 5)[:, :, d], labels) for d in range(5)
+                    logits_per_audio.reshape(num_samples, 5, num_samples)[:, d, :], labels) for d in range(5)
             ]
             text_to_audio_loss = [
                 F.cross_entropy(
-                    logits_per_text.reshape(num_samples, 5, num_samples)[:, d, :], labels) for d in range(5)
+                    logits_per_text.reshape(5, num_samples, num_samples)[d, :, :], labels) for d in range(5)
             ]
             total_loss = (
                              np.mean(audio_to_text_loss) + np.mean(text_to_audio_loss)
@@ -675,7 +687,7 @@ def evaluate_clotho_audiocaps(
             # text to audio: do 5 times
             pred_text = []
             for d in range(5):
-                logit = logits_per_text.reshape(num_samples, 5, num_samples)[:, d, :]
+                logit = logits_per_text.reshape(5, num_samples, num_samples)[d, :, :]
                 ground_truth = torch.arange(len(logit)).view(-1, 1)
                 ranking = torch.argsort(logit, descending=True)
                 preds = torch.where(ranking == ground_truth)[1]
@@ -691,19 +703,27 @@ def evaluate_clotho_audiocaps(
             # audio to text: take the best result
             pred_audio = []
             for d in range(5):
-                logit = logits_per_audio.reshape(num_samples, num_samples, 5)[:, :, d]
+                logit = logits_per_audio.reshape(num_samples, 5, num_samples)[:, d, :]
                 ground_truth = torch.arange(len(logit)).view(-1, 1)
                 ranking = torch.argsort(logit, descending=True)
                 preds = torch.where(ranking == ground_truth)[1]
                 pred_audio.append(preds.detach().cpu().numpy())
 
-            # for audio to text map 10, take the mean result.
+            # for audio to text map 10, sort and assign descending ground truth.
             # see https://github.com/XinhaoMei/audio-text_retrieval/blob/13c21d9a37392b7fc45ed4f91581ce4caf0bc9bd/tools/utils.py#L103
             # map@10
+            map_all = []
+            pred_audio_stack = np.stack(pred_audio, axis=0)
+            for d in range(pred_audio_stack.shape[1]):
+                rank_single = pred_audio_stack[:, d]
+                rank_single = np.sort(rank_single)
+                rank_single = rank_single[rank_single < 10]
+                # /5 because we have 5 text, so it means for the text rank >=10 we count as 0.
+                map_single = np.sum((np.arange(1, len(rank_single) + 1) / rank_single)) / 5
+                map_all.append(map_single)
+            metrics[f"audio_to_text_mAP@10"] = np.mean(map_all)
+            # mean and median rank take the mean result
             pred_audio_concat = np.concatenate(pred_audio, axis=0)
-            metrics[f"audio_to_text_mAP@10"] = np.mean(
-                np.where(pred_audio_concat < 10, 1 / (pred_audio_concat + 1), 0.0))
-            # mean and median rank also take the mean result
             metrics[f"audio_to_text_mean_rank"] = pred_audio_concat.mean() + 1
             metrics[f"text_to_audio_median_rank"] = np.floor(np.median(pred_audio_concat)) + 1
 
