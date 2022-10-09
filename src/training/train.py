@@ -657,10 +657,10 @@ def evaluate_clotho_audiocaps(
             logits_per_text = logits_per_audio.t().detach().cpu()
 
             num_samples = audio_features.shape[0]
-            logging.info(f"{logits_per_audio[10,:10]}, "
-                         f"{logits_per_audio.reshape(num_samples, 5, num_samples)[2, 0, :10]}")
-            logging.info(f"{logits_per_text[10,:10]}, "
-                         f"{logits_per_text.reshape(5, num_samples, num_samples)[0, 2, :10]}")
+            logging.info(f"{logits_per_audio[20,:10]}, "
+                         f"{logits_per_audio.reshape(num_samples, 5, num_samples)[3, 0, :10]}")
+            logging.info(f"{logits_per_text[20,:10]}, "
+                         f"{logits_per_text.reshape(5, num_samples, num_samples)[0, 3, :10]}")
 
             # logits_per_audio shape: [num_samples, num_samples*5]
             # logits_per_text shape: [num_samples*5, num_samples]
@@ -726,6 +726,7 @@ def evaluate_clotho_audiocaps(
                 rank_single = np.sort(rank_single)
                 rank_single = rank_single[rank_single < 10]
                 # /5 because we have 5 text, so it means for the text rank >=10 we count as 0.
+                # TODO: divide by 0
                 map_single = np.sum((np.arange(1, len(rank_single) + 1) / rank_single)) / 5
                 map_all.append(map_single)
             metrics[f"audio_to_text_mAP@10"] = np.mean(map_all)
