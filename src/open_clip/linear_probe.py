@@ -17,6 +17,7 @@ class LinearProbe(nn.Module):
         super().__init__()
         in_ch = 512
         self.clap_model = model
+        #self.clap_model.text_branch = None  # to save memory
         self.freeze = freeze
         if mlp:
             self.lp_layer = MLPLayers(units = [in_ch, in_ch * 2, out_ch])

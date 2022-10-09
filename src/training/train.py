@@ -656,6 +656,11 @@ def evaluate_clotho_audiocaps(
             logits_per_audio = (logit_scale_a * audio_features @ text_features.t()).detach().cpu()
             logits_per_text = logits_per_audio.t().detach().cpu()
 
+            np.save(f"/fsx/yusong/logits_per_audio.npy", logits_per_audio.numpy())
+            np.save(f"/fsx/yusong/audio_features.npy", audio_features.detach().cpu())
+            np.save(f"/fsx/yusong/text_features.npy", text_features.detach().cpu())
+            import sys ; sys.exit(0)
+
             num_samples = audio_features.shape[0]
             logging.info(f"logits_per_audio: {logits_per_audio[15,:10]}, "
                          f"{logits_per_audio.reshape(num_samples, 5, num_samples)[3, 0, :10]}")
