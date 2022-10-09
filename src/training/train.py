@@ -590,7 +590,7 @@ def evaluate_clotho_audiocaps(
             texts = {k: torch.cat([t[k] for t in texts]) for k in texts[0].keys()}
 
             text_shape = texts["input_ids"].shape
-            logging.info(f"batch {i}, texts shape: {text_shape}")
+            # logging.info(f"batch {i}, texts shape: {text_shape}")
             # audios = audios.to(device=device, non_blocking=True)
 
             all_names = list(set(["-".join(b.split("/")[-3:-1]) for b in batch['__url__']]))
@@ -609,8 +609,8 @@ def evaluate_clotho_audiocaps(
                 audio_features = F.normalize(audio_features, dim=-1)
                 text_features = F.normalize(text_features, dim=-1)
 
-                logging.info(f"audio_features shape: {audio_features.shape}, "
-                             f"text_features shape: {text_features.shape}")
+                # logging.info(f"audio_features shape: {audio_features.shape}, "
+                #              f"text_features shape: {text_features.shape}")
 
                 all_names = list(set(["-".join(b.split("/")[-3:-1]) for b in batch['__url__']]))
                 for n in all_names:
@@ -639,8 +639,8 @@ def evaluate_clotho_audiocaps(
             audio_features = torch.cat(eval_info[n]["all_audio_features"], dim=0)
             text_features = torch.cat(eval_info[n]["all_text_features"], dim=0)
 
-            logging.info(f"dataset {n}, audio_features shape: {audio_features.shape},"
-                            f" text_features shape: {text_features.shape}")
+            # logging.info(f"dataset {n}, audio_features shape: {audio_features.shape},"
+            #                 f" text_features shape: {text_features.shape}")
             logits_per_audio = (logit_scale_a * audio_features @ text_features.t()).detach().cpu()
             logits_per_text = logits_per_audio.t().detach().cpu()
 
