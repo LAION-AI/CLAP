@@ -626,9 +626,9 @@ def evaluate_clotho_audiocaps(
                         )
                     )
                     eval_info[n]["all_text_features"].append(
-                        text_features.cpu().index_select(
-                            0, torch.tensor(idx).long()
-                        )
+                        text_features.cpu().reshape([5, -1, text_features.shape[1]]).index_select(
+                            1, torch.tensor(idx).long()
+                        ).reshape([-1, text_features.shape[1]])
                     )
 
 
