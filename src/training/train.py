@@ -281,7 +281,7 @@ def evaluate(model, data, epoch, args, tb_writer=None):
     autocast = torch.cuda.amp.autocast if args.precision == "amp" else suppress
     val_dataset_names = [n for n in args.datasetnames if n not in args.full_train_dataset] \
         if args.full_train_dataset else args.datasetnames
-    if val_dataset_names ==['Clotho']: # todo: ['Clotho','audiocaps']
+    if val_dataset_names == ['Clotho','audiocaps']:
         # if only clotho and audiocaps are used, then we will use a different evaluation function.
         # This is because in the Clotho and audiocaps valid and test set, there are 5 text for 1 audio.
         if args.parallel_eval:
