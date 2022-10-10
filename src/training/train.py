@@ -783,27 +783,27 @@ def evaluate_audiocaps(
     dataloader = data["val"].dataloader
     with torch.no_grad():
         eval_info = {}
+        eval_info['audiocaps-test'] = {
+            "cumulative_loss": 0.0,
+            "num_samples": 0,
+            "all_audio_features": [],
+            "all_text_features": []
+        }
         for i, batch in enumerate(dataloader):
             audios = batch  # contains mel_spec, wavform, and longer list
             texts = [tokenizer(t) for t in batch['full_text']]  # 5 texts for each audio
             texts = {k: torch.cat([t[k] for t in texts]) for k in texts[0].keys()}  # 5 x batch
 
             # audios = audios.to(device=device, non_blocking=True)
-            eval_info['audiocaps'] = {
-                "cumulative_loss": 0.0,
-                "num_samples": 0,
-                "all_audio_features": [],
-                "all_text_features": []
-            }
             with autocast():
                 audio_features = model(audios, None, device)
                 text_features = model(None, texts, device)
                 audio_features = F.normalize(audio_features, dim=-1)
                 text_features = F.normalize(text_features, dim=-1)
-                eval_info['audiocaps']["all_audio_features"].append(
+                eval_info['audiocaps-test']["all_audio_features"].append(
                     audio_features.cpu()
                 )
-                eval_info['audiocaps']["all_text_features"].append(
+                eval_info['audiocaps-test']["all_text_features"].append(
                     text_features.cpu()
                 )
                 logging.info(f"audio_features: {audio_features.shape}"
