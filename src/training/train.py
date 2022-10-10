@@ -669,8 +669,8 @@ def evaluate_clotho_audiocaps(
             # logits_per_audio shape: [num_samples, num_samples*5]
             # logits_per_text shape: [num_samples*5, num_samples]
 
-            # logging.info(f"dataset {n}, logits_per_audio shape: {logits_per_audio.shape}, "
-            #              f"logits_per_text shape: {logits_per_text.shape}")
+            logging.info(f"dataset {n}, logits_per_audio shape: {logits_per_audio.shape}, "
+                         f"logits_per_text shape: {logits_per_text.shape}")
 
             metrics = {}
             num_samples = audio_features.shape[0]
