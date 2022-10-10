@@ -814,6 +814,7 @@ def evaluate_audiocaps(
         for n in eval_info.keys():
             logit_scale_a, logit_scale_t = model(None, None, device)
             logit_scale_a = logit_scale_a.cpu()
+            logging.info(f"{len(eval_info[n]['all_audio_features'])} audio features")
 
             audio_features = torch.cat(eval_info[n]["all_audio_features"], dim=0)
             text_features = torch.cat(eval_info[n]["all_text_features"], dim=0)
