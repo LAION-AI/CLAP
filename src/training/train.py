@@ -292,6 +292,15 @@ def evaluate(model, data, epoch, args, tb_writer=None):
             metrics.update(m)
         if "epoch" not in metrics.keys():
             metrics.update({"epoch": epoch})
+    if val_dataset_names == ['audiocaps']:
+        if args.parallel_eval:
+            # (yusong): just a hack here. Don't use parallel eval when evaluating only clotho and audiocaps.
+            raise NotImplementedError("Parallel evaluation not supported for eval only Clotho and audiocaps.")
+        val_metrics_s = evaluate_audiocaps(model, data, epoch, args, autocast, device, tb_writer)
+        for m in val_metrics_s.values():
+            metrics.update(m)
+        if "epoch" not in metrics.keys():
+            metrics.update({"epoch": epoch})
     elif "val" in data and (
             args.val_frequency
             and ((epoch % args.val_frequency) == 0 or epoch == args.epochs)
