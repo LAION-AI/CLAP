@@ -6,7 +6,7 @@
         "mel_bins": 64,
         "sample_rate": 48000,
         "window_size": 1024,
-        "hop_size": 480,
+        "hop_size": 360,
         "fmin": 50,
         "fmax": 8000,
         "class_num": 527,
