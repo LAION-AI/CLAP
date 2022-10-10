@@ -17,7 +17,6 @@ except ImportError:
 from open_clip import ClipLoss, gather_features
 from .distributed import is_master
 from .zero_shot import zero_shot_eval
-from .data import tokenizer
 
 
 class AverageMeter(object):
@@ -607,13 +606,16 @@ def evaluate_clotho_audiocaps(
         eval_info = {}
         for i, batch in enumerate(dataloader):
             audios = batch  # contains mel_spec, wavform, and longer list
-            texts = [tokenizer(t) for t in batch['full_text']]  # 5 texts for each audio
+
             # each item in the list has 5 texts
-            # print([{k: v.shape for k, v in t.items()} for t in texts])
-            if isinstance(texts[0], dict):
-                texts = {k: torch.cat([t[k] for t in texts]) for k in texts[0].keys()}  # 5 x batch
-            else:
+            if args.tmodel == "transformer":
+                from open_clip import tokenize
+                texts = [tokenize(t) for t in batch['full_text']]
                 texts = torch.cat(texts)
+            else:
+                from .data import tokenizer
+                texts = [tokenizer(t) for t in batch['full_text']]  # 5 texts for each audio
+                texts = {k: torch.cat([t[k] for t in texts]) for k in texts[0].keys()}  # 5 x batch
 
             # audios = audios.to(device=device, non_blocking=True)
 
