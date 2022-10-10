@@ -905,14 +905,9 @@ def get_data(args, model_cfg):
 
         val_dataset_names = [n for n in args.datasetnames if n not in args.full_train_dataset] \
             if args.full_train_dataset else args.datasetnames
-        # TODO: hack, change later !
-        if val_dataset_names == ['audiocaps']:
-            val_dataset_infos = ['test']
-        else:
-            val_dataset_infos = ["valid", "test", "eval"]
         args.val_data = get_tar_path_from_dataset_name(
             val_dataset_names,
-            val_dataset_infos,
+            ["valid", "test", "eval"],
             islocal=not args.remotedata,
             proportion=1,
             dataset_path=args.datasetpath,
