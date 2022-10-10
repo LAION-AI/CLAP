@@ -785,7 +785,6 @@ def evaluate_audiocaps(
         eval_info = {}
         for i, batch in enumerate(dataloader):
             audios = batch  # contains mel_spec, wavform, and longer list
-            logging.info(f"{audios['waveform'].shape}")
             texts = [tokenizer(t) for t in batch['full_text']]  # 5 texts for each audio
             texts = {k: torch.cat([t[k] for t in texts]) for k in texts[0].keys()}  # 5 x batch
 
@@ -807,6 +806,8 @@ def evaluate_audiocaps(
                 eval_info['audiocaps']["all_text_features"].append(
                     text_features.cpu()
                 )
+                logging.info(f"audio_features: {audio_features.shape}"
+                             f"text_features: {text_features.shape}")
 
         val_metrics_all = {}
 
