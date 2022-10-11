@@ -146,7 +146,7 @@ if __name__ == '__main__':
     logits_per_text = logits_per_audio.t().detach().cpu()
 
     metrics = get_metrics(
-        torch.stack(logits_per_text).mean(dim=0)
+        logits_per_text
     )
 
     print(metrics)
