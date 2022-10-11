@@ -428,8 +428,8 @@ class CLAP(nn.Module):
         quick_gelu: bool = False,
         enable_fusion: bool = False,
         fusion_type: str = 'None',
-        joint_embed_shape: int = 512,
-        mlp_act: str = 'gelu',
+        joint_embed_shape: int = 1024,
+        mlp_act: str = 'relu',
     ):
         super().__init__()
         if isinstance(audio_cfg, dict):
