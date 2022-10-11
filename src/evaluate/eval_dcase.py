@@ -15,12 +15,13 @@ from training.params import parse_args
 
 
 def get_output_from_single_audio(audio, text, model, device):
-    audio_embedding = model.audio_infer(audio, hopsize=5 * 48000, key="embedding", device=device)['embedding']
-    if audio_embedding.ndim > 1:
-        audio_embedding = audio_embedding.mean(dim=0, keepdim=True)
-    else:
-        audio_embedding = audio_embedding.unsqueeze(0)
-    audio_features = model.audio_projection(audio_embedding)
+
+    # audio_embedding = model.audio_infer(audio, hopsize=5 * 48000, key="embedding", device=device)['embedding']
+    # if audio_embedding.ndim > 1:
+    #     audio_embedding = audio_embedding.mean(dim=0, keepdim=True)
+    # else:
+    #     audio_embedding = audio_embedding.unsqueeze(0)
+    audio_features = model(audio, None, device)
     audio_features = F.normalize(audio_features, dim=-1)
     text_features = model(None, text, device=device)
     text_features = F.normalize(text_features, dim=-1)
