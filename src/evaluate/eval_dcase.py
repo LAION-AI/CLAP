@@ -102,7 +102,7 @@ if __name__ == '__main__':
         param.requires_grad = False
 
     # take every 5th file because clotho has 5 texts for 1 audio
-    test_file_list = sorted(glob.glob(f"{clotho_test_preprocessed_dir}/*.flac"))[::5]
+    test_file_list = sorted(glob.glob(f"{clotho_test_preprocessed_dir}/*.flac"))
 
     audio_features_all = []
     text_features_all = []
