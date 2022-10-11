@@ -117,7 +117,7 @@ if __name__ == '__main__':
                 json_data = json.load(f)
             audio, sr = librosa.load(file_path, sr=48000, mono=True)
             audio = torch.from_numpy(audio).to(device)
-            text = json_data["original_data"]["all_captions"]
+            text = json_data["text"]
 
             if args.tmodel == "transformer":
                 from open_clip import tokenize
