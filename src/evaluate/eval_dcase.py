@@ -10,6 +10,8 @@ import json
 import librosa
 from tqdm import tqdm
 import numpy as np
+import os
+from training.params import parse_args
 
 
 def get_output_from_single_audio(audio, text, model, device):
@@ -48,9 +50,6 @@ def get_metrics(text_to_audio_logits):
 
 
 if __name__ == '__main__':
-    import os
-    from training.params import parse_args
-
     args = parse_args()
 
     model_path = args.pretrained
