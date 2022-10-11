@@ -20,7 +20,7 @@ def get_output_from_single_audio(audio, text, model, device):
         audio_embedding = audio_embedding.unsqueeze(0)
     audio_features = model.audio_projection(audio_embedding)
     audio_features = F.normalize(audio_features, dim=-1)
-    text_features = model.encode_text(text)
+    text_features = model(None, text, device=device)
     text_features = F.normalize(text_features, dim=-1)
 
     # CHANGE: before normalize or after
@@ -48,151 +48,14 @@ def get_metrics(text_to_audio_logits):
 
 
 if __name__ == '__main__':
+    import os
+    from training.params import parse_args
 
-    # top-2 transformer + top-1 CNN
-    model_path_all = [
-        '/mnt/audio_clip/dcase_submission_systems/2022_05_31-02_55_14-model_HTSAT-tiny-lr_0.001-b_184-j_10-p_fp32/checkpoints/epoch_top_0.pt',
-        '/mnt/audio_clip/dcase_submission_systems/2022_05_31-02_55_14-model_HTSAT-tiny-lr_0.001-b_184-j_10-p_fp32/checkpoints/epoch_top_1.pt',
-        '/mnt/audio_clip/dcase_submission_systems/2022_05_31-02_55_14-model_HTSAT-tiny-lr_0.001-b_184-j_10-p_fp32/checkpoints/epoch_top_2.pt',
-        '/mnt/audio_clip/dcase_submission_systems/2022_06_11-02_55_57-model_HTSAT-tiny-lr_0.001-b_184-j_10-p_fp32/checkpoints/epoch_top_0.pt',
-        '/mnt/audio_clip/dcase_submission_systems/2022_06_11-02_55_57-model_HTSAT-tiny-lr_0.001-b_184-j_10-p_fp32/checkpoints/epoch_top_1.pt',
-        '/mnt/audio_clip/dcase_submission_systems/2022_06_11-02_55_57-model_HTSAT-tiny-lr_0.001-b_184-j_10-p_fp32/checkpoints/epoch_top_2.pt',
-        '/mnt/audio_clip/dcase_submission_systems/2022_06_04-05_56_46-model_PANN-14-lr_0.001-b_184-j_6-p_fp32/checkpoints/epoch_top_0.pt',
-        '/mnt/audio_clip/dcase_submission_systems/2022_06_04-05_56_46-model_PANN-14-lr_0.001-b_184-j_6-p_fp32/checkpoints/epoch_top_1.pt',
-        '/mnt/audio_clip/dcase_submission_systems/2022_06_04-05_56_46-model_PANN-14-lr_0.001-b_184-j_6-p_fp32/checkpoints/epoch_top_2.pt',
-    ]
+    args = parse_args()
 
-    model_type_all = [
-        'HTSAT-tiny',
-        'HTSAT-tiny',
-        'HTSAT-tiny',
-        'HTSAT-tiny',
-        'HTSAT-tiny',
-        'HTSAT-tiny',
-        'PANN-14',
-        'PANN-14',
-        'PANN-14',
-    ]
+    model_path = args.pretrained
 
-    # all transformer + top-1 CNN
-    """
-    model_path_all = [
-        '/mnt/audio_clip/dcase_submission_systems/2022_05_07-19_16_07-model_HTSAT-tiny-lr_0.001-b_96-j_4-p_fp32/checkpoints/epoch_top_0.pt',
-        '/mnt/audio_clip/dcase_submission_systems/2022_05_07-19_16_07-model_HTSAT-tiny-lr_0.001-b_96-j_4-p_fp32/checkpoints/epoch_top_1.pt',
-        '/mnt/audio_clip/dcase_submission_systems/2022_05_07-19_16_07-model_HTSAT-tiny-lr_0.001-b_96-j_4-p_fp32/checkpoints/epoch_top_2.pt',
-        '/mnt/audio_clip/dcase_submission_systems/2022_06_05-17_53_56-model_HTSAT-tiny-lr_0.001-b_184-j_10-p_fp32/checkpoints/epoch_top_0.pt',
-        '/mnt/audio_clip/dcase_submission_systems/2022_06_05-17_53_56-model_HTSAT-tiny-lr_0.001-b_184-j_10-p_fp32/checkpoints/epoch_top_1.pt',
-        '/mnt/audio_clip/dcase_submission_systems/2022_06_05-17_53_56-model_HTSAT-tiny-lr_0.001-b_184-j_10-p_fp32/checkpoints/epoch_top_2.pt',
-        '/mnt/audio_clip/dcase_submission_systems/2022_05_31-02_55_14-model_HTSAT-tiny-lr_0.001-b_184-j_10-p_fp32/checkpoints/epoch_top_0.pt',
-        '/mnt/audio_clip/dcase_submission_systems/2022_05_31-02_55_14-model_HTSAT-tiny-lr_0.001-b_184-j_10-p_fp32/checkpoints/epoch_top_1.pt',
-        '/mnt/audio_clip/dcase_submission_systems/2022_05_31-02_55_14-model_HTSAT-tiny-lr_0.001-b_184-j_10-p_fp32/checkpoints/epoch_top_2.pt',
-        '/mnt/audio_clip/dcase_submission_systems/2022_06_11-02_55_57-model_HTSAT-tiny-lr_0.001-b_184-j_10-p_fp32/checkpoints/epoch_top_0.pt',
-        '/mnt/audio_clip/dcase_submission_systems/2022_06_11-02_55_57-model_HTSAT-tiny-lr_0.001-b_184-j_10-p_fp32/checkpoints/epoch_top_1.pt',
-        '/mnt/audio_clip/dcase_submission_systems/2022_06_11-02_55_57-model_HTSAT-tiny-lr_0.001-b_184-j_10-p_fp32/checkpoints/epoch_top_2.pt',
-        '/mnt/audio_clip/dcase_submission_systems/2022_06_04-05_56_46-model_PANN-14-lr_0.001-b_184-j_6-p_fp32/checkpoints/epoch_top_0.pt',
-        '/mnt/audio_clip/dcase_submission_systems/2022_06_04-05_56_46-model_PANN-14-lr_0.001-b_184-j_6-p_fp32/checkpoints/epoch_top_1.pt',
-        '/mnt/audio_clip/dcase_submission_systems/2022_06_04-05_56_46-model_PANN-14-lr_0.001-b_184-j_6-p_fp32/checkpoints/epoch_top_2.pt',
-    ]
-
-    model_type_all = [
-        'HTSAT-tiny',
-        'HTSAT-tiny',
-        'HTSAT-tiny',
-        'HTSAT-tiny',
-        'HTSAT-tiny',
-        'HTSAT-tiny',
-        'HTSAT-tiny',
-        'HTSAT-tiny',
-        'HTSAT-tiny',
-        'HTSAT-tiny',
-        'HTSAT-tiny',
-        'HTSAT-tiny',
-        'PANN-14',
-        'PANN-14',
-        'PANN-14',
-    ]
-    """
-
-    # all transformers
-    """
-    model_path_all = [
-        '/mnt/audio_clip/dcase_submission_systems/2022_05_07-19_16_07-model_HTSAT-tiny-lr_0.001-b_96-j_4-p_fp32/checkpoints/epoch_top_0.pt',
-        '/mnt/audio_clip/dcase_submission_systems/2022_05_07-19_16_07-model_HTSAT-tiny-lr_0.001-b_96-j_4-p_fp32/checkpoints/epoch_top_1.pt',
-        '/mnt/audio_clip/dcase_submission_systems/2022_05_07-19_16_07-model_HTSAT-tiny-lr_0.001-b_96-j_4-p_fp32/checkpoints/epoch_top_2.pt',
-        '/mnt/audio_clip/dcase_submission_systems/2022_06_05-17_53_56-model_HTSAT-tiny-lr_0.001-b_184-j_10-p_fp32/checkpoints/epoch_top_0.pt',
-        '/mnt/audio_clip/dcase_submission_systems/2022_06_05-17_53_56-model_HTSAT-tiny-lr_0.001-b_184-j_10-p_fp32/checkpoints/epoch_top_1.pt',
-        '/mnt/audio_clip/dcase_submission_systems/2022_06_05-17_53_56-model_HTSAT-tiny-lr_0.001-b_184-j_10-p_fp32/checkpoints/epoch_top_2.pt',
-        '/mnt/audio_clip/dcase_submission_systems/2022_05_31-02_55_14-model_HTSAT-tiny-lr_0.001-b_184-j_10-p_fp32/checkpoints/epoch_top_0.pt',
-        '/mnt/audio_clip/dcase_submission_systems/2022_05_31-02_55_14-model_HTSAT-tiny-lr_0.001-b_184-j_10-p_fp32/checkpoints/epoch_top_1.pt',
-        '/mnt/audio_clip/dcase_submission_systems/2022_05_31-02_55_14-model_HTSAT-tiny-lr_0.001-b_184-j_10-p_fp32/checkpoints/epoch_top_2.pt',
-        '/mnt/audio_clip/dcase_submission_systems/2022_06_11-02_55_57-model_HTSAT-tiny-lr_0.001-b_184-j_10-p_fp32/checkpoints/epoch_top_0.pt',
-        '/mnt/audio_clip/dcase_submission_systems/2022_06_11-02_55_57-model_HTSAT-tiny-lr_0.001-b_184-j_10-p_fp32/checkpoints/epoch_top_1.pt',
-        '/mnt/audio_clip/dcase_submission_systems/2022_06_11-02_55_57-model_HTSAT-tiny-lr_0.001-b_184-j_10-p_fp32/checkpoints/epoch_top_2.pt',
-    ]
-
-    model_type_all = [
-        'HTSAT-tiny',
-        'HTSAT-tiny',
-        'HTSAT-tiny',
-        'HTSAT-tiny',
-        'HTSAT-tiny',
-        'HTSAT-tiny',
-        'HTSAT-tiny',
-        'HTSAT-tiny',
-        'HTSAT-tiny',
-        'HTSAT-tiny',
-        'HTSAT-tiny',
-        'HTSAT-tiny',
-    ]
-    """
-
-    # all systems
-    """
-    model_path_all = [
-        '/mnt/audio_clip/dcase_submission_systems/2022_05_07-19_16_07-model_HTSAT-tiny-lr_0.001-b_96-j_4-p_fp32/checkpoints/epoch_top_0.pt',
-        '/mnt/audio_clip/dcase_submission_systems/2022_05_07-19_16_07-model_HTSAT-tiny-lr_0.001-b_96-j_4-p_fp32/checkpoints/epoch_top_1.pt',
-        '/mnt/audio_clip/dcase_submission_systems/2022_05_07-19_16_07-model_HTSAT-tiny-lr_0.001-b_96-j_4-p_fp32/checkpoints/epoch_top_2.pt',
-        '/mnt/audio_clip/dcase_submission_systems/2022_06_05-17_53_56-model_HTSAT-tiny-lr_0.001-b_184-j_10-p_fp32/checkpoints/epoch_top_0.pt',
-        '/mnt/audio_clip/dcase_submission_systems/2022_06_05-17_53_56-model_HTSAT-tiny-lr_0.001-b_184-j_10-p_fp32/checkpoints/epoch_top_1.pt',
-        '/mnt/audio_clip/dcase_submission_systems/2022_06_05-17_53_56-model_HTSAT-tiny-lr_0.001-b_184-j_10-p_fp32/checkpoints/epoch_top_2.pt',
-        '/mnt/audio_clip/dcase_submission_systems/2022_05_31-02_55_14-model_HTSAT-tiny-lr_0.001-b_184-j_10-p_fp32/checkpoints/epoch_top_0.pt',
-        '/mnt/audio_clip/dcase_submission_systems/2022_05_31-02_55_14-model_HTSAT-tiny-lr_0.001-b_184-j_10-p_fp32/checkpoints/epoch_top_1.pt',
-        '/mnt/audio_clip/dcase_submission_systems/2022_05_31-02_55_14-model_HTSAT-tiny-lr_0.001-b_184-j_10-p_fp32/checkpoints/epoch_top_2.pt',
-        '/mnt/audio_clip/dcase_submission_systems/2022_06_11-02_55_57-model_HTSAT-tiny-lr_0.001-b_184-j_10-p_fp32/checkpoints/epoch_top_0.pt',
-        '/mnt/audio_clip/dcase_submission_systems/2022_06_11-02_55_57-model_HTSAT-tiny-lr_0.001-b_184-j_10-p_fp32/checkpoints/epoch_top_1.pt',
-        '/mnt/audio_clip/dcase_submission_systems/2022_06_11-02_55_57-model_HTSAT-tiny-lr_0.001-b_184-j_10-p_fp32/checkpoints/epoch_top_2.pt',
-        '/mnt/audio_clip/dcase_submission_systems/2022_06_04-05_56_46-model_PANN-14-lr_0.001-b_184-j_6-p_fp32/checkpoints/epoch_top_0.pt',
-        '/mnt/audio_clip/dcase_submission_systems/2022_06_04-05_56_46-model_PANN-14-lr_0.001-b_184-j_6-p_fp32/checkpoints/epoch_top_1.pt',
-        '/mnt/audio_clip/dcase_submission_systems/2022_06_04-05_56_46-model_PANN-14-lr_0.001-b_184-j_6-p_fp32/checkpoints/epoch_top_2.pt',
-        '/mnt/audio_clip/dcase_submission_systems/2022_06_11-21_01_57-model_PANN-14-lr_0.001-b_184-j_10-p_fp32/checkpoints/epoch_top_0.pt',
-        '/mnt/audio_clip/dcase_submission_systems/2022_06_11-21_01_57-model_PANN-14-lr_0.001-b_184-j_10-p_fp32/checkpoints/epoch_top_1.pt',
-        '/mnt/audio_clip/dcase_submission_systems/2022_06_11-21_01_57-model_PANN-14-lr_0.001-b_184-j_10-p_fp32/checkpoints/epoch_top_2.pt',
-    ]
-
-    model_type_all = [
-        'HTSAT-tiny',
-        'HTSAT-tiny',
-        'HTSAT-tiny',
-        'HTSAT-tiny',
-        'HTSAT-tiny',
-        'HTSAT-tiny',
-        'HTSAT-tiny',
-        'HTSAT-tiny',
-        'HTSAT-tiny',
-        'HTSAT-tiny',
-        'HTSAT-tiny',
-        'HTSAT-tiny',
-        'PANN-14',
-        'PANN-14',
-        'PANN-14',
-        'PANN-14',
-        'PANN-14',
-        'PANN-14',
-    ]
-    """
-
-
-    clotho_test_preprocessed_dir = "/mnt/audio_clip/dcase_submission_systems/clotho_test/"
+    clotho_test_preprocessed_dir = "/fsx/yusong/clotho_test_set/test"
 
     parser = argparse.ArgumentParser()
     parser.add_argument('--device', type=str, default='cpu')
@@ -200,7 +63,6 @@ if __name__ == '__main__':
 
     cudnn.benchmark = True
     cudnn.deterministic = False
-    pretrained = 'openai'
 
     audio_features_ensemble_all = []
     text_features_ensemble_all = []
@@ -209,95 +71,85 @@ if __name__ == '__main__':
     logit_scale_a_ensemble_all = []
     logit_scale_t_ensemble_all = []
 
-    for model_path, model_type in zip(model_path_all, model_type_all):
-        device = torch.device(args.device)
-        model, model_cfg = create_model(
-            model_type,
-            pretrained,
-            precision='fp32',
-            device=device,
-            jit=False,
-            force_quick_gelu=False,
-        )
 
-        # load model
-        checkpoint = torch.load(model_path, map_location=device)
-        if "epoch" in checkpoint:
-            # resuming a train checkpoint w/ epoch and optimizer state
-            start_epoch = checkpoint["epoch"]
-            sd = checkpoint["state_dict"]
-            if next(iter(sd.items()))[0].startswith(
-                    "module"
-            ):
-                sd = {k[len("module."):]: v for k, v in sd.items()}
-            model.load_state_dict(sd)
-        else:
-            # loading a bare (model only) checkpoint for fine-tune or evaluation
-            model.load_state_dict(checkpoint)
+    device = torch.device(args.device)
+    model, clap_model_cfg = create_model(
+        args.amodel,
+        args.tmodel,
+        args.pretrained,
+        precision=args.precision,
+        device=device,
+        jit=args.torchscript,
+        force_quick_gelu=args.force_quick_gelu,
+        openai_model_cache_dir=os.path.expanduser(args.openai_model_cache_dir),
+        skip_params=False
+    )
 
-        model.to(device)
-        model.eval()
-        for param in model.parameters():
-            param.requires_grad = False
+    # load model
+    checkpoint = torch.load(model_path, map_location=device)
+    if "epoch" in checkpoint:
+        # resuming a train checkpoint w/ epoch and optimizer state
+        start_epoch = checkpoint["epoch"]
+        sd = checkpoint["state_dict"]
+        if next(iter(sd.items()))[0].startswith(
+                "module"
+        ):
+            sd = {k[len("module."):]: v for k, v in sd.items()}
+        model.load_state_dict(sd)
+    else:
+        # loading a bare (model only) checkpoint for fine-tune or evaluation
+        model.load_state_dict(checkpoint)
 
-        # take every 5th file because clotho has 5 texts for 1 audio
-        test_file_list = sorted(glob.glob(f"{clotho_test_preprocessed_dir}/*.flac"))[::5]
+    model.to(device)
+    model.eval()
+    for param in model.parameters():
+        param.requires_grad = False
 
-        audio_features_all = []
-        text_features_all = []
-        audio_features_mlp_all = []
-        text_features_mlp_all = []
-        logit_scale_a_all = []
-        logit_scale_t_all = []
+    # take every 5th file because clotho has 5 texts for 1 audio
+    test_file_list = sorted(glob.glob(f"{clotho_test_preprocessed_dir}/*.flac"))[::5]
 
-        with torch.no_grad():
-            for file_path in tqdm(test_file_list):
-                json_path = file_path.replace(".flac", ".json")
-                with open(json_path, "r") as f:
-                    json_data = json.load(f)
-                audio, sr = librosa.load(file_path, sr=48000, mono=True)
-                audio = torch.from_numpy(audio).to(device)
-                text = json_data["original_data"]["all_captions"]
-                text = tokenize(text).to(device)
+    audio_features_all = []
+    text_features_all = []
+    audio_features_mlp_all = []
+    text_features_mlp_all = []
+    logit_scale_a_all = []
+    logit_scale_t_all = []
 
-                audio_features, text_features, audio_features_mlp, text_features_mlp, logit_scale_a, logit_scale_t = \
-                    get_output_from_single_audio(audio, text, model, device)
+    with torch.no_grad():
+        for file_path in tqdm(test_file_list):
+            json_path = file_path.replace(".flac", ".json")
+            with open(json_path, "r") as f:
+                json_data = json.load(f)
+            audio, sr = librosa.load(file_path, sr=48000, mono=True)
+            audio = torch.from_numpy(audio).to(device)
+            text = json_data["original_data"]["all_captions"]
 
-                audio_features_all.append(audio_features.detach().cpu())
-                text_features_all.append(text_features.detach().cpu())
-                audio_features_mlp_all.append(audio_features_mlp.detach().cpu())
-                text_features_mlp_all.append(text_features_mlp.detach().cpu())
-                logit_scale_a_all.append(logit_scale_a.detach().cpu())
-                logit_scale_t_all.append(logit_scale_t.detach().cpu())
+            if args.tmodel == "transformer":
+                from open_clip import tokenize
+                text = tokenize(text)
+            else:
+                from training.data import tokenizer
+                text = tokenizer(text)  # 5 texts for each audio
 
-        audio_features_ensemble_all.append(torch.cat(audio_features_all))
-        text_features_ensemble_all.append(torch.cat(text_features_all))
-        audio_features_mlp_ensemble_all.append(torch.cat(audio_features_mlp_all))
-        text_features_mlp_ensemble_all.append(torch.cat(text_features_mlp_all))
-        logit_scale_a_ensemble_all.append(logit_scale_a_all[0])
-        logit_scale_t_ensemble_all.append(logit_scale_t_all[0])
+            audio_features, text_features, audio_features_mlp, text_features_mlp, logit_scale_a, logit_scale_t = \
+                get_output_from_single_audio(audio, text, model, device)
 
-    text_to_audio_logits_ensemble_all = []
-    for i in range(len(model_path_all)):
-        audio_features = audio_features_ensemble_all[i]
-        text_features = text_features_ensemble_all[i]
-        audio_features_mlp = audio_features_mlp_ensemble_all[i]
-        text_features_mlp = text_features_mlp_ensemble_all[i]
-        logit_scale_a = logit_scale_a_ensemble_all[i]
-        logit_scale_t = logit_scale_t_ensemble_all[i]
+            audio_features_all.append(audio_features.detach().cpu())
+            text_features_all.append(text_features.detach().cpu())
+            audio_features_mlp_all.append(audio_features_mlp.detach().cpu())
+            text_features_mlp_all.append(text_features_mlp.detach().cpu())
+            logit_scale_a_all.append(logit_scale_a.detach().cpu())
+            logit_scale_t_all.append(logit_scale_t.detach().cpu())
 
-        a_logits_per_audio = (logit_scale_a * audio_features @ text_features_mlp.t()).detach().cpu()
-        a_logits_per_text = a_logits_per_audio.t().detach().cpu()
-        t_logits_per_audio = (logit_scale_t * audio_features_mlp @ text_features.t()).detach().cpu()
-        t_logits_per_text = t_logits_per_audio.t().detach().cpu()
+    audio_features = torch.cat(audio_features_all)
+    text_features = torch.cat(text_features_all)
+    logit_scale_a = logit_scale_a_all[0]
 
-        text_to_audio_logits = (a_logits_per_text + t_logits_per_text) / 2
-        text_to_audio_logits_ensemble_all.append(text_to_audio_logits)
+    logits_per_audio = (logit_scale_a * audio_features @ text_features.t()).detach().cpu()
+    logits_per_text = logits_per_audio.t().detach().cpu()
 
     metrics = get_metrics(
-        torch.stack(text_to_audio_logits_ensemble_all).mean(dim=0)
+        torch.stack(logits_per_text).mean(dim=0)
     )
 
     print(metrics)
-
-    # TODO:[Tianyu]  load from DCASE contest dataset, get the retrieval file, and save csv file
