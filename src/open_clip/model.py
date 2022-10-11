@@ -427,7 +427,9 @@ class CLAP(nn.Module):
         text_cfg: CLAPTextCfg,
         quick_gelu: bool = False,
         enable_fusion: bool = False,
-        fusion_type: str = 'None'
+        fusion_type: str = 'None',
+        joint_embed_shape: int = 1024,
+        mlp_act: str = 'relu',
     ):
         super().__init__()
         if isinstance(audio_cfg, dict):
@@ -439,7 +441,8 @@ class CLAP(nn.Module):
         self.text_cfg = text_cfg
         self.enable_fusion = enable_fusion
         self.fusion_type = fusion_type
-        self.joint_embed_shape = 512  # hardcoded as 512
+        self.joint_embed_shape = joint_embed_shape
+        self.mlp_act = mlp_act
 
 
         self.context_length = text_cfg.context_length
@@ -448,6 +451,13 @@ class CLAP(nn.Module):
         # memory efficient in recent PyTorch releases (>= 1.10).
         # NOTE: timm models always use native GELU regardless of quick_gelu flag.
         act_layer = QuickGELU if quick_gelu else nn.GELU
+
+        if mlp_act == 'relu':
+            mlp_act_layer = nn.ReLU()
+        elif mlp_act == 'gelu':
+            mlp_act_layer = nn.GELU()
+        else:
+            raise NotImplementedError
 
         # audio branch
         # audio branch parameters
@@ -479,7 +489,7 @@ class CLAP(nn.Module):
                                                    self.joint_embed_shape], dropout=0.1)
             self.text_projection = nn.Sequential(
                 nn.Linear(text_cfg.width, self.joint_embed_shape),
-                nn.ReLU(),
+                mlp_act_layer,
                 nn.Linear(self.joint_embed_shape, self.joint_embed_shape)
             )
         elif text_cfg.model_type == "bert":
@@ -489,7 +499,7 @@ class CLAP(nn.Module):
                                                    self.joint_embed_shape], dropout=0.1)
             self.text_projection = nn.Sequential(
                 nn.Linear(768, self.joint_embed_shape),
-                nn.ReLU(),
+                mlp_act_layer,
                 nn.Linear(self.joint_embed_shape, self.joint_embed_shape)
             )
         elif text_cfg.model_type == "roberta":
@@ -499,7 +509,7 @@ class CLAP(nn.Module):
                                                    self.joint_embed_shape], dropout=0.1)
             self.text_projection = nn.Sequential(
                 nn.Linear(768, self.joint_embed_shape),
-                nn.ReLU(),
+                mlp_act_layer,
                 nn.Linear(self.joint_embed_shape, self.joint_embed_shape)
             )
         elif text_cfg.model_type == "bart":
@@ -509,7 +519,7 @@ class CLAP(nn.Module):
                                                    self.joint_embed_shape], dropout=0.1)
             self.text_projection = nn.Sequential(
                 nn.Linear(768, self.joint_embed_shape),
-                nn.ReLU(),
+                mlp_act_layer,
                 nn.Linear(self.joint_embed_shape, self.joint_embed_shape)
             )
         else:
@@ -528,7 +538,7 @@ class CLAP(nn.Module):
         # ============================================================================================================
         self.audio_projection = nn.Sequential(
                 nn.Linear(embed_dim, self.joint_embed_shape),
-                nn.ReLU(),
+                mlp_act_layer,
                 nn.Linear(self.joint_embed_shape, self.joint_embed_shape)
             )
 
