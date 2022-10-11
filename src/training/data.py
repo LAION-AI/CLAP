@@ -907,6 +907,7 @@ def get_data(args, model_cfg):
 
         val_dataset_names = [n for n in args.datasetnames if n not in excluded_eval_datasets] \
             if excluded_eval_datasets else args.datasetnames
+        args.val_dataset_names = val_dataset_names
         args.val_data = get_tar_path_from_dataset_name(
             val_dataset_names,
             ["valid", "test", "eval"],
