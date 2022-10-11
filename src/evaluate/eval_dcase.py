@@ -117,6 +117,7 @@ if __name__ == '__main__':
                 json_data = json.load(f)
             audio, sr = librosa.load(file_path, sr=48000, mono=True)
             audio = torch.from_numpy(audio).to(device)
+            audio = {'waveform': audio}
             text = json_data["text"]
 
             if args.tmodel == "transformer":
