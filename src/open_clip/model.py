@@ -428,7 +428,7 @@ class CLAP(nn.Module):
         quick_gelu: bool = False,
         enable_fusion: bool = False,
         fusion_type: str = 'None',
-        joint_embed_shape: int = 1024,
+        joint_embed_shape: int = 512,
         mlp_act: str = 'relu',
     ):
         super().__init__()
