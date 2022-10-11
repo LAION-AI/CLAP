@@ -67,7 +67,7 @@ if __name__ == '__main__':
     logit_scale_t_ensemble_all = []
 
 
-    device = torch.device(args.device)
+    device = torch.device('gpu')
     model, clap_model_cfg = create_model(
         args.amodel,
         args.tmodel,
