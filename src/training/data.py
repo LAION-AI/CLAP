@@ -903,6 +903,10 @@ def get_data(args, model_cfg):
             full_dataset=args.full_train_dataset,
         )
 
+        if args.full_train_dataset is None:
+            args.full_train_dataset = []
+        if args.exclude_eval_dataset is None:
+            args.exclude_eval_dataset = []
         excluded_eval_datasets = args.full_train_dataset + args.exclude_eval_dataset
 
         val_dataset_names = [n for n in args.datasetnames if n not in excluded_eval_datasets] \
