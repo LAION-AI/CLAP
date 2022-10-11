@@ -45,7 +45,7 @@ if args.tmodel == "transformer":
     from open_clip import tokenize
 
     def tokenizer(text):
-        return tokenize(text)[0, :]
+        return tokenize(text).squeeze(0)
 
 elif args.tmodel == "bert":
     from transformers import BertTokenizer
@@ -903,8 +903,10 @@ def get_data(args, model_cfg):
             full_dataset=args.full_train_dataset,
         )
 
-        val_dataset_names = [n for n in args.datasetnames if n not in args.full_train_dataset] \
-            if args.full_train_dataset else args.datasetnames
+        excluded_eval_datasets = args.full_train_dataset + args.exclude_eval_dataset
+
+        val_dataset_names = [n for n in args.datasetnames if n not in excluded_eval_datasets] \
+            if excluded_eval_datasets else args.datasetnames
         args.val_data = get_tar_path_from_dataset_name(
             val_dataset_names,
             ["valid", "test", "eval"],

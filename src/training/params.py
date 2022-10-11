@@ -109,6 +109,12 @@ def parse_args():
         help="Which dataset will be trained with all the subsets. (train+test)",
     )
     parser.add_argument(
+        "--exclude-eval-dataset",
+        nargs="+",
+        default=None,
+        help="Which dataset will be excluded with evaluation",
+    )
+    parser.add_argument(
         "--datasetinfos",
         nargs="+",
         default=None,
