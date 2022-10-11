@@ -56,10 +56,6 @@ if __name__ == '__main__':
 
     clotho_test_preprocessed_dir = "/fsx/yusong/clotho_test_set/test"
 
-    parser = argparse.ArgumentParser()
-    parser.add_argument('--device', type=str, default='cpu')
-    args = parser.parse_args()
-
     cudnn.benchmark = True
     cudnn.deterministic = False
 
