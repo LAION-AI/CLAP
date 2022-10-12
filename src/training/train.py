@@ -728,6 +728,26 @@ def evaluate_clotho_audiocaps(
                 metrics[f"text_to_audio_R@{k}_best"] = np.mean(pred_text_min < k)
 
             # audio to text: take the best result
+            # for audio to text map 10, sort and assign descending ground truth.
+            # see https://github.com/XinhaoMei/audio-text_retrieval/blob/main/tools/utils.py#L103
+            # map@10
+            map_all = []
+            pred_audio_all = []
+            for d in range(num_samples):
+                # logits_per_audio: [num_samples, num_samples*5]
+                logit_single = logits_per_audio[d, :]  # [5*num_samples]
+                # Ground-truth index: [d*5, d*5+1, d*5+2, d*5+3, d*5+4]
+                ranking = torch.argsort(logit, descending=True)  # [5*num_samples]
+                # ranking: the index of first match, second match, ...
+                ground_truth = torch.arange(d * 5, d * 5 + 5)
+                all_pred = torch.where(torch.stack([ranking]*5) == ground_truth.view(-1,1))[1]
+                min_pred = torch.min(all_pred)
+                pred_audio_all.append(min_pred.detach().cpu().numpy())
+                all_pred_filter = all_pred[all_pred < 10].detach().cpu().numpy()
+                map_single = np.sum((np.arange(1, len(all_pred_filter) + 1) / (all_pred_filter + 1))) / 5
+                map_all.append(map_single)
+            metrics[f"audio_to_text_mAP@10_best"] = np.mean(map_all)
+
             pred_audio = []
             for d in range(5):
                 logit = logits_per_audio.reshape(num_samples, num_samples, 5)[:, :, d]
@@ -735,20 +755,6 @@ def evaluate_clotho_audiocaps(
                 ranking = torch.argsort(logit, descending=True)
                 preds = torch.where(ranking == ground_truth)[1]
                 pred_audio.append(preds.detach().cpu().numpy())
-
-            # for audio to text map 10, sort and assign descending ground truth.
-            # see https://github.com/XinhaoMei/audio-text_retrieval/blob/main/tools/utils.py#L103
-            # map@10
-            map_all = []
-            pred_audio_stack = np.stack(pred_audio, axis=0)  # [5, num_samples]
-            for d in range(pred_audio_stack.shape[1]):
-                rank_single = pred_audio_stack[:, d]  # [5]
-                rank_single = np.sort(rank_single)
-                rank_single = rank_single[rank_single < 10]
-                # /5 because we have 5 text, so it means for the text rank >=10 we count as 0.
-                map_single = np.sum((np.arange(1, len(rank_single) + 1) / (rank_single + 1))) / 5
-                map_all.append(map_single)
-            metrics[f"audio_to_text_mAP@10_best"] = np.mean(map_all)
             # mean and median rank take the mean result
             pred_audio_concat = np.concatenate(pred_audio, axis=0)
             metrics[f"audio_to_text_mean_rank"] = pred_audio_concat.mean() + 1
