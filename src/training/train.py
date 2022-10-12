@@ -744,9 +744,12 @@ def evaluate_clotho_audiocaps(
                 min_pred = torch.min(all_pred)
                 pred_audio_all.append(min_pred.detach().cpu().numpy())
                 all_pred_filter = all_pred[all_pred < 10].detach().cpu().numpy()
+                # /5 because we have 5 text, so it means for the text rank >=10 we count as 0.
                 map_single = np.sum((np.arange(1, len(all_pred_filter) + 1) / (all_pred_filter + 1))) / 5
                 map_all.append(map_single)
             metrics[f"audio_to_text_mAP@10_best"] = np.mean(map_all)
+            for k in [1, 5, 10]:
+                metrics[f"audio_to_text_R@{k}_best"] = np.mean(np.array(pred_audio_all) < k)
 
             pred_audio = []
             for d in range(5):
@@ -762,11 +765,6 @@ def evaluate_clotho_audiocaps(
             metrics[f"audio_to_text_mAP@10"] = np.mean(np.where(pred_audio_concat < 10, 1 / (pred_audio_concat + 1), 0.0))
             for k in [1, 5, 10]:
                 metrics[f"audio_to_text_R@{k}"] = np.mean(pred_audio_concat < k)
-
-            # for audio to text recall, take the best result.
-            pred_audio_min = np.min(np.stack(pred_audio, axis=0), axis=0)
-            for k in [1, 5, 10]:
-                metrics[f"audio_to_text_R@{k}_best"] = np.mean(pred_audio_min < k)
 
             val_metrics_all[n] = {
                 n + "/" + k: v for k, v in metrics.items()
