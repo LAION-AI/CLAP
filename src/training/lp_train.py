@@ -80,15 +80,15 @@ def train_one_epoch(
 
         audio = batch # contains mel_spec, wavform, and longer list
         class_label = batch['class_label']
+        # audio = audio.to(device=device, non_blocking=True)
+        class_label = class_label.to(device=device, non_blocking=True)
+
         if args.mixup:
             # https://github.com/RetroCirce/HTS-Audio-Transformer/blob/main/utils.py#L146
             mix_lambda = torch.from_numpy(get_mix_lambda(0.5, len(audio["waveform"]))).to(device)
             class_label = do_mixup(class_label, mix_lambda)
         else:
             mix_lambda = None
-
-        # audio = audio.to(device=device, non_blocking=True)
-        class_label = class_label.to(device=device, non_blocking=True)
 
         data_time_m.update(time.time() - end)
         if isinstance(optimizer, dict):
