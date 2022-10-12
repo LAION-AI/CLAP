@@ -3,8 +3,9 @@ import torch.nn.functional as F
 from torch import nn
 from .model import MLPLayers
 
+
 class LinearProbe(nn.Module):
-    def __init__(self, model, mlp, freeze, in_ch, out_ch, act = None):
+    def __init__(self, model, mlp, freeze, in_ch, out_ch, act=None):
         """
         Args:
             model: nn.Module
@@ -20,14 +21,14 @@ class LinearProbe(nn.Module):
         self.clap_model.text_branch = None  # to save memory
         self.freeze = freeze
         if mlp:
-            self.lp_layer = MLPLayers(units = [in_ch, in_ch * 2, out_ch])
+            self.lp_layer = MLPLayers(units=[in_ch, in_ch * 2, out_ch])
         else:
             self.lp_layer = nn.Linear(in_ch, out_ch)
-        
+
         if self.freeze:
             for param in self.clap_model.parameters():
                 param.requires_grad = False
-        
+
         if act == 'None':
             self.act = None
         elif act == 'relu':
@@ -54,7 +55,8 @@ class LinearProbe(nn.Module):
         if self.freeze:
             self.clap_model.eval()
 
-        x = self.audio_projection(self.audio_branch(x, mixup_lambda=mix_lambda, device=device)["embedding"])
+        x = self.clap_model.audio_projection(
+            self.clap_model.audio_branch(x, mixup_lambda=mix_lambda, device=device)["embedding"])
         out = self.lp_layer(x)
         if self.act is not None:
             out = self.act(out)
