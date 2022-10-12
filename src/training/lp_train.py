@@ -15,6 +15,7 @@ except ImportError:
     wandb = None
 
 from open_clip import LPLoss, LPMetrics, lp_gather_features
+from open_clip.utils import do_mixup, get_mix_lambda
 from .distributed import is_master
 from .zero_shot import zero_shot_eval
 
@@ -79,6 +80,12 @@ def train_one_epoch(
 
         audio = batch # contains mel_spec, wavform, and longer list
         class_label = batch['class_label']
+        if args.mixup:
+            # https://github.com/RetroCirce/HTS-Audio-Transformer/blob/main/utils.py#L146
+            mix_lambda = torch.from_numpy(get_mix_lambda(0.5, len(audio["waveform"]))).to(device)
+            class_label = do_mixup(class_label, mix_lambda)
+        else:
+            mix_lambda = None
 
         # audio = audio.to(device=device, non_blocking=True)
         class_label = class_label.to(device=device, non_blocking=True)
@@ -91,7 +98,7 @@ def train_one_epoch(
             optimizer.zero_grad()
 
         with autocast():
-            pred = model(audio, device=device)
+            pred = model(audio, mix_lambda=mix_lambda, device=device)
             total_loss = loss(pred, class_label)
 
         if isinstance(optimizer, dict):
@@ -151,7 +158,7 @@ def train_one_epoch(
                     f"Loss: {loss_m.val:#.5g} ({loss_m.avg:#.4g}) "
                     f"Data (t): {data_time_m.avg:.3f} "
                     f"Batch (t): {batch_time_m.avg:.3f} "
-                    f"LR: {[o_.param_groups[0]['lr'] for o_ in optimizer.values()]}" 
+                    f"LR: {[o_.param_groups[0]['lr'] for o_ in optimizer.values()]}"
                 )
                 log_data = {
                     "loss": loss_m.val,
@@ -284,5 +291,3 @@ def evaluate(model, data, epoch, args, tb_writer=None, extra_suffix=""):
         return metrics
     else:
         return metrics
-
-

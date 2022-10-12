@@ -537,6 +537,13 @@ def parse_args():
         help="Type is among ['channel_map', 'daf_1d','aff_1d','iaff_1d','daf_2d','aff_2d','iaff_2d']",
     )
 
+    parser.add_argument(
+        "--mixup",
+        default=False,
+        action="store_true",
+        help="Enable mixup in finetuning training.",
+    )
+
     args = parser.parse_args()
 
     # If some params are not passed, we use the default values based on model name.
