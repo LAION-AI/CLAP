@@ -740,6 +740,8 @@ def evaluate_clotho_audiocaps(
                 ranking = torch.argsort(logit, descending=True)  # [5*num_samples]
                 # ranking: the index of first match, second match, ...
                 ground_truth = torch.arange(d * 5, d * 5 + 5)[None]
+                logging.info(torch.stack([ranking]*5).shape)
+                logging.info(ground_truth.view(-1, 1).shape)
                 all_pred = torch.where(torch.stack([ranking]*5) == ground_truth.view(-1, 1))[1]
                 min_pred = torch.min(all_pred)
                 pred_audio_all.append(min_pred.detach().cpu().numpy())
