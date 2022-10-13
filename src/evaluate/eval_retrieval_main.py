@@ -184,7 +184,7 @@ if __name__ == '__main__':
     class_label_path = args.class_label_path
     args.class_label_path = None
     from training.data import load_class_label
-    args.class_index_dict = load_class_label(args.class_label_path)
+    args.class_index_dict = load_class_label(class_label_path)
 
 
     data = get_data(args, model_cfg=model_cfg)  # (yusong): hack: no model_cfg needed to get data
