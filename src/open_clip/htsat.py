@@ -864,7 +864,11 @@ class HTSAT_Swin_Transformer(nn.Module):
         return x
 
     def forward(self, x: torch.Tensor, mixup_lambda = None, infer_mode = False, device=None):# out_feat_keys: List[str] = None):
-        
+
+        if self.enable_fusion and x["longer"].sum() == 0:
+            # if no audio is longer than 10s, then randomly select one audio to be longer
+            x["longer"][torch.randint(0, x["longer"].shape[0], (1,))] = True
+
         if not self.enable_fusion:
             x = x["waveform"].to(device=device, non_blocking=True)
             x = self.spectrogram_extractor(x)   # (batch_size, 1, time_steps, freq_bins)

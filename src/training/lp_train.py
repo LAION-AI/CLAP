@@ -70,8 +70,6 @@ def train_one_epoch(
     end = time.time()
 
     for i, batch in enumerate(dataloader):
-        logging.info(f"batch {i} of {num_batches_per_epoch}, longer sum: {batch['longer'].sum()}") # TODO: for debug
-
         step = num_batches_per_epoch * epoch + i
 
         if isinstance(scheduler, dict):
@@ -85,7 +83,6 @@ def train_one_epoch(
         # audio = audio.to(device=device, non_blocking=True)
         class_label = class_label.to(device=device, non_blocking=True)
 
-        logging.info(f"batch {i} of {num_batches_per_epoch} before mixup")  # TODO: for debug
         if args.mixup:
             # https://github.com/RetroCirce/HTS-Audio-Transformer/blob/main/utils.py#L146
             mix_lambda = torch.from_numpy(get_mix_lambda(0.5, len(audio["waveform"]))).to(device)
@@ -103,8 +100,6 @@ def train_one_epoch(
         with autocast():
             pred = model(audio, mix_lambda=mix_lambda, device=device)
             total_loss = loss(pred, class_label)
-
-        logging.info(f"batch {i} of {num_batches_per_epoch} after loss")  # TODO: for debug
 
         if isinstance(optimizer, dict):
             if scaler is not None:
@@ -136,8 +131,6 @@ def train_one_epoch(
             else:
                 total_loss.backward()
                 optimizer.step()
-
-        logging.info(f"batch {i} of {num_batches_per_epoch} after optimizer step")  # TODO: for debug
 
         # Note: we clamp to 4.6052 = ln(100), as in the original paper.
         with torch.no_grad():
@@ -201,8 +194,6 @@ def train_one_epoch(
             batch_time_m.reset()
             data_time_m.reset()
     # end for
-        logging.info(f"batch {i} of {num_batches_per_epoch} end")  # TODO: for debug
-
 
 def evaluate(model, data, epoch, args, tb_writer=None, extra_suffix=""):
     metrics = {}
