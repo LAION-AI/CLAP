@@ -493,6 +493,7 @@ def preprocess(
 
     with torch.no_grad():
         if len(audio_data) > max_len:
+            logging.info(f"Audio data is longer than max_len, {len(audio_data)}") # TODO: remove
             if data_truncating == "rand_trunc":
                 longer = torch.tensor([True])
             elif data_truncating == "fusion":
