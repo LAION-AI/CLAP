@@ -491,7 +491,6 @@ def preprocess(
     #         audio_data, orig_sr = torchaudio.load(fname)
     #         audio_data = audio_data[0, :].float()
 
-    audio_data = audio_data[:48000]
     with torch.no_grad():
         if len(audio_data) > max_len:
             if data_truncating == "rand_trunc":
@@ -508,7 +507,7 @@ def preprocess(
                     # In this case, we just use the whole audio.
                     mel_fusion = torch.stack([mel, mel, mel, mel], dim=0)
                     sample["mel_fusion"] = mel_fusion
-                    longer = torch.tensor([False])
+                    longer = torch.tensor([True]) # TODO
                 else:
                     ranges = np.array_split(list(range(0, total_frames-chunk_frames+1)), 3)
                     # print('total_frames-chunk_frames:', total_frames-chunk_frames,
@@ -578,7 +577,7 @@ def preprocess(
                 mel = get_mel(audio_data, audio_cfg)
                 mel_fusion = torch.stack([mel, mel, mel, mel], dim=0)
                 sample["mel_fusion"] = mel_fusion
-            longer = torch.tensor([False])
+            longer = torch.tensor([True]) # TODO
 
     sample["longer"] = longer
 
