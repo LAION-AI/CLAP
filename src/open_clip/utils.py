@@ -23,6 +23,7 @@ dataset_split = {
     "MACS": ["train", "test"],
     "freesound": ["train", "test"],
     "FSD50K": ["train", "test"],
+    "fsd50k_class_label": ["train", "test"],
     "esc50": ["train", "test"],
     "audiostock": ["train", "test"],
     "freesound_no_overlap_noesc50": ["train", "test"],
