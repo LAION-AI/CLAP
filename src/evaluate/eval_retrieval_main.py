@@ -31,17 +31,6 @@ def find_params_value(file, key):
     return None
 
 
-def make_prompt(tags):
-    assert isinstance(tags, list)
-    if len(tags) > 1:
-        text = "The sounds of " + ", ".join(tags[:-1]) + " and " + tags[-1]
-    elif len(tags) == 1:
-        text = "The sound of " + tags[0]
-    else:
-        raise ValueError("No class label found")
-    return text
-
-
 def evaluate_zeroshot(model, data, start_epoch, args, writer):
     dataloader = data["val"].dataloader
     metrics = {}
@@ -63,7 +52,7 @@ def evaluate_zeroshot(model, data, start_epoch, args, writer):
         metrics["num_samples"] = all_audio_features.shape[0]
 
         # get text features
-        all_texts = [make_prompt(t) for t in args.class_index_dict.keys()]
+        all_texts = ["The sound of " + t for t in args.class_index_dict.keys()]
         all_text_features = model.encode_text(tokenize(all_texts))
         all_text_features = F.normalize(all_text_features, dim=-1).detach().cpu()
 
