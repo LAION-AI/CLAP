@@ -256,4 +256,5 @@ if __name__ == '__main__':
         if args.datasetnames == ['esc50'] or args.datasetnames == ['VGGSound']:
             # use the same dataset for all models
             evaluate_zeroshot(model, data, start_epoch, args, writer)
-        evaluate(model, data, start_epoch, args, writer)
+        else:
+            evaluate(model, data, start_epoch, args, writer)
