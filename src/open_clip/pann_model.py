@@ -243,7 +243,7 @@ class Cnn14(nn.Module):
                 # local processing
                 if len(longer_list_idx) > 0:
                     import logging # TODO: remove
-                    logging.info("in longer!!!")# TODO: remove
+                    logging.info(f"in longer!!! {longer_list_idx}, {input['longer'].sum()}")  # TODO: remove
                     fusion_x_local = x[longer_list_idx,1:,:,:].clone().contiguous()
                     FB,FC,FT,FF = fusion_x_local.size()
                     fusion_x_local = fusion_x_local.view(FB * FC, FT, FF)
