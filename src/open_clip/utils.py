@@ -27,6 +27,7 @@ dataset_split = {
     "audiostock": ["train", "test"],
     "freesound_no_overlap_noesc50": ["train", "test"],
     "epidemic_sound_effects": ["train", "test"],
+    "VGGSound": ["train", "test"],
 }
 
 
