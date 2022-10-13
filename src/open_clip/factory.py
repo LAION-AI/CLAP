@@ -157,6 +157,17 @@ def create_model(
                     f"Pretrained weights ({pretrained}) not found for model {amodel_name}."
                 )
 
+# audio_ckpt = torch.load(pretrained_audio, map_location='cpu')
+# audio_ckpt = audio_ckpt['state_dict']
+# save_ckpt = {}
+# keys = list(audio_ckpt.keys())
+# for key in keys:
+#     if 'audio_branch' in key:
+#         v = audio_ckpt.pop(key)
+#         save_key = key.replace('module.clap_model.', '')
+#         save_ckpt[save_key] = v
+# torch.save(save_ckpt, 'htsat_epoch_47_processed.pt')
+
         if pretrained_audio:
             if amodel_name.startswith('PANN'):
                 if 'map' in pretrained_audio:
