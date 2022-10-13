@@ -609,6 +609,7 @@ def preprocess(
     sample["audio_name"] = sample["__key__"].split("/")[-1] + "." + audio_ext
     sample["text_name"] = sample["__key__"].split("/")[-1] + "." + text_ext
     sample["audio_orig_sr"] = orig_sr
+    sample["tag"] = json_dict_raw["tag"]
     return sample
 
 

@@ -46,7 +46,9 @@ def evaluate_zeroshot(model, data, start_epoch, args, writer):
             audio_features = model(audios, None, device)
             audio_features = F.normalize(audio_features, dim=-1)
             all_audio_features.append(audio_features.detach().cpu())
-            all_class_labels.append(torch.argmax(batch["class_label"], 1).long())
+            tag = batch["tag"]
+            all_class_labels = [', '.join(t) if len(t) > 0 else t[0] for t in tag]
+            all_class_labels.append([args.class_index_dict[l] for l in all_class_labels])
         all_audio_features = torch.cat(all_audio_features, dim=0)
         all_class_labels = torch.cat(all_class_labels, dim=0)
         metrics["num_samples"] = all_audio_features.shape[0]
