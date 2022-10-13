@@ -170,8 +170,18 @@ if __name__ == '__main__':
             proportion=1,
             dataset_path=args.datasetpath,
         )
+    model, model_cfg = create_model(
+        amodel,
+        tmodel,
+        pretrained,
+        precision='fp32',
+        device=device,
+        jit=False,
+        force_quick_gelu=False,
+        openai_model_cache_dir=os.path.expanduser(args.openai_model_cache_dir)
+    )  # a hack to get model_cfg
 
-    data = get_data(args, model_cfg=None)  # (yusong): hack: no model_cfg needed to get data
+    data = get_data(args, model_cfg=model_cfg)  # (yusong): hack: no model_cfg needed to get data
 
     writer = None  # if use tensorboard, initalize writer here
 
