@@ -46,10 +46,7 @@ def evaluate_zeroshot(model, data, start_epoch, args, writer):
             audio_features = model(audios, None, device)
             audio_features = F.normalize(audio_features, dim=-1)
             all_audio_features.append(audio_features.detach().cpu())
-            tag = batch["tag"]
-            # (yusong) a hack for bad VGGSound dataset
-            all_class_labels = [', '.join(t) if len(t) > 0 else t[0] for t in tag]
-            all_class_labels.append([args.class_index_dict[label] for label in all_class_labels])
+            all_class_labels.append(torch.argmax(batch["class_label"], 1).long())
         all_audio_features = torch.cat(all_audio_features, dim=0)
         all_class_labels = torch.cat(all_class_labels, dim=0)
         metrics["num_samples"] = all_audio_features.shape[0]
@@ -180,14 +177,7 @@ if __name__ == '__main__':
         openai_model_cache_dir=os.path.expanduser(args.openai_model_cache_dir)
     )  # a hack to get model_cfg
 
-    # (yusong) a hack for avoiding bad VGGSound Dataset
-    class_label_path = args.class_label_path
-    args.class_label_path = None
-
     data = get_data(args, model_cfg=model_cfg)  # (yusong): hack: no model_cfg needed to get data
-
-    from training.data import load_class_label
-    args.class_index_dict = load_class_label(class_label_path)
 
     writer = None  # if use tensorboard, initalize writer here
 
