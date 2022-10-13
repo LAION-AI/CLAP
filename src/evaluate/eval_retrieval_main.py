@@ -53,7 +53,8 @@ def evaluate_zeroshot(model, data, start_epoch, args, writer):
 
         # get text features
         all_texts = ["The sound of " + t for t in args.class_index_dict.keys()]
-        all_text_features = model.encode_text(tokenize(all_texts))
+        all_texts = tokenize(all_texts)
+        all_text_features = model(None, all_texts, device)
         all_text_features = F.normalize(all_text_features, dim=-1).detach().cpu()
 
         # compute similarity
