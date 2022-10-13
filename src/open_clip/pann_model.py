@@ -277,7 +277,7 @@ class Cnn14(nn.Module):
             global_x = self.conv_block1(global_x, pool_size=(2, 2), pool_type='avg')
             if len(longer_list_idx) > 0:
                 import logging  # TODO: remove
-                logging.info("in longer!!!")  # TODO: remove
+                logging.info(f"in longer!!! {longer_list_idx}, {input['longer'].sum()}")  # TODO: remove
                 local_x = x[longer_list_idx,1:,:,:].contiguous()
                 TH = global_x.size(-2)
                 # local processing
