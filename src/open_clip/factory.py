@@ -158,8 +158,8 @@ def create_model(
                 )
 
         if pretrained_audio:
-            if amodel_name.startswith('Cnn14_mAP'):
-                if 'map' in pretrained_audio:  # official checkpoint
+            if amodel_name.startswith('PANN'):
+                if 'Cnn14_mAP' in pretrained_audio:  # official checkpoint
                     audio_ckpt = torch.load(pretrained_audio, map_location='cpu')
                     audio_ckpt = audio_ckpt['model']
                     keys = list(audio_ckpt.keys())
