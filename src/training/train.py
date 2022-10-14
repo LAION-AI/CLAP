@@ -741,8 +741,8 @@ def calculate_selection_performance_clotho_audiocaps(val_metrics_per_dataset):
     """
     selection_performance_all = []
     for n in val_metrics_per_dataset.keys():
-        selection_performance = val_metrics_per_dataset[n][f"{n}/audio_to_text_mAP@10"] + \
-                      val_metrics_per_dataset[n][f"{n}/text_to_audio_mAP@10"]
+        selection_performance = (val_metrics_per_dataset[n][f"{n}/audio_to_text_mAP@10"] +
+                                 val_metrics_per_dataset[n][f"{n}/text_to_audio_mAP@10"]) / 2
         selection_performance_all.append(selection_performance)
     return np.mean(selection_performance_all)
 
@@ -750,9 +750,9 @@ def calculate_selection_performance_clotho_audiocaps(val_metrics_per_dataset):
 def select_top_metric_clotho_audiocaps(metrics, val_metrics_per_dataset):
     # val_metrics_per_dataset: dict, key: dataset name, value: dict, key: metric name, value: metric value
     # metrics: dict, key: metric name, value: metric value
-    if not any(['-top' in k for k in metrics.keys()]):
+    if 'top-selection-performance' not in metrics.keys():
         selection_performance = calculate_selection_performance_clotho_audiocaps(val_metrics_per_dataset)
-        logging.info(metrics)
+        # TODO: write the if and else together
         metric_update = {}
         for n in val_metrics_per_dataset.keys():
             for k in val_metrics_per_dataset[n].keys():
