@@ -29,6 +29,7 @@ dataset_split = {
     "freesound_no_overlap_noesc50": ["train", "test"],
     "epidemic_sound_effects": ["train", "test"],
     "VGGSound": ["train", "test"],
+    "urbansound8k_class_label": ["train", "test"],
 }
 
 
