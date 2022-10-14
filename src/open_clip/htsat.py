@@ -871,8 +871,9 @@ class HTSAT_Swin_Transformer(nn.Module):
 
         if not self.enable_fusion:
             x = x["waveform"].to(device=device, non_blocking=True)
-            x = self.spectrogram_extractor(x)   # (batch_size, 1, time_steps, freq_bins)
-            x = self.logmel_extractor(x)    # (batch_size, 1, time_steps, mel_bins)
+            with torch.no_grad():
+                x = self.spectrogram_extractor(x)   # (batch_size, 1, time_steps, freq_bins)
+                x = self.logmel_extractor(x)    # (batch_size, 1, time_steps, mel_bins)
             x = x.transpose(1, 3)
             x = self.bn0(x)
             x = x.transpose(1, 3)
