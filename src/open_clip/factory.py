@@ -164,8 +164,10 @@ def create_model(
                     audio_ckpt = audio_ckpt['model']
                     keys = list(audio_ckpt.keys())
                     for key in keys:
-                        v = audio_ckpt.pop(key)
-                        audio_ckpt['audio_branch.' + key] = v
+                        if 'spectrogram_extractor' not in key or 'logmel_extractor' not in key:
+                            audio_ckpt.pop(key)
+                            v = audio_ckpt.pop(key)
+                            audio_ckpt['audio_branch.' + key] = v
                 else:
                     audio_ckpt = torch.load(pretrained_audio, map_location='cpu')
             elif amodel_name.startswith('HTSAT'):
