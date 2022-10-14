@@ -100,7 +100,7 @@ if __name__ == '__main__':
     args = parse_args()
 
     if os.path.isdir(args.pretrained):
-        log_dir = args.pretrained
+        log_dir = os.path.dirname(args.pretrained)
     else:
         log_dir = os.path.dirname(os.path.dirname(args.pretrained))
 
