@@ -284,20 +284,12 @@ def evaluate(model, data, epoch, args, tb_writer=None):
         if args.parallel_eval:
             # (yusong): just a hack here. Don't use parallel eval when evaluating only clotho and audiocaps.
             raise NotImplementedError("Parallel evaluation not supported for eval only Clotho and audiocaps.")
-        val_metrics_s = evaluate_clotho_audiocaps(model, data, epoch, args, autocast, device, tb_writer)
-        for m in val_metrics_s.values():
+        val_metrics_per_dataset = evaluate_clotho_audiocaps(model, data, epoch, args, autocast, device, tb_writer)
+        for m in val_metrics_per_dataset.values():
             metrics.update(m)
         if "epoch" not in metrics.keys():
             metrics.update({"epoch": epoch})
-    # elif val_dataset_names == ['audiocaps']:
-    #     if args.parallel_eval:
-    #         # (yusong): just a hack here. Don't use parallel eval when evaluating only clotho and audiocaps.
-    #         raise NotImplementedError("Parallel evaluation not supported for eval only Clotho and audiocaps.")
-    #     val_metrics_s = evaluate_audiocaps(model, data, epoch, args, autocast, device, tb_writer)
-    #     for m in val_metrics_s.values():
-    #         metrics.update(m)
-    #     if "epoch" not in metrics.keys():
-    #         metrics.update({"epoch": epoch})
+        metrics = select_top_metric_clotho_audiocaps(metrics, val_metrics_per_dataset)
     elif "val" in data and (
             args.val_frequency
             and ((epoch % args.val_frequency) == 0 or epoch == args.epochs)
@@ -450,7 +442,7 @@ def evaluate(model, data, epoch, args, tb_writer=None):
                         f"Eval Epoch: {epoch} [{num_samples} / {samples_per_val}]"
                     )
             if is_master(args):
-                val_metrics_s = {}
+                val_metrics_per_dataset = {}
                 for n in eval_info.keys():
                     if args.clap_mlploss:
                         metrics_single_dataset = get_metrics(
@@ -471,10 +463,10 @@ def evaluate(model, data, epoch, args, tb_writer=None):
                             logit_scale_a=logit_scale_a.cpu(),
                             mlp_loss=args.clap_mlploss
                         )
-                    val_metrics_s[n] = {
+                    val_metrics_per_dataset[n] = {
                         n + "/" + k: v for k, v in metrics_single_dataset.items()
                     }
-                    metrics.update(val_metrics_s[n])
+                    metrics.update(val_metrics_per_dataset[n])
                     if "epoch" not in metrics.keys():
                         metrics.update({"epoch": epoch})
     if is_master(args):
@@ -486,7 +478,7 @@ def evaluate(model, data, epoch, args, tb_writer=None):
             + "\n".join(
                 [
                     "\t".join([f"{k}: {round(v, 4):.4f}" for k, v in m.items()])
-                    for m in val_metrics_s.values()
+                    for m in val_metrics_per_dataset.values()
                 ]
             )
         )
@@ -633,9 +625,6 @@ def evaluate_clotho_audiocaps(
                 audio_features = F.normalize(audio_features, dim=-1)
                 text_features = F.normalize(text_features, dim=-1)
 
-                # logging.info(f"audio_features shape: {audio_features.shape}, "
-                #              f"text_features shape: {text_features.shape}")
-
                 all_names = list(set(["-".join(b.split("/")[-3:-1]) for b in batch['__url__']]))
                 for n in all_names:
                     idx = np.where(
@@ -668,16 +657,8 @@ def evaluate_clotho_audiocaps(
             audio_features = torch.cat(eval_info[n]["all_audio_features"], dim=0)
             text_features = torch.cat(eval_info[n]["all_text_features"], dim=0)
 
-            # logging.info(f"dataset {n}, audio_features shape: {audio_features.shape},"
-            #                 f" text_features shape: {text_features.shape}")
             logits_per_audio = (logit_scale_a * audio_features @ text_features.t()).detach().cpu()
             logits_per_text = logits_per_audio.t().detach().cpu()
-
-            # num_samples = audio_features.shape[0]
-            # logging.info(f"logits_per_audio: {logits_per_audio[15,:10]}, "
-            #              f"{logits_per_audio.reshape(num_samples, 5, num_samples)[3, 0, :10]}")
-            # logging.info(f"logits_per_text: {logits_per_text[15,:10]}, "
-            #              f"{logits_per_text.reshape(5, num_samples, num_samples)[0, 3, :10]}")
 
             # logits_per_audio shape: [num_samples, num_samples*5]
             # logits_per_text shape: [num_samples*5, num_samples]
@@ -723,9 +704,6 @@ def evaluate_clotho_audiocaps(
                 metrics[f"text_to_audio_R@{k}"] = np.mean(pred_text_concat < k)
             # map@10
             metrics[f"text_to_audio_mAP@10"] = np.mean(np.where(pred_text_concat < 10, 1 / (pred_text_concat + 1), 0.0))
-            pred_text_min = np.min(np.stack(pred_text, axis=0), axis=0)
-            for k in [1, 5, 10]:
-                metrics[f"text_to_audio_R@{k}_best"] = np.mean(pred_text_min < k)
 
             # audio to text: take the best result
             # for audio to text map 10, sort and assign descending ground truth.
@@ -747,26 +725,43 @@ def evaluate_clotho_audiocaps(
                 # /5 because we have 5 text, so it means for the text rank >=10 we count as 0.
                 map_single = np.sum((np.arange(1, len(all_pred_filter) + 1) / (all_pred_filter + 1))) / 5
                 map_all.append(map_single)
-            metrics[f"audio_to_text_mAP@10_best"] = np.mean(map_all)
+            metrics[f"audio_to_text_mAP@10"] = np.mean(map_all)
             for k in [1, 5, 10]:
-                metrics[f"audio_to_text_R@{k}_best"] = np.mean(np.array(pred_audio_all) < k)
-
-            pred_audio = []
-            for d in range(5):
-                logit = logits_per_audio.reshape(num_samples, num_samples, 5)[:, :, d]
-                ground_truth = torch.arange(len(logit)).view(-1, 1)
-                ranking = torch.argsort(logit, descending=True)
-                preds = torch.where(ranking == ground_truth)[1]
-                pred_audio.append(preds.detach().cpu().numpy())
-            # mean and median rank take the mean result
-            pred_audio_concat = np.concatenate(pred_audio, axis=0)
-            metrics[f"audio_to_text_mean_rank"] = pred_audio_concat.mean() + 1
-            metrics[f"audio_to_text_median_rank"] = np.floor(np.median(pred_audio_concat)) + 1
-            metrics[f"audio_to_text_mAP@10"] = np.mean(np.where(pred_audio_concat < 10, 1 / (pred_audio_concat + 1), 0.0))
-            for k in [1, 5, 10]:
-                metrics[f"audio_to_text_R@{k}"] = np.mean(pred_audio_concat < k)
+                metrics[f"audio_to_text_R@{k}"] = np.mean(np.array(pred_audio_all) < k)
 
             val_metrics_all[n] = {
                 n + "/" + k: v for k, v in metrics.items()
             }
     return val_metrics_all
+
+
+def calculate_selection_performance_clotho_audiocaps(val_metrics_per_dataset):
+    """
+    Calculate performance for Clotho+AudioCaps for model selection.
+    """
+    selection_performance_all = []
+    for n in val_metrics_per_dataset.keys():
+        selection_performance = val_metrics_per_dataset[n]["audio_to_text_mAP@10"] + \
+                      val_metrics_per_dataset[n]["text_to_audio_mAP@10"]
+        selection_performance_all.append(selection_performance)
+    return np.mean(selection_performance_all)
+
+
+def select_top_metric_clotho_audiocaps(metrics, val_metrics_per_dataset):
+    # val_metrics_per_dataset: dict, key: dataset name, value: dict, key: metric name, value: metric value
+    # metrics: dict, key: metric name, value: metric value
+    if not any(['-top' in k for k in metrics.keys()]):
+        selection_performance = calculate_selection_performance_clotho_audiocaps(val_metrics_per_dataset)
+        for k in metrics.keys():
+            metrics[k+'-top'] = metrics[k]
+        metrics['top-selection-performance'] = selection_performance
+        metrics['top-selection-epoch'] = metrics['epoch']
+    else:
+        selection_performance_new = calculate_selection_performance_clotho_audiocaps(val_metrics_per_dataset)
+        selection_performance_old = metrics['top-selection-performance']
+        if selection_performance_new > selection_performance_old:
+            for k in metrics.keys():
+                metrics[k+'-top'] = metrics[k]
+            metrics['top-selection-performance'] = selection_performance_new
+            metrics['top-selection-epoch'] = metrics['epoch']
+    return metrics
