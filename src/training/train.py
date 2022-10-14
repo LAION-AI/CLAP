@@ -752,6 +752,7 @@ def select_top_metric_clotho_audiocaps(metrics, val_metrics_per_dataset):
     # metrics: dict, key: metric name, value: metric value
     if not any(['-top' in k for k in metrics.keys()]):
         selection_performance = calculate_selection_performance_clotho_audiocaps(val_metrics_per_dataset)
+        logging.info(metrics)
         metric_update = {}
         for k in metrics.keys():
             metric_update[k.split('/')[0]+'-top'+'/'+k.split('/')[1]] = metrics[k]
