@@ -750,7 +750,7 @@ def select_top_metric_clotho_audiocaps(metrics, val_metrics_per_dataset, args):
     # val_metrics_per_dataset: dict, key: dataset name, value: dict, key: metric name, value: metric value
     # metrics: dict, key: metric name, value: metric value
     # Hack: use args to save the top performance
-    if hasattr(args, "top_selection_performance"):
+    if not hasattr(args, "top_selection_performance"):
         selection_performance = calculate_selection_performance_clotho_audiocaps(val_metrics_per_dataset)
         # TODO: write the if and else together
         metric_update = {}
