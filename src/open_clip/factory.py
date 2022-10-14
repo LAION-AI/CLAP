@@ -164,6 +164,7 @@ def create_model(
                     audio_ckpt = audio_ckpt['model']
                     keys = list(audio_ckpt.keys())
                     for key in keys:
+                        logging.info(key)
                         if 'spectrogram_extractor' not in key and 'logmel_extractor' not in key:
                             v = audio_ckpt.pop(key)
                             audio_ckpt['audio_branch.' + key] = v
