@@ -159,7 +159,7 @@ def create_model(
 
         if pretrained_audio:
             if amodel_name.startswith('PANN'):
-                if 'map' in pretrained_audio:
+                if 'map' in pretrained_audio:  # official checkpoint
                     audio_ckpt = torch.load(pretrained_audio, map_location='cpu')
                     audio_ckpt = audio_ckpt['model']
                     keys = list(audio_ckpt.keys())
@@ -169,7 +169,7 @@ def create_model(
                 else:
                     audio_ckpt = torch.load(pretrained_audio, map_location='cpu')
             elif amodel_name.startswith('HTSAT'):
-                if 'HTSAT_AudioSet_Saved' in pretrained_audio:
+                if 'HTSAT_AudioSet_Saved' in pretrained_audio:  # official checkpoint
                     audio_ckpt = torch.load(pretrained_audio, map_location='cpu')
                     audio_ckpt = audio_ckpt['state_dict']
                     keys = list(audio_ckpt.keys())
