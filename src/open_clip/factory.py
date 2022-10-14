@@ -165,7 +165,6 @@ def create_model(
                     keys = list(audio_ckpt.keys())
                     for key in keys:
                         if 'spectrogram_extractor' not in key or 'logmel_extractor' not in key:
-                            audio_ckpt.pop(key)
                             v = audio_ckpt.pop(key)
                             audio_ckpt['audio_branch.' + key] = v
                 else:
@@ -176,7 +175,8 @@ def create_model(
                     audio_ckpt = audio_ckpt['state_dict']
                     keys = list(audio_ckpt.keys())
                     for key in keys:
-                        if key.startswith('sed_model'):
+                        if key.startswith('sed_model') and ('spectrogram_extractor' not in key
+                                                            or 'logmel_extractor' not in key):
                             v = audio_ckpt.pop(key)
                             audio_ckpt['audio_branch.' + key[10:]] = v
                 else:
