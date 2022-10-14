@@ -30,6 +30,8 @@ dataset_split = {
     "epidemic_sound_effects": ["train", "test"],
     "VGGSound": ["train", "test"],
     "urbansound8k_class_label": ["train", "test"],
+    "audioset_t5": ["balanced_train", "unbalanced_train", "eval"],
+    "epidemic_sound_effects_t5": ["train", "test"],
 }
 
 
