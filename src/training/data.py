@@ -588,7 +588,11 @@ def preprocess(
         json_dict_raw = json.loads(sample[text_ext].decode("utf-8"))
     except:
         print("sample[__url__]:", sample["__url__"])
-    texts = json_dict_raw["text"]
+    # (yusong) hack: we can do this when the t5 augmented dataset is separate from the original dataset
+    if "text_augment_all" in json_dict_raw.keys():
+        texts = json_dict_raw["text_augment_all"]
+    else:
+        texts = json_dict_raw["text"]
     sample["full_text"] = texts
 
     if isinstance(texts, list) and isinstance(texts[0], str) and len(texts) > 1:
