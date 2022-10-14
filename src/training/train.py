@@ -740,7 +740,6 @@ def calculate_selection_performance_clotho_audiocaps(val_metrics_per_dataset):
     Calculate performance for Clotho+AudioCaps for model selection.
     """
     selection_performance_all = []
-    # logging.info(val_metrics_per_dataset)  # TODO: debug
     for n in val_metrics_per_dataset.keys():
         selection_performance = val_metrics_per_dataset[n][f"{n}/audio_to_text_mAP@10"] + \
                       val_metrics_per_dataset[n][f"{n}/text_to_audio_mAP@10"]
@@ -755,7 +754,7 @@ def select_top_metric_clotho_audiocaps(metrics, val_metrics_per_dataset):
         selection_performance = calculate_selection_performance_clotho_audiocaps(val_metrics_per_dataset)
         metric_update = {}
         for k in metrics.keys():
-            metric_update[k+'-top'] = metrics[k]
+            metric_update[k.split('/')[0]+'-top'+'/'+k.split('/')[1]] = metrics[k]
         metrics.update(metric_update)
         metrics['top-selection-performance'] = selection_performance
         metrics['top-selection-epoch'] = metrics['epoch']
@@ -765,7 +764,7 @@ def select_top_metric_clotho_audiocaps(metrics, val_metrics_per_dataset):
         if selection_performance_new > selection_performance_old:
             metric_update = {}
             for k in metrics.keys():
-                metric_update[k + '-top'] = metrics[k]
+                metric_update[k.split('/')[0]+'-top'+'/'+k.split('/')[1]] = metrics[k]
             metrics.update(metric_update)
             metrics['top-selection-performance'] = selection_performance_new
             metrics['top-selection-epoch'] = metrics['epoch']
