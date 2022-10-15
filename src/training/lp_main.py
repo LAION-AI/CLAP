@@ -173,10 +173,13 @@ def config_lp_optimizer(model, data, args):
         )
         include = lambda n, p: not exclude(n, p)
 
+        # (yusong): we do not split the learning rate anymore
+        # p for n, p in named_parameters if in_clap(n,p) and exclude(n, p) and p.requires_grad
         gain_or_bias_params = [
-            p for n, p in named_parameters if in_clap(n,p) and exclude(n, p) and p.requires_grad
+            p for n, p in named_parameters if exclude(n, p) and p.requires_grad
         ]
-        rest_params = [p for n, p in named_parameters if in_clap(n,p) and include(n, p) and p.requires_grad]
+        # rest_params = [p for n, p in named_parameters if in_clap(n,p) and include(n, p) and p.requires_grad]
+        rest_params = [p for n, p in named_parameters if include(n, p) and p.requires_grad]
 
         if args.train_data is None:
             optimizer = None
@@ -286,10 +289,11 @@ def config_lp_optimizer(model, data, args):
                     hvd.broadcast_optimizer_state(optimizer["clap"], root_rank=0)
 
     # linear probe optimizer
-    lp_params = [p for n,p in named_parameters if (not in_clap(n,p)) and p.requires_grad]
-    lp_optim = get_optimizer(lp_params, lr=args.lp_lr, betas=(args.beta1, args.beta2), eps=args.eps, momentum=0.9,
-                             optimizer_name=args.optimizer)
-    optimizer["lp"] = lp_optim
+    else:
+        lp_params = [p for n, p in named_parameters if (not in_clap(n, p)) and p.requires_grad]
+        lp_optim = get_optimizer(lp_params, lr=args.lp_lr, betas=(args.beta1, args.beta2), eps=args.eps, momentum=0.9,
+                                 optimizer_name=args.optimizer)
+        optimizer["lp"] = lp_optim
 
     return optimizer, scheduler, text_freeze_parameters
 
