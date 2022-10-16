@@ -543,6 +543,12 @@ def parse_args():
         action="store_true",
         help="Enable mixup in finetuning training.",
     )
+    parser.add_argument(
+        "--text-augment-selection",
+        type=str,
+        default=None,
+        help="For selecting levels of augmented text. Type is among ['all', 'augment_only', 'none']",
+    )
 
     args = parser.parse_args()
 

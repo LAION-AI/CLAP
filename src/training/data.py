@@ -98,6 +98,11 @@ def int16_to_float32(x):
     return (x / 32767.0).astype(np.float32)
 
 
+def float32_to_int16(x):
+    x = np.clip(x, a_min=-1., a_max=1.)
+    return (x * 32767.).astype(np.int16)
+
+
 # For Toy Dataset
 class ToyDataset(Dataset):
     def __init__(self, index_path, ipc, config, eval_mode=False):
@@ -470,12 +475,16 @@ def preprocess(
     class_index_dict=None,
     data_filling="pad",
     data_truncating="rand_trunc",
+    text_augment_selection=None,
 ):
     """
     Preprocess a single sample for wdsdataloader.
     """
     audio_data, orig_sr = sf.read(io.BytesIO(sample[audio_ext]))
     audio_data = torch.tensor(audio_data).float()
+
+    audio_data = int16_to_float32(float32_to_int16(audio_data))
+
     # TODO: (yusong) to be include in the future
     # # if torchaudio not installed, use soundfile to load audio
     # if torchaudio is None:
@@ -588,11 +597,24 @@ def preprocess(
         json_dict_raw = json.loads(sample[text_ext].decode("utf-8"))
     except:
         print("sample[__url__]:", sample["__url__"])
-    # (yusong) hack: we can do this when the t5 augmented dataset is separate from the original dataset
-    if "text_augment_all" in json_dict_raw.keys():
-        texts = json_dict_raw["text_augment_all"]
-    else:
+
+    # For selecting augmented text from dataset
+    if text_augment_selection is None or text_augment_selection == "none":
         texts = json_dict_raw["text"]
+    elif text_augment_selection == "all":
+        if "text_augment_all" in json_dict_raw.keys():
+            texts = json_dict_raw["text_augment_all"]
+        else:
+            texts = json_dict_raw["text"]
+    elif text_augment_selection == "augment_only":
+        if "text_augment_all" in json_dict_raw.keys():
+            texts = json_dict_raw["text_augment_all"][-1]
+        else:
+            texts = json_dict_raw["text"]
+    else:
+        raise NotImplementedError(
+            f"text_augment_selection {text_augment_selection} not implemented"
+        )
     sample["full_text"] = texts
 
     if isinstance(texts, list) and isinstance(texts[0], str) and len(texts) > 1:
@@ -729,6 +751,7 @@ def get_wds_dataset(
                 class_index_dict=copy.deepcopy(args.class_index_dict),
                 data_filling=args.data_filling,
                 data_truncating=args.data_truncating,
+                text_augment_selection=args.text_augment_selection,
             )
         ),
     )
