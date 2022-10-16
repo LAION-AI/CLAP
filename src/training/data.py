@@ -481,9 +481,8 @@ def preprocess(
     Preprocess a single sample for wdsdataloader.
     """
     audio_data, orig_sr = sf.read(io.BytesIO(sample[audio_ext]))
-    audio_data = torch.tensor(audio_data).float()
-
     audio_data = int16_to_float32(float32_to_int16(audio_data))
+    audio_data = torch.tensor(audio_data).float()
 
     # TODO: (yusong) to be include in the future
     # # if torchaudio not installed, use soundfile to load audio
