@@ -4,7 +4,7 @@
 # Some layers designed on the model
 # below codes are based and referred from https://github.com/microsoft/Swin-Transformer
 # Swin Transformer for Computer Vision: https://arxiv.org/pdf/2103.14030.pdf
-
+import logging
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -868,8 +868,10 @@ class HTSAT_Swin_Transformer(nn.Module):
         if self.enable_fusion and x["longer"].sum() == 0:
             # if no audio is longer than 10s, then randomly select one audio to be longer
             x["longer"][torch.randint(0, x["longer"].shape[0], (1,))] = True
+            logging.info('Entering 1#')
 
         if not self.enable_fusion:
+            logging.info('Entering 2#')
             x = x["waveform"].to(device=device, non_blocking=True)
             x = self.spectrogram_extractor(x)   # (batch_size, 1, time_steps, freq_bins)
             x = self.logmel_extractor(x)    # (batch_size, 1, time_steps, mel_bins)
@@ -885,6 +887,7 @@ class HTSAT_Swin_Transformer(nn.Module):
             x = self.reshape_wav2img(x)
             output_dict = self.forward_features(x)
         else:
+            logging.info('Entering 3#')
             longer_list = x["longer"].to(device=device, non_blocking=True)
             x = x["mel_fusion"].to(device=device, non_blocking=True)
             x = x.transpose(1, 3)
@@ -914,13 +917,17 @@ class HTSAT_Swin_Transformer(nn.Module):
                     x = new_x
 
             elif self.fusion_type in ['daf_2d','aff_2d','iaff_2d','channel_map']:
+                logging.info('Entering 4#')
                 x = x # no change
 
             if self.training:
+                logging.info('Entering 5#')
                 x = self.spec_augmenter(x)
             if self.training and mixup_lambda is not None:
+                logging.info('Entering 6#')
                 x = do_mixup(x, mixup_lambda)
 
+            logging.info('Entering 7#')
             x = self.reshape_wav2img(x)
             output_dict = self.forward_features(x, longer_idx = longer_list_idx)
        
