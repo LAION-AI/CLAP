@@ -3,7 +3,7 @@
 # Some layers are re-designed for CLAP
 import os
 os.environ['NUMBA_CACHE_DIR'] = '/tmp/'
-
+import logging
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -227,6 +227,7 @@ class Cnn14(nn.Module):
         if self.enable_fusion and input["longer"].sum() == 0:
             # if no audio is longer than 10s, then randomly select one audio to be longer
             input["longer"][torch.randint(0, input["longer"].shape[0], (1,))] = True
+            logging.info('Entering 1#')
 
         if not self.enable_fusion:
             x = self.spectrogram_extractor(input['waveform'].to(device=device, non_blocking=True))   # (batch_size, 1, time_steps, freq_bins)
@@ -235,7 +236,9 @@ class Cnn14(nn.Module):
             x = x.transpose(1, 3)
             x = self.bn0(x)
             x = x.transpose(1, 3)
+            logging.info('Entering 2#')
         else:
+            logging.info('Entering 3#')
             longer_list = input["longer"].to(device=device, non_blocking=True)
             x = input["mel_fusion"].to(device=device, non_blocking=True)
             longer_list_idx = torch.where(longer_list)[0]
@@ -270,8 +273,10 @@ class Cnn14(nn.Module):
             x = self.spec_augmenter(x)
         # Mixup on spectrogram
         if self.training and mixup_lambda is not None:
+            logging.info('Entering 4#')
             x = do_mixup(x, mixup_lambda)
         if (self.enable_fusion) and (self.fusion_type in ['daf_2d','aff_2d','iaff_2d']):
+            logging.info('Entering 5#')
             global_x = x[:,0:1,:,:]
 
              # global processing
@@ -295,8 +300,10 @@ class Cnn14(nn.Module):
                 global_x[longer_list_idx] = self.fusion_model(global_x[longer_list_idx],local_x)
             x = global_x
         else:
+            logging.info('Entering 6#')
             x = self.conv_block1(x, pool_size=(2, 2), pool_type='avg')
 
+        logging.info('Entering 7#')
         x = F.dropout(x, p=0.2, training=self.training)
         x = self.conv_block2(x, pool_size=(2, 2), pool_type='avg')
         x = F.dropout(x, p=0.2, training=self.training)
