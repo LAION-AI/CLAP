@@ -607,7 +607,10 @@ def preprocess(
             texts = json_dict_raw["text"]
     elif text_augment_selection == "augment_only":
         if "text_augment_all" in json_dict_raw.keys():
-            texts = json_dict_raw["text_augment_all"][-1]
+            if json_dict_raw["text_augment_t5"] is None:
+                texts = json_dict_raw["text"]
+            else:
+                texts = json_dict_raw["text_augment_t5"]
         else:
             texts = json_dict_raw["text"]
     else:
