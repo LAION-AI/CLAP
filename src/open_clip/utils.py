@@ -33,6 +33,8 @@ dataset_split = {
     "audioset_t5": ["balanced_train", "unbalanced_train", "eval"],
     "epidemic_sound_effects_t5": ["train", "test"],
     "WavText5K": ["train", "test"],
+    "esc50_no_overlap": ["train", "test"],
+    "usd8k_no_overlap": ["train", "test"],
 }
 
 
