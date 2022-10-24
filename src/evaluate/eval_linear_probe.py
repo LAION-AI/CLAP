@@ -305,7 +305,9 @@ def lp_main(args, device, writer, pretrain_epoch, idx):
         jit=args.torchscript,
         force_quick_gelu=args.force_quick_gelu,
         openai_model_cache_dir=os.path.expanduser(args.openai_model_cache_dir),
-        skip_params=False
+        skip_params=False,
+        enable_fusion=args.enable_fusion,
+        fusion_type=args.fusion_type
     )
     
     args.lp_out_ch = len(list(args.class_index_dict.keys()))

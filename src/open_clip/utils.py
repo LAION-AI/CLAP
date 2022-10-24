@@ -22,8 +22,8 @@ dataset_split = {
     "wesoundeffects": ["train", "test"],
     "MACS": ["train", "test"],
     "freesound": ["train", "test"],
-    "FSD50K": ["train", "test"],
-    "fsd50k_class_label": ["train", "test"],
+    "FSD50K": ["train", "test", "valid"],
+    "fsd50k_class_label": ["train", "test", "valid"],
     "esc50": ["train", "test"],
     "audiostock": ["train", "test"],
     "freesound_no_overlap_noesc50": ["train", "test"],
@@ -35,7 +35,7 @@ dataset_split = {
     "WavText5K": ["train", "test"],
     "esc50_no_overlap": ["train", "test"],
     "usd8k_no_overlap": ["train", "test"],
-    "fsd50k_200_class_label": ["train", "test"]
+    "fsd50k_200_class_label": ["train", "test", "valid"]
 }
 
 

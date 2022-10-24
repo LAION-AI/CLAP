@@ -174,7 +174,10 @@ if __name__ == '__main__':
         device=device,
         jit=False,
         force_quick_gelu=False,
-        openai_model_cache_dir=os.path.expanduser(args.openai_model_cache_dir)
+        openai_model_cache_dir=os.path.expanduser(args.openai_model_cache_dir),
+        skip_params=False,
+        enable_fusion=args.enable_fusion,
+        fusion_type=args.fusion_type
     )  # a hack to get model_cfg
 
     data = get_data(args, model_cfg=model_cfg)  # (yusong): hack: no model_cfg needed to get data
