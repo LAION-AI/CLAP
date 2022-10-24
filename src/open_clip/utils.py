@@ -35,6 +35,7 @@ dataset_split = {
     "WavText5K": ["train", "test"],
     "esc50_no_overlap": ["train", "test"],
     "usd8k_no_overlap": ["train", "test"],
+    "fsd50k_200_class_label": ["train", "test"]
 }
 
 
