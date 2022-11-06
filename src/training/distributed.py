@@ -1,6 +1,7 @@
 import os
 
 import torch
+import socket
 
 try:
     import horovod.torch as hvd
@@ -82,7 +83,9 @@ def init_distributed_device(args):
         os.environ['LOCAL_RANK'] = str(args.local_rank)
         os.environ['RANK'] = str(args.rank)
         os.environ['WORLD_SIZE'] = str(args.world_size)
-        print("Distributed training: local_rank={}, rank={}, world_size={}".format(args.local_rank, args.rank, args.world_size))
+        print(f"Distributed training: local_rank={args.local_rank}, "
+              f"rank={args.rank}, world_size={args.world_size}, "
+              f"hostname={socket.gethostname()}, pid={os.getpid()}")
     elif is_using_distributed():
         if 'SLURM_PROCID' in os.environ:
             # DDP via SLURM
@@ -91,6 +94,19 @@ def init_distributed_device(args):
             os.environ['LOCAL_RANK'] = str(args.local_rank)
             os.environ['RANK'] = str(args.rank)
             os.environ['WORLD_SIZE'] = str(args.world_size)
+            torch.distributed.init_process_group(
+                backend=args.dist_backend,
+                init_method=args.dist_url,
+                world_size=args.world_size,
+                rank=args.rank,
+            )
+        elif 'OMPI_COMM_WORLD_SIZE' in os.environ: # using Summit cluster
+            world_size = int(os.environ['OMPI_COMM_WORLD_SIZE'])
+            world_rank = int(os.environ['OMPI_COMM_WORLD_RANK'])
+            local_rank = int(os.environ['OMPI_COMM_WORLD_LOCAL_RANK'])
+            args.local_rank = local_rank
+            args.rank = world_rank
+            args.world_size = world_size
             torch.distributed.init_process_group(
                 backend=args.dist_backend,
                 init_method=args.dist_url,
@@ -106,6 +122,9 @@ def init_distributed_device(args):
             args.world_size = torch.distributed.get_world_size()
             args.rank = torch.distributed.get_rank()
         args.distributed = True
+        print(f"Distributed training: local_rank={args.local_rank}, "
+              f"rank={args.rank}, world_size={args.world_size}, "
+              f"hostname={socket.gethostname()}, pid={os.getpid()}")
 
     if torch.cuda.is_available():
         if args.distributed and not args.no_set_device_rank:

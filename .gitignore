@@ -154,3 +154,11 @@ src/sizes.json
 *.pt
 dev.ipynb
 src/json_files/*
+.vs/*
+run.sh
+Untitled.ipynb
+dev.ipynb
+src/dev.py
+ESC.csv
+.gitignore
+UrbanSound8K.csv

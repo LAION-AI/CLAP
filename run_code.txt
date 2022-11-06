@@ -14,10 +14,69 @@ CUDA_VISIBLE_DEVICES=0 python -m training.main \
     --epochs=200  \
     --workers=4 \
     --use-bn-sync  \
-    --model PANN-14 \
-    --resample-method="None" \
+    --amodel PANN-14 \
+    --tmodel transformer \
     --datasetnames "Clotho" "audiocaps" "BBCSoundEffects" \
     --datasetinfos "train" "unbalanced_train" "balanced_train"
+
+# Toy dataset Linear Probe
+CUDA_VISIBLE_DEVICES=0 python -m training.main \
+    --save-frequency 1 \
+    --dataset-type="toy" \
+    --train-data="/home/la/kechen/Research/ke_zsasp/workspace/hdf5s/indexes/balanced_train.h5"  \
+    --val-data="/home/la/kechen/Research/ke_zsasp/workspace/hdf5s/indexes/eval.h5"  \
+    --train-ipc="/home/la/kechen/Research/clap/CLAP/idc_train.npy" \
+    --val-ipc="/home/la/kechen/Research/clap/CLAP/idc_eval.npy" \
+    --precision="fp32" \
+    --warmup 10000 \
+    --batch-size=4 \
+    --lr=1e-3 \
+    --wd=0.1 \
+    --epochs=1 \
+    --workers=0 \
+    --amodel HTSAT-tiny \
+    --tmodel transformer \
+    --no-eval \
+    --lp-freeze \
+    --pretrained="/home/la/kechen/Research/clap/ckpt/2022_05_07-19_16_07-model_HTSAT-tiny-lr_0.001-b_96-j_4-p_fp32/checkpoints/epoch_top_0.pt"
+
+torchrun --nproc_per_node 2 -m training.lp_main \
+    --save-frequency 1 \
+    --dataset-type="toy" \
+    --train-data="/home/la/kechen/Research/ke_zsasp/workspace/hdf5s/indexes/balanced_train.h5"  \
+    --val-data="/home/la/kechen/Research/ke_zsasp/workspace/hdf5s/indexes/eval.h5"  \
+    --train-ipc="/home/la/kechen/Research/clap/CLAP/idc_train.npy" \
+    --val-ipc="/home/la/kechen/Research/clap/CLAP/idc_eval.npy" \
+    --precision="fp32" \
+    --warmup 10000 \
+    --batch-size=32 \
+    --lr=1e-3 \
+    --wd=0.1 \
+    --epochs=1 \
+    --workers=4 \
+    --amodel HTSAT-tiny \
+    --tmodel transformer \
+    --no-eval \
+    --lp-freeze \
+    --pretrained="/home/la/kechen/Research/clap/ckpt/2022_05_07-19_16_07-model_HTSAT-tiny-lr_0.001-b_96-j_4-p_fp32/checkpoints/epoch_top_0.pt"
+
+CUDA_VISIBLE_DEVICES=0 python -m training.main \
+    --save-frequency 1 \
+    --dataset-type="toy" \
+    --train-data="/home/la/kechen/Research/ke_zsasp/workspace/hdf5s/indexes/balanced_train.h5"  \
+    --val-data="/home/la/kechen/Research/ke_zsasp/workspace/hdf5s/indexes/eval.h5"  \
+    --train-ipc="/home/la/kechen/Research/clap/CLAP/idc_train.npy" \
+    --val-ipc="/home/la/kechen/Research/clap/CLAP/idc_eval.npy" \
+    --precision="fp32" \
+    --warmup 10000 \
+    --batch-size=32 \
+    --lr=1e-3 \
+    --wd=0.1 \
+    --epochs=1 \
+    --workers=4 \
+    --amodel PANN-14 \
+    --tmodel transformer \
+
 
 
 torchrun --nproc_per_node 8 -m training.main \
@@ -35,8 +94,8 @@ torchrun --nproc_per_node 8 -m training.main \
     --workers=4 \
     --freeze-text \
     --use-bn-sync  \
-    --model PANN-14 \
-    --resample-method="None" \
+    --amodel PANN-14 \
+    --tmodel transformer \
     --datasetnames "Clotho" "audiocaps" "BBCSoundEffects" \
     --datasetinfos "train" "unbalanced_train" "balanced_train"
 
@@ -60,10 +119,10 @@ torchrun --nproc_per_node 8 -m training.main \
     --epochs=200  \
     --workers=4 \
     --use-bn-sync  \
-    --model PANN-14 \
+    --amodel PANN-14 \
+    --tmodel transformer \
     --report-to "wandb" \
     --wandb-notes "text-audio-diff-lr-1e-3-1e-4-model-pann-14" \
-    --resample-method="None" \
     --datasetnames "Clotho" "audiocaps" "BBCSoundEffects" \
     --datasetinfos "train" "unbalanced_train" "balanced_train" \
 
@@ -83,10 +142,10 @@ torchrun --nproc_per_node 8 -m training.main \
     --epochs=200  \
     --workers=4 \
     --use-bn-sync  \
-    --model PANN-14 \
+    --amodel PANN-14 \
+    --tmodel transformer \
     --report-to "wandb" \
     --wandb-notes "text-audio-diff-lr-1e-3-1e-4-model-pann-14" \
-    --resample-method="None" \
     --datasetnames "Clotho" "audiocaps" "BBCSoundEffects" \
     --datasetinfos "train" "unbalanced_train" "balanced_train" "eval" \
 
@@ -106,10 +165,10 @@ torchrun --nproc_per_node 8 -m training.main \
     --epochs=200  \
     --workers=4 \
     --use-bn-sync  \
-    --model HTSAT-tiny \
+    --amodel HTSAT-tiny \
+    --tmodel transformer \
     --report-to "wandb" \
     --wandb-notes "text-audio-diff-lr-1e-3-1e-4-model-htsat-tiny" \
-    --resample-method="None" \
     --datasetnames "Clotho" "audiocaps" "BBCSoundEffects" \
     --datasetinfos "train" "unbalanced_train" "balanced_train" \
 
@@ -131,10 +190,10 @@ torchrun --nproc_per_node 8 -m training.main \
     --workers=4 \
     --use-bn-sync  \
     --freeze-text \
-    --model PANN-14 \
+    --amodel PANN-14 \
+    --tmodel transformer \
     --report-to "wandb" \
     --wandb-notes "text-audio-freeze-text-lr-1e-3-model-pann-14" \
-    --resample-method="None" \
     --datasetnames "Clotho" "audiocaps" "BBCSoundEffects" "audioset"  \
     --datasetinfos "train" "unbalanced_train" "balanced_train"\
 
@@ -153,10 +212,10 @@ torchrun --nproc_per_node 8 -m training.main \
     --workers=4 \
     --use-bn-sync  \
     --freeze-text \
-    --model HTSAT-tiny \
+    --amodel HTSAT-tiny \
+    --tmodel transformer \
     --report-to "wandb" \
     --wandb-notes "text-audio-freeze-text-lr-1e-3-model-htsat-tiny" \
-    --resample-method="None" \
     --datasetnames "Clotho" "audiocaps" "BBCSoundEffects" "audioset"  \
     --datasetinfos "train" "unbalanced_train" "balanced_train"\
 
@@ -177,10 +236,10 @@ torchrun --nproc_per_node 8 -m training.main \
     --epochs=200  \
     --workers=4 \
     --use-bn-sync  \
-    --model PANN-14 \
+    --amodel PANN-14 \
+    --tmodel transformer \
     --report-to "wandb" \
     --wandb-notes "text-audio-diff-lr-1e-3-1e-5-freeze-after-5-model-pann-14" \
-    --resample-method="None" \
     --datasetnames "Clotho" "audiocaps" "BBCSoundEffects"  \
     --datasetinfos "train" "unbalanced_train" "balanced_train" \
 
@@ -199,10 +258,10 @@ torchrun --nproc_per_node 8 -m training.main \
     --workers=10 \
     --use-bn-sync  \
     --freeze-text \
-    --model HTSAT-tiny \
+    --amodel HTSAT-tiny \
+    --tmodel transformer \
     --report-to "wandb" \
     --wandb-notes "text-audio-freeze-text-lr-1e-3-8-dataset-model-htsat-tiny" \
-    --resample-method="None" \
     --datasetnames "Clotho" "audiocaps" "BBCSoundEffects" "audioset" "free_to_use_sounds" "paramount_motion" "sonniss_game_effects" "wesoundeffects" \
     --datasetinfos "train" "unbalanced_train" "balanced_train"\
     --remotedata
@@ -222,10 +281,10 @@ torchrun --nproc_per_node 8 -m training.main \
     --workers=10 \
     --use-bn-sync  \
     --freeze-text \
-    --model HTSAT-tiny \
+    --amodel HTSAT-tiny \
+    --tmodel transformer \
     --report-to "wandb" \
     --wandb-notes "text-audio-freeze-text-lr-1e-3-8-dataset-model-htsat-tiny" \
-    --resample-method="None" \
     --datasetnames "audioset" \
     --datasetinfos "train" "unbalanced_train" "balanced_train"\
     --remotedata
@@ -248,10 +307,10 @@ torchrun --nproc_per_node 8  -m training.main \
     --workers=10 \
     --use-bn-sync \
     --freeze-text \
-    --model HTSAT-tiny \
+    --amodel HTSAT-tiny \
+    --tmodel transformer \
     --report-to "wandb" \
     --wandb-notes "text-audio-freeze-text-lr-1e-3-8-dataset-model-htsat-tiny" \
-    --resample-method="None" \
     --datasetnames "Clotho" "audiocaps" "BBCSoundEffects" "audioset" "free_to_use_sounds" "paramount_motion" "sonniss_game_effects" "wesoundeffects" \
     --datasetinfos "train" "unbalanced_train" "balanced_train" "valid" \
     --top-k-checkpoint-select-dataset="Clotho-test" \
@@ -273,13 +332,102 @@ torchrun --nproc_per_node 8  -m training.main \
     --workers=10 \
     --use-bn-sync \
     --freeze-text \
-    --model PANN-14 \
+    --amodel PANN-14 \
+    --tmodel transformer \
     --report-to "wandb" \
     --wandb-notes "text-audio-freeze-text-lr-1e-3-8-dataset-model-pann-14" \
-    --resample-method="None" \
     --datasetnames "Clotho" "audiocaps" "BBCSoundEffects" "audioset" "free_to_use_sounds" "paramount_motion" "sonniss_game_effects" "wesoundeffects" \
     --datasetinfos "train" "unbalanced_train" "balanced_train" "valid" \
     --top-k-checkpoint-select-dataset="Clotho-test" \
     --top-k-checkpoint-select-metric="mAP@10" \
     --seed 3407 \
     --remotedata
+
+torchrun --nproc_per_node 8  -m training.main \
+    --save-frequency 50 \
+    --save-top-performance 3 \
+    --save-most-recent \
+    --dataset-type="webdataset" \
+    --precision="fp32" \
+    --warmup 10000 \
+    --batch-size=184 \
+    --lr=1e-3 \
+    --wd=0.1 \
+    --epochs=400 \
+    --workers=10 \
+    --use-bn-sync \
+    --freeze-text \
+    --amodel PANN-14 \
+    --tmodel bert \
+    --report-to "wandb" \
+    --wandb-notes "text-audio-freeze-text-lr-1e-3-8-dataset-model-pann-14" \
+    --datasetnames "Clotho" "audiocaps" "BBCSoundEffects" "audioset" "free_to_use_sounds" "paramount_motion" "sonniss_game_effects" "wesoundeffects" \
+    --datasetinfos "train" "unbalanced_train" "balanced_train" "valid" \
+    --top-k-checkpoint-select-dataset="Clotho-test" \
+    --top-k-checkpoint-select-metric="mAP@10" \
+    --seed 3407 \
+    --remotedata
+
+
+torchrun --nproc_per_node 8  -m training.main \
+    --save-frequency 50 \
+    --save-top-performance 3 \
+    --save-most-recent \
+    --dataset-type="webdataset" \
+    --precision="fp32" \
+    --warmup 10000 \
+    --batch-size=184 \
+    --lr=1e-3 \
+    --wd=0.1 \
+    --epochs=400 \
+    --workers=10 \
+    --use-bn-sync \
+    --freeze-text \
+    --amodel PANN-14 \
+    --tmodel roberta \
+    --report-to "wandb" \
+    --wandb-notes "text-audio-freeze-text-lr-1e-3-8-dataset-model-pann-14" \
+    --datasetnames "Clotho" "audiocaps" "BBCSoundEffects" "audioset" "free_to_use_sounds" "paramount_motion" "sonniss_game_effects" "wesoundeffects" \
+    --datasetinfos "train" "unbalanced_train" "balanced_train" "valid" \
+    --top-k-checkpoint-select-dataset="Clotho-test" \
+    --top-k-checkpoint-select-metric="mAP@10" \
+    --seed 3407 \
+    --remotedata
+----run on summit----
+
+module load open-ce/1.5.2-py39-0
+conda activate ~/audio_clip
+cd ~/CLAP/src
+
+num_nodes=16
+jsrun --launch_distribution=packed -bpacked:7 -n${num_nodes} -r1 -a6 -g6 -c42 ./launch-smt4.sh ./run_summit_clap.sh
+
+num_nodes=2
+jsrun --launch_distribution=packed -bpacked:7 -n${num_nodes} -r1 -a6 -g6 -c42 ./launch-smt4.sh ./run_summit_clap.sh
+
+jsrun --launch_distribution=packed -bpacked:7 -n1 -r1 -a1 -g1 -c7 ./launch-smt1.sh ./run_summit_clap_eval.sh
+
+num_nodes=1
+jsrun --launch_distribution=packed -bpacked:7 -n${num_nodes} -r1 -a6 -g6 -c42 ./launch-smt4.sh ./run_summit_clap.sh
+
+num_nodes=2
+jsrun --launch_distribution=packed -bpacked:7 -n${num_nodes} -r1 -a6 -g6 -c42 ./launch-smt4.sh ./run_summit_clap.sh
+
+jsrun --launch_distribution=packed -bpacked:7 -n1 -r1 -a1 -g1 -c7 ./launch-smt1.sh ./run_summit_clap_eval.sh
+
+num_nodes=1
+jsrun --launch_distribution=packed -bpacked:7 -n${num_nodes} -r1 -a6 -g6 -c42 ./launch-smt4.sh ./run_summit_clap.sh
+
+
+# pretrained_audio = ''
+# audio_ckpt = torch.load(pretrained_audio, map_location='cpu')
+# audio_ckpt = audio_ckpt['state_dict']
+# save_ckpt = {}
+# keys = list(audio_ckpt.keys())
+# for key in keys:
+#     if 'audio_branch' in key:
+#         v = audio_ckpt.pop(key)
+#         save_key = key.replace('module.clap_model.', '')
+#         save_ckpt[save_key] = v
+#
+# torch.save(save_ckpt, '10.13_pann_epoch_50_mixup_processed.pt')

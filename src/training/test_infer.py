@@ -127,7 +127,7 @@ def random_seed(seed=42, rank=0):
 def main():
     args = parse_args()
     # sanitize model name for filesystem / uri use, easier if we don't use / in name as a rule?
-    args.model = args.model.replace("/", "-")
+    args.amodel = args.amodel.replace("/", "-")
     # download sizes.json file
     
     random.seed(args.seed)
@@ -141,7 +141,7 @@ def main():
         args.name = "-".join(
             [
                 datetime.now().strftime("%Y_%m_%d-%H_%M_%S"),
-                f"model_{args.model}",
+                f"model_{args.amodel}",
                 f"lr_{args.lr}",
                 f"b_{args.batch_size}",
                 f"j_{args.workers}",
@@ -193,7 +193,7 @@ def main():
         logging.info(f"Running with a single process. Device {args.device}.")
 
     model, model_cfg = create_model(
-        args.model,
+        args.amodel,
         args.pretrained,
         precision=args.precision,
         device=device,
@@ -249,7 +249,7 @@ def main():
     ]
 
     # construct data
-    output_dict = model.audio_infer(torch.rand(960000).cuda(), hopsize=120000, key ="fine_grained_embedding")
+    output_dict = model.audio_infer(torch.rand(960000).cuda(), hopsize=120000, key ="fine_grained_embedding", device=device)
     print(output_dict["fine_grained_embedding"].size())
 
     # inference

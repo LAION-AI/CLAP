@@ -26,6 +26,8 @@ def load_openai_model(
         device: Union[str, torch.device] = "cuda" if torch.cuda.is_available() else "cpu",
         jit=True,
         cache_dir=os.path.expanduser("~/.cache/clip"),
+        enable_fusion: bool = False,
+        fusion_type: str = 'None'
 ):
     """Load a CLIP model, preserve its text pretrained part, and set in the CLAP model
 
@@ -65,10 +67,10 @@ def load_openai_model(
 
     if not jit:
         try:
-            model = build_model_from_openai_state_dict(state_dict or model.state_dict(), model_cfg).to(device)
+            model = build_model_from_openai_state_dict(state_dict or model.state_dict(), model_cfg, enable_fusion, fusion_type).to(device)
         except KeyError:
             sd = {k[7:]: v for k, v in state_dict["state_dict"].items()}
-            model = build_model_from_openai_state_dict(sd, model_cfg).to(device)
+            model = build_model_from_openai_state_dict(sd, model_cfg, enable_fusion, fusion_type).to(device)
 
         if str(device) == "cpu":
             model.float()

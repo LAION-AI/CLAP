@@ -86,8 +86,13 @@ torchrun --nproc_per_node 8  -m training.main \
     --resample-method="None" \
     --datasetnames "Clotho" "audiocaps" "BBCSoundEffects" "audioset" "free_to_use_sounds" "paramount_motion" "sonniss_game_effects" "wesoundeffects" \
     --datasetinfos "train" "unbalanced_train" "balanced_train" \
-    --datasetpath <webdataset_tar_path>
+    --datasetpath <webdataset_tar_path> \
+    --data-filling repeat \
+    --kappa 1.0 \
 ```
+
+**kappa** is the temperature parameter for weighted contrastive CLIPLoss. Set **data-filling** to **repeatpad** means when you have a 3s audio, and the max_len is 10s, it will repeat 3 times to 9s and then pad to 10s with zeros. Set **data-filling** to **pad** means when you have a 3s audio, and the max_len is 10s, it will pad to 10s. Set **data-filling** to **repeat** means when you have a 3s audio, and the max_len is 10s, it will repeat to 12s and clip to 10s. 
+
 
 ## How to get audio feature?
 Please refer to the ``evaluation()`` function in the ``train.py`` and `audio_infer()` function in `model.py`.
@@ -98,3 +103,16 @@ Please refer to the ``get_metrics()`` function in the ``train.py``.
 ## Link to Pretrained Models
 TODO
 
+## Test if tar is invalid
+``python test_tars.py --tar-path "pipe:aws s3 --cli-connect-timeout 0 cp s3://s-laion-audio/webdataset_tar/audioset/unbalanced_train" --start 0 --end 100 --exclude 11 21 --batch-size 1 --order``
+
+This means test tars from ``pipe:aws s3 --cli-connect-timeout 0 cp s3://s-laion-audio/webdataset_tar/audioset/unbalanced_train/0.tar`` to ``pipe:aws s3 --cli-connect-timeout 0 cp s3://s-laion-audio/webdataset_tar/audioset/unbalanced_train/100.tar`` but exclude ``pipe:aws s3 --cli-connect-timeout 0 cp s3://s-laion-audio/webdataset_tar/audioset/unbalanced_train/11.tar``and ``pipe:aws s3 --cli-connect-timeout 0 cp s3://s-laion-audio/webdataset_tar/audioset/unbalanced_train/21.tar``. The iterative order if not random by specifying `--order`.
+
+## Test if checkpoints are freezed
+
+Use ``keys_in_state_dict()`` in ``check_ckpt.py`` to check the keys in the state_dict. Use ``check_ckpt_diff`` to check if 2 checkpoints has the same weights. e.g.
+
+``check_ckpt_diff("/fsx/clap_logs/2022_09_11-19_37_08-model_PANN-14-lr_0.001-b_160-j_4-p_fp32/checkpoints/epoch_10.pt", "/fsx/clap_logs/2022_09_11-19_37_08-model_PANN-14-lr_0.001-b_160-j_4-p_fp32/checkpoints/epoch_100.pt", "text_branch.resblocks")``
+
+
+This means check the difference between ``/fsx/clap_logs/2022_09_11-19_37_08-model_PANN-14-lr_0.001-b_160-j_4-p_fp32/checkpoints/epoch_10.pt`` and ``/fsx/clap_logs/2022_09_11-19_37_08-model_PANN-14-lr_0.001-b_160-j_4-p_fp32/checkpoints/epoch_100.pt``, easpecally with keys include ``text_branch.resblocks``.
