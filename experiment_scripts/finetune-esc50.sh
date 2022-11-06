@@ -2,12 +2,13 @@
 #SBATCH --comment clap
 #SBATCH --partition=gpu
 #SBATCH --job-name=mclap
-#SBATCH --nodes 8
-#SBATCH --ntasks-per-node 8
+#SBATCH --nodes 1
+#SBATCH --ntasks-per-node 1
 #SBATCH --cpus-per-gpu=6
-#SBATCH --gres=gpu:8
+#SBATCH --gres=gpu:1
 #SBATCH --output=%x_%j.out
 #SBATCH --exclude gpu-st-p4d-24xlarge-[23,30,31,108,115,134,135,183,185,186,187,188,275,277,374]
+
 
 module load intelmpi
 source /opt/intel/mpi/latest/env/vars.sh
@@ -47,34 +48,41 @@ export COUNT_NODE=`scontrol show hostnames "$SLURM_JOB_NODELIST" | wc -l`
 echo go $COUNT_NODE
 echo $HOSTNAMES
 
-source /fsx/tyz/clap/bin/activate
-cd /fsx/tyz/CLAP/src
+source /fsx/yusong/clap/bin/activate
+cd /fsx/yusong/CLAP/src
+export TRANSFORMERS_CACHE=/fsx/yusong/transformers_cache
 
-export TRANSFORMERS_CACHE=/fsx/tyz/transformers_cache
-
-srun --comment clap --cpu_bind=v --accel-bind=gn python -m training.main \
+srun --comment clap --cpu_bind=v --accel-bind=gn python -m evaluate.eval_linear_probe \
     --save-frequency 50 \
     --save-top-performance 3 \
     --save-most-recent \
     --dataset-type="webdataset" \
     --precision="fp32" \
-    --warmup 10000 \
-    --batch-size=184 \
-    --lr=1e-3 \
+    --warmup 0 \
+    --batch-size=160 \
+    --lr=1e-4 \
     --wd=0.1 \
-    --epochs=400 \
-    --workers=10 \
+    --epochs=100 \
+    --workers=4 \
     --use-bn-sync \
     --freeze-text \
     --amodel PANN-14 \
-    --tmodel bart \
+    --tmodel roberta \
     --report-to "wandb" \
-    --wandb-notes "text-audio-freeze-text-lr-1e-3-8-dataset-model-pann-14" \
-    --datasetnames "Clotho" "audiocaps" "BBCSoundEffects" "audioset" "free_to_use_sounds" "paramount_motion" "sonniss_game_effects" "wesoundeffects" \
-    --datasetinfos "train" "unbalanced_train" "balanced_train" "valid" \
-    --top-k-checkpoint-select-dataset="Clotho-test" \
-    --top-k-checkpoint-select-metric="mAP@10" \
+    --wandb-notes "10.14-finetune-esc50" \
+    --datasetnames "esc50" \
+    --datasetinfos "train" \
     --seed 3407 \
-    --openai-model-cache-dir /fsx/tyz/transformers_cache \
-    --remotedata
-
+    --remotedata \
+    --logs /fsx/clap_logs \
+    --gather-with-grad \
+    --lp-loss="ce" \
+    --lp-metrics="acc" \
+    --lp-lr=1e-4 \
+    --lp-mlp \
+    --class-label-path="../class_labels/ESC50_class_labels_indices_space.json" \
+    --openai-model-cache-dir /fsx/yusong/transformers_cache \
+    --pretrained="/fsx/clap_logs/2022_10_14-04_05_14-model_PANN-14-lr_0.0001-b_160-j_6-p_fp32/checkpoints" \
+    --data-filling "repeatpad" \
+    --data-truncating "rand_trunc" \
+    --optimizer "adam"
