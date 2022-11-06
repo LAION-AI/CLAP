@@ -244,7 +244,9 @@ def main():
         openai_model_cache_dir=os.path.expanduser(args.openai_model_cache_dir),
         skip_params=True,
         pretrained_audio=args.pretrained_audio,
-        pretrained_text=args.pretrained_text
+        pretrained_text=args.pretrained_text,
+        enable_fusion=args.enable_fusion,
+        fusion_type=args.fusion_type
     )
 
     if args.horovod:
@@ -297,10 +299,7 @@ def main():
     text_freeze_parameters = [
         p
         for n, p in named_parameters
-        if n.startswith("text_branch")
-        or n in ["positional_embedding", "text_projection"]
-        or n.startswith("token_embedding")
-        or n.startswith("ln_final")
+        if 'text_branch' in n
     ]
 
     if args.freeze_text:
@@ -312,6 +311,12 @@ def main():
         p for n, p in named_parameters if exclude(n, p) and p.requires_grad
     ]
     rest_params = [p for n, p in named_parameters if include(n, p) and p.requires_grad]
+
+    # set wd-related params to 0 if use adam optimizer
+    if args.optimizer == "adam":
+        args.wd = 0
+        args.wd_pretrained = 0
+        args.wd_new = 0
 
     if args.train_data is None:
         optimizer = None
@@ -356,7 +361,7 @@ def main():
                 lr=args.lr_pretrained,
                 betas=(args.beta1_pretrained, args.beta2_pretrained),
                 eps=args.eps_pretrained,
-                momentum=args.momentum_pretraatariined,
+                momentum=args.momentum_pretrained,
                 optimizer_name=args.optimizer,
                 )
             pretrained_params_scheduler = cosine_lr(

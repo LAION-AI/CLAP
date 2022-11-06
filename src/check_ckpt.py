@@ -40,6 +40,10 @@ def check_ckpt_diff(ckpt_a, ckpt_b, key_include=None, key_exclude=None, device='
 # Transformer no freeze:
 # check_ckpt_diff("/fsx/clap_logs/2022_09_11-19_37_08-model_PANN-14-lr_0.001-b_160-j_4-p_fp32/checkpoints/epoch_10.pt", "/fsx/clap_logs/2022_09_11-19_37_08-model_PANN-14-lr_0.001-b_160-j_4-p_fp32/checkpoints/epoch_100.pt", "text_branch.resblocks")
 
+check_ckpt_diff("/fsx/clap_logs/2022_09_29-23_42_40-model_PANN-14-lr_0.001-b_160-j_4-p_fp32/checkpoints/epoch_1.pt",
+                "/fsx/clap_logs/2022_09_29-23_42_40-model_PANN-14-lr_0.001-b_160-j_4-p_fp32/checkpoints/epoch_2.pt",
+                "text_branch.resblocks")
+
 # key module.text_branch.resblocks.0.attn.in_proj_weight is different
 # key module.text_branch.resblocks.0.attn.in_proj_bias is different
 # key module.text_branch.resblocks.0.attn.out_proj.weight is different

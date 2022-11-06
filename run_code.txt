@@ -20,7 +20,7 @@ CUDA_VISIBLE_DEVICES=0 python -m training.main \
     --datasetinfos "train" "unbalanced_train" "balanced_train"
 
 # Toy dataset Linear Probe
-CUDA_VISIBLE_DEVICES=0 python -m training.lp_main \
+CUDA_VISIBLE_DEVICES=0 python -m training.main \
     --save-frequency 1 \
     --dataset-type="toy" \
     --train-data="/home/la/kechen/Research/ke_zsasp/workspace/hdf5s/indexes/balanced_train.h5"  \
@@ -29,11 +29,11 @@ CUDA_VISIBLE_DEVICES=0 python -m training.lp_main \
     --val-ipc="/home/la/kechen/Research/clap/CLAP/idc_eval.npy" \
     --precision="fp32" \
     --warmup 10000 \
-    --batch-size=32 \
+    --batch-size=4 \
     --lr=1e-3 \
     --wd=0.1 \
     --epochs=1 \
-    --workers=4 \
+    --workers=0 \
     --amodel HTSAT-tiny \
     --tmodel transformer \
     --no-eval \
@@ -401,3 +401,33 @@ cd ~/CLAP/src
 
 num_nodes=16
 jsrun --launch_distribution=packed -bpacked:7 -n${num_nodes} -r1 -a6 -g6 -c42 ./launch-smt4.sh ./run_summit_clap.sh
+
+num_nodes=2
+jsrun --launch_distribution=packed -bpacked:7 -n${num_nodes} -r1 -a6 -g6 -c42 ./launch-smt4.sh ./run_summit_clap.sh
+
+jsrun --launch_distribution=packed -bpacked:7 -n1 -r1 -a1 -g1 -c7 ./launch-smt1.sh ./run_summit_clap_eval.sh
+
+num_nodes=1
+jsrun --launch_distribution=packed -bpacked:7 -n${num_nodes} -r1 -a6 -g6 -c42 ./launch-smt4.sh ./run_summit_clap.sh
+
+num_nodes=2
+jsrun --launch_distribution=packed -bpacked:7 -n${num_nodes} -r1 -a6 -g6 -c42 ./launch-smt4.sh ./run_summit_clap.sh
+
+jsrun --launch_distribution=packed -bpacked:7 -n1 -r1 -a1 -g1 -c7 ./launch-smt1.sh ./run_summit_clap_eval.sh
+
+num_nodes=1
+jsrun --launch_distribution=packed -bpacked:7 -n${num_nodes} -r1 -a6 -g6 -c42 ./launch-smt4.sh ./run_summit_clap.sh
+
+
+# pretrained_audio = ''
+# audio_ckpt = torch.load(pretrained_audio, map_location='cpu')
+# audio_ckpt = audio_ckpt['state_dict']
+# save_ckpt = {}
+# keys = list(audio_ckpt.keys())
+# for key in keys:
+#     if 'audio_branch' in key:
+#         v = audio_ckpt.pop(key)
+#         save_key = key.replace('module.clap_model.', '')
+#         save_ckpt[save_key] = v
+#
+# torch.save(save_ckpt, '10.13_pann_epoch_50_mixup_processed.pt')

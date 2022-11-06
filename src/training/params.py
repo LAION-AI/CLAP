@@ -103,6 +103,18 @@ def parse_args():
         help="If loading webdataset, spedify the dataset names to load. Can be some of these: Clotho, audioset, audiocaps, BBCSoundEffects",
     )
     parser.add_argument(
+        "--full-train-dataset",
+        nargs="+",
+        default=None,
+        help="Which dataset will be trained with all the subsets. (train+test)",
+    )
+    parser.add_argument(
+        "--exclude-eval-dataset",
+        nargs="+",
+        default=None,
+        help="Which dataset will be excluded with evaluation",
+    )
+    parser.add_argument(
         "--datasetinfos",
         nargs="+",
         default=None,
@@ -188,7 +200,7 @@ def parse_args():
         "--wd-pretrained", type=float, default=0.2, help="Weight decay for text."
     )
     parser.add_argument(
-        "--momentum-pretrained", type=float, default=0.2, help="Momentum for text."
+        "--momentum-pretrained", type=float, default=0.9, help="Momentum for text."
     )
     parser.add_argument(
         "--lr-new", type=float, default=None, help="Learning rate for audio."
@@ -206,7 +218,7 @@ def parse_args():
         "--wd-new", type=float, default=0.2, help="Weight decay for audio."
     )
     parser.add_argument(
-        "--momentum-new", type=float, default=0.2, help="Momentum for audio."
+        "--momentum-new", type=float, default=0.9, help="Momentum for audio."
     )
     parser.add_argument(
         "--warmup", type=int, default=10000, help="Number of steps to warmup for."
@@ -473,14 +485,23 @@ def parse_args():
         "--lp-lr", type=float, default=1e-4, help="learning rate of linear probe"
     )
     parser.add_argument(
-        "--kappa", type=float, default=0, help="the kappa in the weighted contrastive loss, default is to turn off the weighted contrastive loss"
+        "--kappa", type=float, default=0,
+        help="the kappa in the weighted contrastive loss, default is to turn off the weighted contrastive loss"
     )
 
     parser.add_argument(
         "--data-filling",
         type=str,
-        default="repeat",
-        help="type of data filling, can be one of the following: repeat, repeatpad, pad",
+        default="pad",
+        help="type of data filling when the audio length is shorter than the max length."
+             "Can be one of the following: repeat, repeatpad, pad",
+    )
+    parser.add_argument(
+        "--data-truncating",
+        type=str,
+        default="rand_trunc",
+        help="type of data truncation when the audio length is longer than the max length."
+             "Can be one of the following: rand_trunc, fusion",
     )
 
     parser.add_argument(
@@ -488,6 +509,45 @@ def parse_args():
         default=False,
         action="store_true",
         help="Using MLP loss for CLAP model or not",
+    )
+
+    parser.add_argument(
+        "--wandb-id",
+        type=str,
+        default=None,
+        help="the id of wandb experiment to restore.",
+    )
+
+    parser.add_argument(
+        "--sleep", type=float, default=0, help="sleep n seconds before start training"
+    )
+
+    # variable length processing
+    parser.add_argument(
+        "--enable-fusion",
+        default=False,
+        action="store_true",
+        help="Enable feature funsion for variable-length data",
+    )
+
+    parser.add_argument(
+        "--fusion-type",
+        type=str,
+        default='None',
+        help="Type is among ['channel_map', 'daf_1d','aff_1d','iaff_1d','daf_2d','aff_2d','iaff_2d']",
+    )
+
+    parser.add_argument(
+        "--mixup",
+        default=False,
+        action="store_true",
+        help="Enable mixup in finetuning training.",
+    )
+    parser.add_argument(
+        "--text-augment-selection",
+        type=str,
+        default=None,
+        help="For selecting levels of augmented text. Type is among ['all', 'augment_only', 'none']",
     )
 
     args = parser.parse_args()

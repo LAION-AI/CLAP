@@ -75,7 +75,9 @@ def create_model(
     openai_model_cache_dir: str = os.path.expanduser("~/.cache/clip"),
     skip_params=True,
     pretrained_audio: str = "",
-    pretrained_text: str = ""
+    pretrained_text: str = "",
+    enable_fusion: bool = False,
+    fusion_type: str = 'None'
     # pretrained_image: bool = False,
 ):
     amodel_name = amodel_name.replace(
@@ -102,6 +104,8 @@ def create_model(
             device=device,
             jit=jit,
             cache_dir=openai_model_cache_dir,
+            enable_fusion=enable_fusion,
+            fusion_type=fusion_type
         )
         # See https://discuss.pytorch.org/t/valueerror-attemting-to-unscale-fp16-gradients/81372
         if precision == "amp" or precision == "fp32":
@@ -127,6 +131,8 @@ def create_model(
         #     else:
         #         assert False, 'pretrained image towers currently only supported for timm models'
         model_cfg["text_cfg"]["model_type"] = tmodel_name
+        model_cfg["enable_fusion"] = enable_fusion
+        model_cfg["fusion_type"] = fusion_type
         model = CLAP(**model_cfg)
 
         if pretrained:
@@ -153,20 +159,48 @@ def create_model(
 
         if pretrained_audio:
             if amodel_name.startswith('PANN'):
-                audio_ckpt = torch.load(pretrained_audio, map_location='cpu')
-                audio_ckpt = audio_ckpt['model']
-                keys = list(audio_ckpt.keys())
-                for key in keys:
-                    v = audio_ckpt.pop(key)
-                    audio_ckpt['audio_branch.' + key] = v
+                if 'Cnn14_mAP' in pretrained_audio:  # official checkpoint
+                    audio_ckpt = torch.load(pretrained_audio, map_location='cpu')
+                    audio_ckpt = audio_ckpt['model']
+                    keys = list(audio_ckpt.keys())
+                    for key in keys:
+                        if 'spectrogram_extractor' not in key and 'logmel_extractor' not in key:
+                            v = audio_ckpt.pop(key)
+                            audio_ckpt['audio_branch.' + key] = v
+                elif os.path.basename(pretrained_audio).startswith('PANN'):  # checkpoint trained via HTSAT codebase
+                    audio_ckpt = torch.load(pretrained_audio, map_location='cpu')
+                    audio_ckpt = audio_ckpt['state_dict']
+                    keys = list(audio_ckpt.keys())
+                    for key in keys:
+                        if key.startswith('sed_model'):
+                            v = audio_ckpt.pop(key)
+                            audio_ckpt['audio_branch.' + key[10:]] = v
+                elif os.path.basename(pretrained_audio).startswith('finetuned'):  # checkpoint trained via linear probe codebase
+                    audio_ckpt = torch.load(pretrained_audio, map_location='cpu')
+                else:
+                    raise ValueError('Unknown audio checkpoint')
             elif amodel_name.startswith('HTSAT'):
-                audio_ckpt = torch.load(pretrained_audio, map_location='cpu')
-                audio_ckpt = audio_ckpt['state_dict']
-                keys = list(audio_ckpt.keys())
-                for key in keys:
-                    if key.startswith('sed_model'):
-                        v = audio_ckpt.pop(key)
-                        audio_ckpt['audio_branch.' + key[10:]] = v
+                if 'HTSAT_AudioSet_Saved' in pretrained_audio:  # official checkpoint
+                    audio_ckpt = torch.load(pretrained_audio, map_location='cpu')
+                    audio_ckpt = audio_ckpt['state_dict']
+                    keys = list(audio_ckpt.keys())
+                    for key in keys:
+                        if key.startswith('sed_model') and ('spectrogram_extractor' not in key
+                                                            and 'logmel_extractor' not in key):
+                            v = audio_ckpt.pop(key)
+                            audio_ckpt['audio_branch.' + key[10:]] = v
+                elif os.path.basename(pretrained_audio).startswith('HTSAT'):  # checkpoint trained via HTSAT codebase
+                    audio_ckpt = torch.load(pretrained_audio, map_location='cpu')
+                    audio_ckpt = audio_ckpt['state_dict']
+                    keys = list(audio_ckpt.keys())
+                    for key in keys:
+                        if key.startswith('sed_model'):
+                            v = audio_ckpt.pop(key)
+                            audio_ckpt['audio_branch.' + key[10:]] = v
+                elif os.path.basename(pretrained_audio).startswith('finetuned'):  # checkpoint trained via linear probe codebase
+                    audio_ckpt = torch.load(pretrained_audio, map_location='cpu')
+                else:
+                    raise ValueError('Unknown audio checkpoint')
             else:
                 raise f'this audio encoder pretrained checkpoint is not support'
 

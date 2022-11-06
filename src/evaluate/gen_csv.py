@@ -14,8 +14,8 @@ import pandas as pd
 import os
 
 
-def get_output_from_single_audio(audio, text, model):
-    audio_embedding = model.audio_infer(audio, hopsize=5 * 48000, key="embedding")[
+def get_output_from_single_audio(audio, text, model, device):
+    audio_embedding = model.audio_infer(audio, hopsize=5 * 48000, key="embedding", device=device)[
         "embedding"
     ]
     if audio_embedding.ndim > 1:
@@ -38,8 +38,8 @@ def get_output_from_single_audio(audio, text, model):
     )
 
 
-def get_audio_embeddings(audio, model):
-    audio_embedding = model.audio_infer(audio, hopsize=5 * 48000, key="embedding")[
+def get_audio_embeddings(audio, model, device):
+    audio_embedding = model.audio_infer(audio, hopsize=5 * 48000, key="embedding", device=device)[
         "embedding"
     ]
     if audio_embedding.ndim > 1:
@@ -165,7 +165,7 @@ if __name__ == "__main__":
                     audio_features,
                     audio_features_mlp,
                     logit_scale_a,
-                ) = get_audio_embeddings(audio, model)
+                ) = get_audio_embeddings(audio, model,device)
 
                 audio_features_all.append(audio_features)
                 audio_features_mlp_all.append(audio_features_mlp)
