@@ -1,118 +1,60 @@
 # CLAP
 
 Contrastive Language-Audio Pretraining, known as CLAP. Referring to the CLIP (Contrastive Language-Image Pretraining) architecture, similarly, the CLAP architecture is as follows.  
- <img width="906" alt="735af1fc4b786726348a421098e65b7" src="https://user-images.githubusercontent.com/53099276/176800216-9af8a6f2-ba06-45bf-b13e-ea4b83813218.png">
+![Model Architecture](./assets/audioclip-arch.png)
 
-We adopt a CNN-based model --- PANN, and a transformer-based model --- HTS-AT, as our choices of audio encoder to encode the audio data, while loading and freezing the pre-trained text encoder from CLIP to encode the text data.
+The repository contains code for the following paper:
+ - [Large-scale Contrastive Language-Audio Pretraining with \\ Feature Fusion and Keyword-to-Caption Augmentation](https://arxiv.org/abs/xxxx.xxxxx)
 
 ## About this project
 
-This project is a project in [LAION](https://laion.ai/) that aims at learning better audio understanding and getting more audio data. This is a opensource project. We adopt the codebase of [open_clip](https://github.com/mlfoundations/open_clip) for this project. The major opensource contributers of this project are (in equal contribution): Yusong Wu, Tianyu Zhang, Ke Chen.
+This project is a project in [LAION](https://laion.ai/) that aims at learning better audio understanding and getting more audio data. 
+This is an opensource project. We adopt the codebase of [open_clip](https://github.com/mlfoundations/open_clip) for this project. 
+The major opensource contributers of this project are (in equal contribution): Yusong Wu, Tianyu Zhang, Ke Chen.
 
-many thanks to <a href="https://github.com/cfoster0/CLAP">@cfoster0</a> for allowing us to use his repo name
+many thanks to <a href="https://github.com/cfoster0/CLAP">@cfoster0</a> for allowing us to use his repo name.
 
-## Work in Progress
-
-This project is working in progress, thus the codebase and model might not be perfect or bug-free. We will very much appreciate any kind of contribution. If you would actively contribute to this project, please join the discord of LAION.
-
-## Quick Start
-
-```
+## Environment Installation
+To install the same environment as we use, please run the following command:
+```bash
 conda create env -n clap python=3.10
 conda activate clap
 git clone https://github.com/LAION-AI/CLAP.git
 cd CLAP
+# you can also install pytorch by following the official instruction (https://pytorch.org/get-started/locally/)
+pip install torch==1.11.0+cu113 torchvision==0.12.0+cu113 torchaudio==0.11.0+cu113 -f https://download.pytorch.org/whl/torch_stable.html
 pip install -r requirements.txt
 ```
 ## Dataset format
 We use training data in webdataset format. For details of our dataset please see https://github.com/LAION-AI/audio-dataset.
 
-## Training
-Firstly, please direct to the **src** folder:
-```
-cd src
-```
+## Training, Fine-tuning and Evaluation
+Please find the script of training, fine-tuning and evaluation (zero-shot and retrieval) in the [experiment_scripts](./experiment_scripts) folder. 
+The scripts included there are the one we used to train our model on a SLURM cluster. 
+You need to change the script to fit your own environment.
+For example, in a single machine multi-GPU setting, you might want to use `torchrun` instead of `srun` to run the script.
+To train on a single GPU machine, use `CUDA_VISIBLE_DEVICES=0 python -m ...` instead of `srun`.
+We use [Weights and Biases](https://wandb.ai/site) for experiment logging. You need to configure the weights and biases in your environment.
 
-To train on a single GPU machine, please run the following command. 
-```
-CUDA_VISIBLE_DEVICES=0 python -m training.main \
-    --save-frequency 50 \
-    --save-top-performance 3 \
-    --save-most-recent \
-    --dataset-type="webdataset" \
-    --precision="fp32" \
-    --pretrained="openai" \
-    --warmup 10000 \
-    --batch-size=184 \
-    --lr=1e-3 \
-    --wd=0.1 \
-    --epochs=400 \
-    --workers=10 \
-    --use-bn-sync \
-    --freeze-text \
-    --model HTSAT-tiny \
-    --report-to "wandb" \
-    --wandb-notes "text-audio-freeze-text-lr-1e-3-8-dataset-model-htsat-tiny" \
-    --resample-method="None" \
-    --datasetnames "Clotho" "audiocaps" "BBCSoundEffects" "audioset" "free_to_use_sounds" "paramount_motion" "sonniss_game_effects" "wesoundeffects" \
-    --datasetinfos "train" "unbalanced_train" "balanced_train" \
-    --datasetpath <webdataset_tar_path>
-```
-
-Here, ``model`` is set to choose the model from src/open_clip/model_configs/. Note that only 'PANN' and 'HTS-AT' models are supported, while others are image encoder models for previous CLIP.
-
-And ``wandb-notes`` is set to report the log into the [wandb](https://github.com/wandb/client); ``datasetnames`` and ``datasetinfors`` are set to configure the dataset training and evalutaion specifications. Further information can be refered in ``src/training/params.py``
-
-To train on a multi-GPU machine, please run the following command. Please feel checkout the help documentation in the argparse in ``params.py``.
-```
-torchrun --nproc_per_node 8  -m training.main \
-    --save-frequency 50 \
-    --save-top-performance 3 \
-    --save-most-recent \
-    --dataset-type="webdataset" \
-    --precision="fp32" \
-    --pretrained="openai" \
-    --warmup 10000 \
-    --batch-size=184 \
-    --lr=1e-3 \
-    --wd=0.1 \
-    --epochs=400 \
-    --workers=10 \
-    --use-bn-sync \
-    --freeze-text \
-    --model HTSAT-tiny \
-    --report-to "wandb" \
-    --wandb-notes "text-audio-freeze-text-lr-1e-3-8-dataset-model-htsat-tiny" \
-    --resample-method="None" \
-    --datasetnames "Clotho" "audiocaps" "BBCSoundEffects" "audioset" "free_to_use_sounds" "paramount_motion" "sonniss_game_effects" "wesoundeffects" \
-    --datasetinfos "train" "unbalanced_train" "balanced_train" \
-    --datasetpath <webdataset_tar_path> \
-    --data-filling repeat \
-    --kappa 1.0 \
-```
-
-**kappa** is the temperature parameter for weighted contrastive CLIPLoss. Set **data-filling** to **repeatpad** means when you have a 3s audio, and the max_len is 10s, it will repeat 3 times to 9s and then pad to 10s with zeros. Set **data-filling** to **pad** means when you have a 3s audio, and the max_len is 10s, it will pad to 10s. Set **data-filling** to **repeat** means when you have a 3s audio, and the max_len is 10s, it will repeat to 12s and clip to 10s. 
-
-
-## How to get audio feature?
-Please refer to the ``evaluation()`` function in the ``train.py`` and `audio_infer()` function in `model.py`.
-
-## How to get audio_text_rank?
-Please refer to the ``get_metrics()`` function in the ``train.py``.
-
-## Link to Pretrained Models
+## Loading Model and Inference
 TODO
 
-## Test if tar is invalid
-``python test_tars.py --tar-path "pipe:aws s3 --cli-connect-timeout 0 cp s3://s-laion-audio/webdataset_tar/audioset/unbalanced_train" --start 0 --end 100 --exclude 11 21 --batch-size 1 --order``
+## Pretrained Models
+The pretrained checkpoints can be found in [here](https://drive.google.com/drive/folders/1Ni8lZ2pryTESjgq8gELLQNM_HGdWtFrE?usp=sharing).
+Please refer to the previous section for how to load and run the checkpoints.
 
-This means test tars from ``pipe:aws s3 --cli-connect-timeout 0 cp s3://s-laion-audio/webdataset_tar/audioset/unbalanced_train/0.tar`` to ``pipe:aws s3 --cli-connect-timeout 0 cp s3://s-laion-audio/webdataset_tar/audioset/unbalanced_train/100.tar`` but exclude ``pipe:aws s3 --cli-connect-timeout 0 cp s3://s-laion-audio/webdataset_tar/audioset/unbalanced_train/11.tar``and ``pipe:aws s3 --cli-connect-timeout 0 cp s3://s-laion-audio/webdataset_tar/audioset/unbalanced_train/21.tar``. The iterative order if not random by specifying `--order`.
+The checkpoints list here for each model setting is the one with the highest average mAP score in training.
+The average mAP score is calculated by averaging 4 scores: A-->T mAP@10 on AudioCaps, and T-->A mAP@10 on AudioCaps, A-->T mAP@10 on Clotho, and T-->A mAP@10 on Clotho.
 
-## Test if checkpoints are freezed
+## Citation
+If you find this project and the LAION-Audio-630K dataset useful, please cite our paper:
+```
+TODO
+```
 
-Use ``keys_in_state_dict()`` in ``check_ckpt.py`` to check the keys in the state_dict. Use ``check_ckpt_diff`` to check if 2 checkpoints has the same weights. e.g.
+## Acknowledgements
 
-``check_ckpt_diff("/fsx/clap_logs/2022_09_11-19_37_08-model_PANN-14-lr_0.001-b_160-j_4-p_fp32/checkpoints/epoch_10.pt", "/fsx/clap_logs/2022_09_11-19_37_08-model_PANN-14-lr_0.001-b_160-j_4-p_fp32/checkpoints/epoch_100.pt", "text_branch.resblocks")``
-
-
-This means check the difference between ``/fsx/clap_logs/2022_09_11-19_37_08-model_PANN-14-lr_0.001-b_160-j_4-p_fp32/checkpoints/epoch_10.pt`` and ``/fsx/clap_logs/2022_09_11-19_37_08-model_PANN-14-lr_0.001-b_160-j_4-p_fp32/checkpoints/epoch_100.pt``, easpecally with keys include ``text_branch.resblocks``.
+This project is working in progress, thus the codebase and model might not be perfect or bug-free. 
+We will very much appreciate any kind of contribution or and issue raised.
+If you find a bug or have any suggestion, please feel free to open an issue or contact us.
+If you would actively contribute to this project, please join the discord of LAION.
