@@ -466,39 +466,9 @@ def get_mel(audio_data,audio_cfg):
     return mel.T  # (T, n_mels)
 
 
-def preprocess(
-    sample,
-    audio_ext,
-    text_ext,
-    max_len,
-    audio_cfg,
-    class_index_dict=None,
-    data_filling="pad",
-    data_truncating="rand_trunc",
-    text_augment_selection=None,
-):
-    """
-    Preprocess a single sample for wdsdataloader.
-    """
-    audio_data, orig_sr = sf.read(io.BytesIO(sample[audio_ext]))
-    audio_data = int16_to_float32(float32_to_int16(audio_data))
-    audio_data = torch.tensor(audio_data).float()
-
-    # TODO: (yusong) to be include in the future
-    # # if torchaudio not installed, use soundfile to load audio
-    # if torchaudio is None:
-    #     audio_data, orig_sr = sf.read(io.BytesIO(sample[audio_ext]))
-    #     audio_data = torch.tensor(audio_data).float()
-    # else:
-    #     # https://github.com/webdataset/webdataset/blob/main/webdataset/autodecode.py
-    #     with tempfile.TemporaryDirectory() as dirname:
-    #         os.makedirs(dirname, exist_ok=True)
-    #         fname = os.path.join(dirname, f"file.flac")
-    #         with open(fname, "wb") as stream:
-    #             stream.write(sample[audio_ext])
-    #         audio_data, orig_sr = torchaudio.load(fname)
-    #         audio_data = audio_data[0, :].float()
-
+def get_audio_features(sample, audio_data, max_len, data_truncating, data_filling, audio_cfg):
+    """Calculate and add audio features to sample.
+    Sample: a dict containing all the data of current sample."""
     with torch.no_grad():
         if len(audio_data) > max_len:
             if data_truncating == "rand_trunc":
@@ -588,8 +558,45 @@ def preprocess(
             longer = torch.tensor([False])
 
     sample["longer"] = longer
-
     sample["waveform"] = audio_data
+
+    return sample
+
+
+def preprocess(
+    sample,
+    audio_ext,
+    text_ext,
+    max_len,
+    audio_cfg,
+    class_index_dict=None,
+    data_filling="pad",
+    data_truncating="rand_trunc",
+    text_augment_selection=None,
+):
+    """
+    Preprocess a single sample for wdsdataloader.
+    """
+    audio_data, orig_sr = sf.read(io.BytesIO(sample[audio_ext]))
+    audio_data = int16_to_float32(float32_to_int16(audio_data))
+    audio_data = torch.tensor(audio_data).float()
+
+    # TODO: (yusong) to be include in the future
+    # # if torchaudio not installed, use soundfile to load audio
+    # if torchaudio is None:
+    #     audio_data, orig_sr = sf.read(io.BytesIO(sample[audio_ext]))
+    #     audio_data = torch.tensor(audio_data).float()
+    # else:
+    #     # https://github.com/webdataset/webdataset/blob/main/webdataset/autodecode.py
+    #     with tempfile.TemporaryDirectory() as dirname:
+    #         os.makedirs(dirname, exist_ok=True)
+    #         fname = os.path.join(dirname, f"file.flac")
+    #         with open(fname, "wb") as stream:
+    #             stream.write(sample[audio_ext])
+    #         audio_data, orig_sr = torchaudio.load(fname)
+    #         audio_data = audio_data[0, :].float()
+
+    sample = get_audio_features(sample, audio_data, max_len, data_truncating, data_filling, audio_cfg)
     del sample[audio_ext]
 
     try:
