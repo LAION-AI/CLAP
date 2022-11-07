@@ -467,8 +467,15 @@ def get_mel(audio_data,audio_cfg):
 
 
 def get_audio_features(sample, audio_data, max_len, data_truncating, data_filling, audio_cfg):
-    """Calculate and add audio features to sample.
-    Sample: a dict containing all the data of current sample."""
+    """
+    Calculate and add audio features to sample.
+    Sample: a dict containing all the data of current sample.
+    audio_data: a tensor of shape (T) containing audio data.
+    max_len: the maximum length of audio data.
+    data_truncating: the method of truncating data.
+    data_filling: the method of filling data.
+    audio_cfg: a dict containing audio configuration. Comes from model_cfg['audio_cfg'].
+    """
     with torch.no_grad():
         if len(audio_data) > max_len:
             if data_truncating == "rand_trunc":
