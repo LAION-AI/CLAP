@@ -695,17 +695,64 @@ class CLAP(nn.Module):
     def get_logit_scale(self):
         return self.logit_scale_a.exp(), self.logit_scale_t.exp()
 
-    def audio_infer(self, audio, hopsize=None, key="embedding", device=None):
+    def get_text_embedding(self, data):
+        """Get the text embedding from the model
+
+        Parameters
+        ----------
+        data: torch.Tensor 
+            a tensor of text embedding
+
+        Returns
+        ----------
+        text_embed: torch.Tensor
+            a tensor of text_embeds (N, D)
+
+        """
+        device = next(self.parameters()).device
+        for k in data:
+            data[k] = data[k].to(device)
+        text_embeds = self.encode_text(data, device=device)
+        text_embeds = F.normalize(text_embeds, dim=-1)
+        
+        return text_embeds
+
+    def get_audio_embedding(self, data):
+        """Get the audio embedding from the model
+
+        Parameters
+        ----------
+        data: a list of dict
+            the audio input dict list from 'get_audio_feature' method
+
+        Returns
+        ----------
+        audio_embed: torch.Tensor
+            a tensor of audio_embeds (N, D)
+
+        """
+        device = next(self.parameters()).device
+        input_dict = {}
+        keys = data[0].keys()
+        for k in keys:
+            input_dict[k] = torch.cat([d[k].unsqueeze(0) for d in data], dim=0).to(device)
+        
+        audio_embeds = self.audio_projection(self.encode_audio(input_dict, device=device)["embedding"])
+        audio_embeds = F.normalize(audio_embeds, dim=-1)
+        
+        return audio_embeds
+
+            
+
+    def audio_infer(self, audio, hopsize=None, device=None):
         """Forward one audio and produce the audio embedding
 
         Parameters
         ----------
-        audio: torch.Tensor (audio_length)
+        audio:  (audio_length)
             the time-domain audio input, notice that it must be only one input
         hopsize: int
             the overlap hopsize as the sliding window
-        key: str
-            the key string to extract the latant code (e.g. embedding, fine_grained_embedding)
 
         Returns
         ----------
