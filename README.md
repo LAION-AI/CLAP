@@ -1,7 +1,8 @@
 # CLAP
 
 Contrastive Language-Audio Pretraining, known as CLAP. Referring to the CLIP (Contrastive Language-Image Pretraining) architecture, similarly, the CLAP architecture is as follows.  
-<img src="./assets/audioclip-arch.png" style="zoom:50%" />
+<img src="./assets/audioclip-arch.png" align="center" alt="The Contrastive Language-Audio Pretraining Model Architecture" width="60%"/>
+
 
 The repository contains code for the following paper:
  - [Large-scale Contrastive Language-Audio Pretraining with Feature Fusion and Keyword-to-Caption Augmentation](https://arxiv.org/abs/xxxx.xxxxx)
