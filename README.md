@@ -1,7 +1,11 @@
 # CLAP
 
 Contrastive Language-Audio Pretraining, known as CLAP. Referring to the CLIP (Contrastive Language-Image Pretraining) architecture, similarly, the CLAP architecture is as follows.  
-<img src="./assets/audioclip-arch.png" style="zoom:50%" />
+<p align="center">
+  <img src="./assets/audioclip-arch.png" alt="The Contrastive Language-Audio Pretraining Model Architecture" width="60%"/>
+</p>
+
+
 
 The repository contains code for the following paper:
  - [Large-scale Contrastive Language-Audio Pretraining with Feature Fusion and Keyword-to-Caption Augmentation](https://arxiv.org/abs/xxxx.xxxxx)
@@ -37,7 +41,48 @@ To train on a single GPU machine, use `CUDA_VISIBLE_DEVICES=0 python -m ...` ins
 We use [Weights and Biases](https://wandb.ai/site) for experiment logging. You need to configure the weights and biases in your environment.
 
 ## Loading Model and Inference
-TODO
+Please refer to [infer_demo.py](src/training/infer_demo.py) to get the whole view of using our model to infer the audio and text embeddings.
+Below is the core code.
+```python
+# import necessary libraries
+def infer_audio():
+    
+    '''
+    set hyperparameters, and load pretrain model
+    '''
+    
+    # load the waveform of the shape (T,), should resample to 48000
+    audio_waveform, sr = librosa.load('/home/la/kechen/Research/KE_CLAP/ckpt/test_clap_long.wav', sr=48000) 
+    # quantize
+    audio_waveform = int16_to_float32(float32_to_int16(audio_waveform))
+    audio_waveform = torch.from_numpy(audio_waveform).float()
+    audio_dict = {}
+
+    # the 'fusion' truncate mode can be changed to 'rand_trunc' if run in unfusion mode
+    audio_dict = get_audio_features(
+        audio_dict, audio_waveform, 480000, 
+        data_truncating='fusion', 
+        data_filling='repeatpad',
+        audio_cfg=model_cfg['audio_cfg']
+    )
+    # can send a list to the model, to process many audio tracks in one time (i.e. batch size)
+    audio_embed = model.get_audio_embedding([audio_dict])
+    print(audio_embed.size())
+
+def infer_text():
+    '''
+    set hyperparameters, and load pretrain model
+    '''
+    
+    # load the text, can be a list (i.e. batch size)
+    text_data = ["I love the contrastive learning", "I love the pretrain model"] 
+    # tokenize for roberta, if you want to tokenize for another text encoder, please refer to data.py#L43-90 
+    text_data = tokenizer(text_data)
+    
+    text_embed = model.get_text_embedding(text_data)
+    print(text_embed.size())
+    
+```
 
 ## Pretrained Models
 The pretrained checkpoints can be found in [here](https://drive.google.com/drive/folders/1Ni8lZ2pryTESjgq8gELLQNM_HGdWtFrE?usp=sharing).
