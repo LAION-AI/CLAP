@@ -1,8 +1,0 @@
-1. change the optimizer and scheduler  # lp_main.py 463
-2. change lp_out_ch lp_in_ch # lp_main.py 271 / 279
-3. ddp step before evaluate # lp_train.py 214-218
-4. dataset change and test  # lp_train.py 85 / 236
-5. loss does not need log_softmax/sigmoid
-6. ddp eval # loss.py 183 | # lp_train 215-219
-7. model should be load in args.pretrained
-8. what feature to use
