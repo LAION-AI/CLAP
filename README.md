@@ -94,7 +94,12 @@ The average mAP score is calculated by averaging 4 scores: A-->T mAP@10 on Audio
 ## Citation
 If you find this project and the LAION-Audio-630K dataset useful, please cite our paper:
 ```
-TODO
+@article{wu2022large,
+  title = {Large-scale Contrastive Language-Audio Pretraining with Feature Fusion and Keyword-to-Caption Augmentation},
+  author = {Wu, Yusong and Chen, Ke and Zhang, Tianyu and Hui, Yuchen and Berg-Kirkpatrick, Taylor and Dubnov, Shlomo},
+  journal={arXiv preprint arXiv:2211:06687},
+  year = {2022},
+}
 ```
 
 ## Acknowledgements
