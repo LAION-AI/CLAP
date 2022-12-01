@@ -32,6 +32,9 @@ pip install -r requirements.txt
 ## Dataset format
 We use training data in webdataset format. For details of our dataset please see https://github.com/LAION-AI/audio-dataset.
 
+You can find an example of our dataset format in [here](https://drive.google.com/drive/folders/1aU54FGctrjhxA2sTN0wgHVsPm0nPEc_E?usp=share_link).
+It contains the full ESC50 dataset, split according to the first 5-fold split.
+
 ## Training, Fine-tuning and Evaluation
 Please find the script of training, fine-tuning and evaluation (zero-shot and retrieval) in the [experiment_scripts](./experiment_scripts) folder. 
 The scripts included there are the one we used to train our model on a SLURM cluster. 
