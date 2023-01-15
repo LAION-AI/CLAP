@@ -94,6 +94,11 @@ Please refer to the previous section for how to load and run the checkpoints.
 The checkpoints list here for each model setting is the one with the highest average mAP score in training.
 The average mAP score is calculated by averaging 4 scores: A-->T mAP@10 on AudioCaps, and T-->A mAP@10 on AudioCaps, A-->T mAP@10 on Clotho, and T-->A mAP@10 on Clotho.
 
+## Reproducibility
+An example of the preprocessed Clotho dataset in webdataset format can be download [here](). The audio encoder pretrained with 48kHz AudioSet can be found [here](https://drive.google.com/drive/folders/1SMQyzJvc6DwJNuhQ_WI8tlCFL5HG2vk6?usp=sharing), where `HTSAT-fullset-imagenet-map=0.467.ckpt` is the checkpoint used to initalize our HTSAT audio encoder. You should get similar result by loading from the audio encoder checkpoint and training on same dataset.
+Because most of the dataset has copyright restriction, unfortunatly we cannot directly share other preprocessed datasets. 
+
+
 ## Citation
 If you find this project and the LAION-Audio-630K dataset useful, please cite our paper:
 ```
