@@ -940,7 +940,13 @@ def get_wds_dataset(
         kwargs["multiprocessing_context"] = "forkserver"
 
     dataloader = wds.WebLoader(
-        dataset, batch_size=None, shuffle=False, num_workers=args.workers, **kwargs
+        dataset,
+        batch_size=None,
+        shuffle=False,
+        num_workers=args.workers,
+        pin_memory=True,
+        prefetch_factor=args.batch_size // args.workers,
+        **kwargs
     )
 
     # FIXME not clear which approach is better, with_epoch before vs after dataloader?
