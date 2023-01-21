@@ -691,24 +691,7 @@ def preprocess_new(
     """
     Preprocess a single sample for wdsdataloader.
     """
-    audio_data, orig_sr = sf.read(io.BytesIO(sample[audio_ext]))
-    audio_data = int16_to_float32(float32_to_int16(audio_data))
-    audio_data = torch.tensor(audio_data).float()
-
-    # TODO: (yusong) to be include in the future
-    # # if torchaudio not installed, use soundfile to load audio
-    # if torchaudio is None:
-    #     audio_data, orig_sr = sf.read(io.BytesIO(sample[audio_ext]))
-    #     audio_data = torch.tensor(audio_data).float()
-    # else:
-    #     # https://github.com/webdataset/webdataset/blob/main/webdataset/autodecode.py
-    #     with tempfile.TemporaryDirectory() as dirname:
-    #         os.makedirs(dirname, exist_ok=True)
-    #         fname = os.path.join(dirname, f"file.flac")
-    #         with open(fname, "wb") as stream:
-    #             stream.write(sample[audio_ext])
-    #         audio_data, orig_sr = torchaudio.load(fname)
-    #         audio_data = audio_data[0, :].float()
+    audio_data, orig_sr = sample[audio_ext]
 
     sample = get_audio_features(sample, audio_data, max_len, data_truncating, data_filling, audio_cfg)
     del sample[audio_ext]
@@ -747,9 +730,6 @@ def preprocess_new(
     if class_index_dict is not None:
         # https://stackoverflow.com/questions/48004243/how-to-share-large-read-only-dictionary-list-across-processes-in-multiprocessing
         # https://stackoverflow.com/questions/45693949/storing-strings-in-a-multiprocessing-sharedctypes-array
-        # key, val = class_index_dict
-        # key = key[:].split('\n')
-        # _dict = {k: v for k, v in zip(key, val)}
         sample["class_label"] = np.zeros(len(class_index_dict.keys()))
         for x in json_dict_raw["tag"]:
             sample["class_label"][class_index_dict[x]] = 1
