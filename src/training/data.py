@@ -874,7 +874,7 @@ def get_wds_dataset(
         )
 
     pipeline.append(
-        wds.decode("torchaudio"),
+        wds.decode(wds.torchaudio),
     )
 
     pipeline.append(
