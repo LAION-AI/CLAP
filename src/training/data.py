@@ -587,6 +587,7 @@ def preprocess(
 
     print('sample:', sample)
     print('audio:', sample["flac"])
+    print('audio type', type(sample["flac"]))
     quit()
 
     audio_data, orig_sr = sf.read(io.BytesIO(sample[audio_ext]))
