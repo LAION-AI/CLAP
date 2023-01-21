@@ -702,7 +702,7 @@ def preprocess_new(
     """
     audio_data, orig_sr = sample[audio_ext]
     audio_data = int16_to_float32_torch(float32_to_int16_torch(audio_data[0]))
-    print('audio_data.shape',audio_data.shape)
+    print('sample[text_ext]:',sample[text_ext])
 
     sample = get_audio_features(sample, audio_data, max_len, data_truncating, data_filling, audio_cfg)
     del sample[audio_ext]
