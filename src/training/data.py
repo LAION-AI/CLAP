@@ -692,6 +692,7 @@ def preprocess_new(
     Preprocess a single sample for wdsdataloader.
     """
     audio_data, orig_sr = sample[audio_ext]
+    print('audio_data.shape',audio_data.shape)
 
     sample = get_audio_features(sample, audio_data, max_len, data_truncating, data_filling, audio_cfg)
     del sample[audio_ext]
