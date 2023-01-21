@@ -103,6 +103,15 @@ def float32_to_int16(x):
     return (x * 32767.).astype(np.int16)
 
 
+def int16_to_float32_torch(x):
+    return (x / 32767.0).type(torch.float32)
+
+
+def float32_to_int16_torch(x):
+    x = torch.clamp(x, min=-1., max=1.)
+    return (x * 32767.).type(torch.int16)
+
+
 # For Toy Dataset
 class ToyDataset(Dataset):
     def __init__(self, index_path, ipc, config, eval_mode=False):
@@ -692,6 +701,7 @@ def preprocess_new(
     Preprocess a single sample for wdsdataloader.
     """
     audio_data, orig_sr = sample[audio_ext]
+    audio_data = int16_to_float32(float32_to_int16(audio_data[0]))
     print('audio_data.shape',audio_data.shape)
 
     sample = get_audio_features(sample, audio_data, max_len, data_truncating, data_filling, audio_cfg)
