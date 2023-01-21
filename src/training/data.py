@@ -702,19 +702,14 @@ def preprocess_new(
     """
     audio_data, orig_sr = sample[audio_ext]
     audio_data = int16_to_float32_torch(float32_to_int16_torch(audio_data[0]))
-    print('sample[text_ext]:',sample[text_ext])
 
     sample = get_audio_features(sample, audio_data, max_len, data_truncating, data_filling, audio_cfg)
     del sample[audio_ext]
 
     json_dict_raw = sample[text_ext]
 
-    # try:
-    #     json_dict_raw = json.loads(sample[text_ext].decode("utf-8"))
-    # except:
-    #     print("JSON error:", sample["__url__"])
-
     # For selecting augmented text from dataset
+    # TODO: write this as a function
     if text_augment_selection is None or text_augment_selection == "none":
         texts = json_dict_raw["text"]
     elif text_augment_selection == "all":
