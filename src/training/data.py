@@ -579,47 +579,7 @@ def get_audio_features(sample, audio_data, max_len, data_truncating, data_fillin
     return sample
 
 
-def preprocess(
-    sample,
-    audio_ext,
-    text_ext,
-    max_len,
-    audio_cfg,
-    class_index_dict=None,
-    data_filling="pad",
-    data_truncating="rand_trunc",
-    text_augment_selection=None,
-):
-    """
-    Preprocess a single sample for wdsdataloader.
-    """
-    audio_data, orig_sr = sf.read(io.BytesIO(sample[audio_ext]))
-    audio_data = int16_to_float32(float32_to_int16(audio_data))
-    audio_data = torch.tensor(audio_data).float()
-
-    # TODO: (yusong) to be include in the future
-    # # if torchaudio not installed, use soundfile to load audio
-    # if torchaudio is None:
-    #     audio_data, orig_sr = sf.read(io.BytesIO(sample[audio_ext]))
-    #     audio_data = torch.tensor(audio_data).float()
-    # else:
-    #     # https://github.com/webdataset/webdataset/blob/main/webdataset/autodecode.py
-    #     with tempfile.TemporaryDirectory() as dirname:
-    #         os.makedirs(dirname, exist_ok=True)
-    #         fname = os.path.join(dirname, f"file.flac")
-    #         with open(fname, "wb") as stream:
-    #             stream.write(sample[audio_ext])
-    #         audio_data, orig_sr = torchaudio.load(fname)
-    #         audio_data = audio_data[0, :].float()
-
-    sample = get_audio_features(sample, audio_data, max_len, data_truncating, data_filling, audio_cfg)
-    del sample[audio_ext]
-
-    try:
-        json_dict_raw = json.loads(sample[text_ext].decode("utf-8"))
-    except:
-        print("JSON error:", sample["__url__"])
-
+def select_text(json_dict_raw, text_augment_selection):
     # For selecting augmented text from dataset
     if text_augment_selection is None or text_augment_selection == "none":
         texts = json_dict_raw["text"]
@@ -640,53 +600,10 @@ def preprocess(
         raise NotImplementedError(
             f"text_augment_selection {text_augment_selection} not implemented"
         )
-    sample["full_text"] = texts
-
-    if isinstance(texts, list) and isinstance(texts[0], str) and len(texts) > 1:
-        texts = random.choice(texts)
-    sample["raw_text"] = texts
-    sample["text"] = tokenizer(texts)  # text shape: [num_token]
-    if class_index_dict is not None:
-        # https://stackoverflow.com/questions/48004243/how-to-share-large-read-only-dictionary-list-across-processes-in-multiprocessing
-        # https://stackoverflow.com/questions/45693949/storing-strings-in-a-multiprocessing-sharedctypes-array
-        # key, val = class_index_dict
-        # key = key[:].split('\n')
-        # _dict = {k: v for k, v in zip(key, val)}
-        sample["class_label"] = np.zeros(len(class_index_dict.keys()))
-        for x in json_dict_raw["tag"]:
-            sample["class_label"][class_index_dict[x]] = 1
-        sample["class_label"] = torch.tensor(sample["class_label"]).float()
-    del sample[text_ext]
-    sample["audio_name"] = sample["__key__"].split("/")[-1] + "." + audio_ext
-    sample["text_name"] = sample["__key__"].split("/")[-1] + "." + text_ext
-    sample["audio_orig_sr"] = orig_sr
-    return sample
+    return texts
 
 
-def collate_fn(batch):
-    """
-    Collate function for wdsdataloader.
-    batch: a list of dict, each dict is a sample
-    """
-    # concatenate values in each dictionary. if it is a tensor, concatenate. if it is a list, extend.
-    batch_dict = {}
-    for k in batch[0].keys():
-        if isinstance(batch[0][k], dict):  # dealwith bert tokenizer output
-            batch_dict[k] = {}
-            for kk in batch[0][k].keys():
-                tmp = []
-                for i in range(len(batch)):
-                    tmp.append(batch[i][k][kk])
-                batch_dict[k][kk] = torch.vstack(tmp)
-        elif isinstance(batch[0][k], torch.Tensor):
-            batch_dict[k] = torch.stack([sample[k] for sample in batch])
-        elif isinstance(batch[0][k], np.ndarray):
-            batch_dict[k] = torch.tensor(np.stack([sample[k] for sample in batch]))
-        else:
-            batch_dict[k] = [sample[k] for sample in batch]
-    return batch_dict
-
-def preprocess_new(
+def preprocess_single(
     sample,
     audio_ext,
     text_ext,
@@ -708,27 +625,7 @@ def preprocess_new(
 
     json_dict_raw = sample[text_ext]
 
-    # For selecting augmented text from dataset
-    # TODO: write this as a function
-    if text_augment_selection is None or text_augment_selection == "none":
-        texts = json_dict_raw["text"]
-    elif text_augment_selection == "all":
-        if "text_augment_all" in json_dict_raw.keys():
-            texts = json_dict_raw["text_augment_all"]
-        else:
-            texts = json_dict_raw["text"]
-    elif text_augment_selection == "augment_only":
-        if "text_augment_all" in json_dict_raw.keys():
-            if json_dict_raw["text_augment_t5"] is None:
-                texts = json_dict_raw["text"]
-            else:
-                texts = json_dict_raw["text_augment_t5"]
-        else:
-            texts = json_dict_raw["text"]
-    else:
-        raise NotImplementedError(
-            f"text_augment_selection {text_augment_selection} not implemented"
-        )
+    texts = select_text(json_dict_raw, text_augment_selection)
     sample["full_text"] = texts
 
     if isinstance(texts, list) and isinstance(texts[0], str) and len(texts) > 1:
@@ -738,10 +635,17 @@ def preprocess_new(
     if class_index_dict is not None:
         # https://stackoverflow.com/questions/48004243/how-to-share-large-read-only-dictionary-list-across-processes-in-multiprocessing
         # https://stackoverflow.com/questions/45693949/storing-strings-in-a-multiprocessing-sharedctypes-array
-        sample["class_label"] = np.zeros(len(class_index_dict.keys()))
-        for x in json_dict_raw["tag"]:
-            sample["class_label"][class_index_dict[x]] = 1
-        sample["class_label"] = torch.tensor(sample["class_label"]).float()
+
+        # in case the re-written version is wrong, here is the old version:
+        # sample["class_label"] = np.zeros(len(class_index_dict.keys()))
+        # for x in json_dict_raw["tag"]:
+        #     sample["class_label"][class_index_dict[x]] = 1
+        # sample["class_label"] = torch.tensor(sample["class_label"]).float()
+
+        class_labels = np.zeros(len(class_index_dict))
+        class_labels[np.in1d(list(class_index_dict.keys()), json_dict_raw["tag"])] = 1
+        sample["class_label"] = torch.tensor(class_labels).float()
+
     del sample[text_ext]
     sample["audio_name"] = sample["__key__"].split("/")[-1] + "." + audio_ext
     sample["text_name"] = sample["__key__"].split("/")[-1] + "." + text_ext
@@ -749,16 +653,16 @@ def preprocess_new(
     return sample
 
 
-def collate_fn_new(batch,
-                   audio_ext,
-                   text_ext,
-                   max_len,
-                   audio_cfg,
-                   class_index_dict,
-                   data_filling,
-                   data_truncating,
-                   text_augment_selection,
-                   ):
+def collate_fn_with_preprocess(batch,
+                               audio_ext,
+                               text_ext,
+                               max_len,
+                               audio_cfg,
+                               class_index_dict,
+                               data_filling,
+                               data_truncating,
+                               text_augment_selection,
+                               ):
     """
     Collate function for wdsdataloader.
     batch: a list of dict, each dict is a sample
@@ -767,17 +671,9 @@ def collate_fn_new(batch,
     data_preprocessed = []
 
     for sample in batch:
-        data_preprocessed.append(preprocess_new(
-            sample,
-            audio_ext,
-            text_ext,
-            max_len,
-            audio_cfg,
-            class_index_dict,
-            data_filling,
-            data_truncating,
-            text_augment_selection,
-        ))
+        data_preprocessed.append(
+            preprocess_single(sample, audio_ext, text_ext, max_len, audio_cfg, class_index_dict, data_filling,
+                              data_truncating, text_augment_selection))
 
 
     batch_dict = {}
@@ -901,7 +797,7 @@ def get_wds_dataset(
         wds.batched(
             args.batch_size,
             partial=not (is_train or args.parallel_eval),
-            collation_fn=partial(collate_fn_new,
+            collation_fn=partial(collate_fn_with_preprocess,
                                  audio_ext=audio_ext,
                                  text_ext=text_ext,
                                  max_len=max_len,
@@ -939,13 +835,18 @@ def get_wds_dataset(
     if args.horovod:  # multi-node training on summit
         kwargs["multiprocessing_context"] = "forkserver"
 
+    if is_train:
+        prefetch_factor = args.batch_size // args.workers
+    else:
+        prefetch_factor = 2
+
     dataloader = wds.WebLoader(
         dataset,
         batch_size=None,
         shuffle=False,
         num_workers=args.workers,
         pin_memory=True,
-        prefetch_factor=args.batch_size // args.workers,
+        prefetch_factor=prefetch_factor,
         **kwargs
     )
 
