@@ -707,10 +707,12 @@ def preprocess_new(
     sample = get_audio_features(sample, audio_data, max_len, data_truncating, data_filling, audio_cfg)
     del sample[audio_ext]
 
-    try:
-        json_dict_raw = json.loads(sample[text_ext].decode("utf-8"))
-    except:
-        print("JSON error:", sample["__url__"])
+    json_dict_raw = sample[text_ext]
+
+    # try:
+    #     json_dict_raw = json.loads(sample[text_ext].decode("utf-8"))
+    # except:
+    #     print("JSON error:", sample["__url__"])
 
     # For selecting augmented text from dataset
     if text_augment_selection is None or text_augment_selection == "none":
