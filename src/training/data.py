@@ -584,12 +584,6 @@ def preprocess(
     """
     Preprocess a single sample for wdsdataloader.
     """
-
-    print('sample:', sample)
-    print('audio:', sample["flac"])
-    print('audio type', type(sample["flac"]))
-    quit()
-
     audio_data, orig_sr = sf.read(io.BytesIO(sample[audio_ext]))
     audio_data = int16_to_float32(float32_to_int16(audio_data))
     audio_data = torch.tensor(audio_data).float()
@@ -773,25 +767,31 @@ def collate_fn_new(batch, audio_cfg):
     batch: a list of dict, each dict is a sample
     """
     # concatenate values in each dictionary. if it is a tensor, concatenate. if it is a list, extend.
+    data_preprocessed = []
+
+    print("batch size:", len(batch))
+    print('batch[0]:', batch[0])
+
+    quit()
+
+
     batch_dict = {}
 
 
-
-
-    for k in batch[0].keys():
-        if isinstance(batch[0][k], dict):  # dealwith bert tokenizer output
+    for k in data_preprocessed[0].keys():
+        if isinstance(data_preprocessed[0][k], dict):  # dealwith bert tokenizer output
             batch_dict[k] = {}
-            for kk in batch[0][k].keys():
+            for kk in data_preprocessed[0][k].keys():
                 tmp = []
-                for i in range(len(batch)):
-                    tmp.append(batch[i][k][kk])
+                for i in range(len(data_preprocessed)):
+                    tmp.append(data_preprocessed[i][k][kk])
                 batch_dict[k][kk] = torch.vstack(tmp)
-        elif isinstance(batch[0][k], torch.Tensor):
-            batch_dict[k] = torch.stack([sample[k] for sample in batch])
-        elif isinstance(batch[0][k], np.ndarray):
-            batch_dict[k] = torch.tensor(np.stack([sample[k] for sample in batch]))
+        elif isinstance(data_preprocessed[0][k], torch.Tensor):
+            batch_dict[k] = torch.stack([sample[k] for sample in data_preprocessed])
+        elif isinstance(data_preprocessed[0][k], np.ndarray):
+            batch_dict[k] = torch.tensor(np.stack([sample[k] for sample in data_preprocessed]))
         else:
-            batch_dict[k] = [sample[k] for sample in batch]
+            batch_dict[k] = [sample[k] for sample in data_preprocessed]
     return batch_dict
 
 
@@ -878,27 +878,27 @@ def get_wds_dataset(
         wds.decode(wds.torch_audio),
     )
 
-    pipeline.append(
-        wds.map(
-            partial(
-                preprocess,
-                audio_ext=audio_ext,
-                text_ext=text_ext,
-                max_len=max_len,
-                audio_cfg=model_cfg['audio_cfg'],
-                class_index_dict=copy.deepcopy(args.class_index_dict),
-                data_filling=args.data_filling,
-                data_truncating=args.data_truncating,
-                text_augment_selection=args.text_augment_selection,
-            )
-        ),
-    )
+    # pipeline.append(
+    #     wds.map(
+    #         partial(
+    #             preprocess,
+    #             audio_ext=audio_ext,
+    #             text_ext=text_ext,
+    #             max_len=max_len,
+    #             audio_cfg=model_cfg['audio_cfg'],
+    #             class_index_dict=copy.deepcopy(args.class_index_dict),
+    #             data_filling=args.data_filling,
+    #             data_truncating=args.data_truncating,
+    #             text_augment_selection=args.text_augment_selection,
+    #         )
+    #     ),
+    # )
 
     pipeline.append(
         wds.batched(
             args.batch_size,
             partial=not (is_train or args.parallel_eval),
-            collation_fn=collate_fn,
+            collation_fn=partial(collate_fn_new, audio_cfg=model_cfg["audio_cfg"]),
         )
     )
 
