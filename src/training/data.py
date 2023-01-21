@@ -683,10 +683,10 @@ def preprocess_new(
     text_ext,
     max_len,
     audio_cfg,
-    class_index_dict=None,
-    data_filling="pad",
-    data_truncating="rand_trunc",
-    text_augment_selection=None,
+    class_index_dict,
+    data_filling,
+    data_truncating,
+    text_augment_selection,
 ):
     """
     Preprocess a single sample for wdsdataloader.
@@ -761,7 +761,16 @@ def preprocess_new(
     return sample
 
 
-def collate_fn_new(batch, audio_cfg):
+def collate_fn_new(batch,
+                   audio_ext,
+                   text_ext,
+                   max_len,
+                   audio_cfg,
+                   class_index_dict,
+                   data_filling,
+                   data_truncating,
+                   text_augment_selection,
+                   ):
     """
     Collate function for wdsdataloader.
     batch: a list of dict, each dict is a sample
@@ -769,15 +778,21 @@ def collate_fn_new(batch, audio_cfg):
     # concatenate values in each dictionary. if it is a tensor, concatenate. if it is a list, extend.
     data_preprocessed = []
 
-    print("batch size:", len(batch))
-    print('batch[0]:', batch[0])
-
-    quit()
+    for sample in batch:
+        data_preprocessed.append(preprocess_new(
+            sample,
+            audio_ext,
+            text_ext,
+            max_len,
+            audio_cfg,
+            class_index_dict,
+            data_filling,
+            data_truncating,
+            text_augment_selection,
+        ))
 
 
     batch_dict = {}
-
-
     for k in data_preprocessed[0].keys():
         if isinstance(data_preprocessed[0][k], dict):  # dealwith bert tokenizer output
             batch_dict[k] = {}
@@ -898,7 +913,17 @@ def get_wds_dataset(
         wds.batched(
             args.batch_size,
             partial=not (is_train or args.parallel_eval),
-            collation_fn=partial(collate_fn_new, audio_cfg=model_cfg["audio_cfg"]),
+            collation_fn=partial(collate_fn_new,
+                                 audio_ext=audio_ext,
+                                 text_ext=text_ext,
+                                 max_len=max_len,
+                                 audio_cfg=model_cfg['audio_cfg'],
+                                 class_index_dict=copy.deepcopy(args.class_index_dict),
+                                 data_filling=args.data_filling,
+                                 data_truncating=args.data_truncating,
+                                 text_augment_selection=args.text_augment_selection,
+                                 ),
+
         )
     )
 
