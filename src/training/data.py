@@ -584,6 +584,11 @@ def preprocess(
     """
     Preprocess a single sample for wdsdataloader.
     """
+
+    print('sample:', sample)
+    print('audio:', sample["flac"])
+    quit()
+
     audio_data, orig_sr = sf.read(io.BytesIO(sample[audio_ext]))
     audio_data = int16_to_float32(float32_to_int16(audio_data))
     audio_data = torch.tensor(audio_data).float()
@@ -609,7 +614,7 @@ def preprocess(
     try:
         json_dict_raw = json.loads(sample[text_ext].decode("utf-8"))
     except:
-        print("sample[__url__]:", sample["__url__"])
+        print("JSON error:", sample["__url__"])
 
     # For selecting augmented text from dataset
     if text_augment_selection is None or text_augment_selection == "none":
@@ -661,6 +666,117 @@ def collate_fn(batch):
     """
     # concatenate values in each dictionary. if it is a tensor, concatenate. if it is a list, extend.
     batch_dict = {}
+    for k in batch[0].keys():
+        if isinstance(batch[0][k], dict):  # dealwith bert tokenizer output
+            batch_dict[k] = {}
+            for kk in batch[0][k].keys():
+                tmp = []
+                for i in range(len(batch)):
+                    tmp.append(batch[i][k][kk])
+                batch_dict[k][kk] = torch.vstack(tmp)
+        elif isinstance(batch[0][k], torch.Tensor):
+            batch_dict[k] = torch.stack([sample[k] for sample in batch])
+        elif isinstance(batch[0][k], np.ndarray):
+            batch_dict[k] = torch.tensor(np.stack([sample[k] for sample in batch]))
+        else:
+            batch_dict[k] = [sample[k] for sample in batch]
+    return batch_dict
+
+def preprocess_new(
+    sample,
+    audio_ext,
+    text_ext,
+    max_len,
+    audio_cfg,
+    class_index_dict=None,
+    data_filling="pad",
+    data_truncating="rand_trunc",
+    text_augment_selection=None,
+):
+    """
+    Preprocess a single sample for wdsdataloader.
+    """
+    audio_data, orig_sr = sf.read(io.BytesIO(sample[audio_ext]))
+    audio_data = int16_to_float32(float32_to_int16(audio_data))
+    audio_data = torch.tensor(audio_data).float()
+
+    # TODO: (yusong) to be include in the future
+    # # if torchaudio not installed, use soundfile to load audio
+    # if torchaudio is None:
+    #     audio_data, orig_sr = sf.read(io.BytesIO(sample[audio_ext]))
+    #     audio_data = torch.tensor(audio_data).float()
+    # else:
+    #     # https://github.com/webdataset/webdataset/blob/main/webdataset/autodecode.py
+    #     with tempfile.TemporaryDirectory() as dirname:
+    #         os.makedirs(dirname, exist_ok=True)
+    #         fname = os.path.join(dirname, f"file.flac")
+    #         with open(fname, "wb") as stream:
+    #             stream.write(sample[audio_ext])
+    #         audio_data, orig_sr = torchaudio.load(fname)
+    #         audio_data = audio_data[0, :].float()
+
+    sample = get_audio_features(sample, audio_data, max_len, data_truncating, data_filling, audio_cfg)
+    del sample[audio_ext]
+
+    try:
+        json_dict_raw = json.loads(sample[text_ext].decode("utf-8"))
+    except:
+        print("JSON error:", sample["__url__"])
+
+    # For selecting augmented text from dataset
+    if text_augment_selection is None or text_augment_selection == "none":
+        texts = json_dict_raw["text"]
+    elif text_augment_selection == "all":
+        if "text_augment_all" in json_dict_raw.keys():
+            texts = json_dict_raw["text_augment_all"]
+        else:
+            texts = json_dict_raw["text"]
+    elif text_augment_selection == "augment_only":
+        if "text_augment_all" in json_dict_raw.keys():
+            if json_dict_raw["text_augment_t5"] is None:
+                texts = json_dict_raw["text"]
+            else:
+                texts = json_dict_raw["text_augment_t5"]
+        else:
+            texts = json_dict_raw["text"]
+    else:
+        raise NotImplementedError(
+            f"text_augment_selection {text_augment_selection} not implemented"
+        )
+    sample["full_text"] = texts
+
+    if isinstance(texts, list) and isinstance(texts[0], str) and len(texts) > 1:
+        texts = random.choice(texts)
+    sample["raw_text"] = texts
+    sample["text"] = tokenizer(texts)  # text shape: [num_token]
+    if class_index_dict is not None:
+        # https://stackoverflow.com/questions/48004243/how-to-share-large-read-only-dictionary-list-across-processes-in-multiprocessing
+        # https://stackoverflow.com/questions/45693949/storing-strings-in-a-multiprocessing-sharedctypes-array
+        # key, val = class_index_dict
+        # key = key[:].split('\n')
+        # _dict = {k: v for k, v in zip(key, val)}
+        sample["class_label"] = np.zeros(len(class_index_dict.keys()))
+        for x in json_dict_raw["tag"]:
+            sample["class_label"][class_index_dict[x]] = 1
+        sample["class_label"] = torch.tensor(sample["class_label"]).float()
+    del sample[text_ext]
+    sample["audio_name"] = sample["__key__"].split("/")[-1] + "." + audio_ext
+    sample["text_name"] = sample["__key__"].split("/")[-1] + "." + text_ext
+    sample["audio_orig_sr"] = orig_sr
+    return sample
+
+
+def collate_fn_new(batch, audio_cfg):
+    """
+    Collate function for wdsdataloader.
+    batch: a list of dict, each dict is a sample
+    """
+    # concatenate values in each dictionary. if it is a tensor, concatenate. if it is a list, extend.
+    batch_dict = {}
+
+
+
+
     for k in batch[0].keys():
         if isinstance(batch[0][k], dict):  # dealwith bert tokenizer output
             batch_dict[k] = {}
@@ -756,6 +872,11 @@ def get_wds_dataset(
                 wds.tarfile_to_samples(handler=log_and_continue),
             ]
         )
+
+    pipeline.append(
+        wds.decode("torchaudio"),
+    )
+
     pipeline.append(
         wds.map(
             partial(
