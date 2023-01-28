@@ -836,7 +836,7 @@ def get_wds_dataset(
         kwargs["multiprocessing_context"] = "forkserver"
 
     if is_train:
-        prefetch_factor = args.batch_size // args.workers
+        prefetch_factor = min(2, args.batch_size // args.workers)
     else:
         prefetch_factor = 2
 
