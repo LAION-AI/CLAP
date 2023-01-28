@@ -36,6 +36,8 @@ data = get_data(args, model_cfg)
 dataloader, sampler = data["train"].dataloader, data["train"].sampler
 
 print('dataset size:', data["train"].dataloader.num_samples)
+print('batch size:', args.batch_size)
+print('num batches:', len(data["train"].dataloader.num_samples // args.batch_size))
 
-for i, batch in enumerate(tqdm(dataloader)):
+for i, batch in enumerate(tqdm(dataloader, total=len(data["train"].dataloader.num_samples // args.batch_size))):
     pass
