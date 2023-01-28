@@ -691,6 +691,7 @@ def collate_fn_with_preprocess(batch,
             batch_dict[k] = torch.tensor(np.stack([sample[k] for sample in data_preprocessed]))
         else:
             batch_dict[k] = [sample[k] for sample in data_preprocessed]
+    del data_preprocessed
     return batch_dict
 
 
@@ -836,7 +837,7 @@ def get_wds_dataset(
         kwargs["multiprocessing_context"] = "forkserver"
 
     if is_train:
-        prefetch_factor = min(2, args.batch_size // args.workers)
+        prefetch_factor = max(2, args.batch_size // args.workers)
     else:
         prefetch_factor = 2
 
