@@ -77,6 +77,13 @@ def train_one_epoch(
     data_time_m = AverageMeter()
     end = time.time()
 
+    prof = torch.profiler.profile(
+        schedule=torch.profiler.schedule(wait=1, warmup=1, active=3, repeat=2),
+        on_trace_ready=torch.profiler.tensorboard_trace_handler('/fsx/yusong/pt_profiler_logs'),
+        record_shapes=True,
+        with_stack=True)
+    prof.start()
+
     for i, batch in enumerate(dataloader):
         # logging.info(f"batch {i} of {num_batches_per_epoch}")
         step = num_batches_per_epoch * epoch + i
@@ -261,6 +268,9 @@ def train_one_epoch(
             # resetting batch / data time meters per log window
             batch_time_m.reset()
             data_time_m.reset()
+
+        prof.step()
+    prof.stop()
     # end for
 
 
