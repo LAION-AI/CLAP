@@ -35,8 +35,16 @@ dataset_split = {
     "WavText5K": ["train", "test"],
     "esc50_no_overlap": ["train", "test"],
     "usd8k_no_overlap": ["train", "test"],
-    "fsd50k_200_class_label": ["train", "test", "valid"]
-}
+    "fsd50k_200_class_label": ["train", "test", "valid"],
+    "fma_full": ["train", "test"],
+    "Genius": ["train", "test"],
+    "Jamendo": ["train", "test"],
+    "juno": ["train", "test"],
+    "CMU_Arctic": ["train", "test"],
+    "ravdess": ["train", "test"],
+    "Europarl-st": ["train", "test"],
+    "common_voice": ["train", "test"],
+    }
 
 
 def freeze_batch_norm_2d(module, module_match={}, name=""):
