@@ -848,7 +848,6 @@ def get_wds_dataset(
         num_workers=args.workers,
         pin_memory=True,
         prefetch_factor=prefetch_factor,
-        cache_dir='./wds_cache',
         **kwargs
     )
 
