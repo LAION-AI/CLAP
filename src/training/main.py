@@ -214,8 +214,9 @@ def main():
     assert args.precision in ["amp", "fp16", "fp32"]
     if args.precision == "fp16":
         logging.warning(
-            "It is recommended to use AMP mixed-precision instead of FP16. "
-            "FP16 support needs further verification and tuning, especially for train."
+            "It is recommended to use fp32 mixed-precision instead of FP16 and AMP in this model. "
+            "They will cause NaN loss and NaN gradients. "
+            "FP16 and AMP support needs further verification and tuning, especially for train."
         )
 
     if args.horovod:
@@ -428,8 +429,7 @@ def main():
                 hvd.broadcast_parameters(model.state_dict(), root_rank=0)
                 hvd.broadcast_optimizer_state(optimizer, root_rank=0)
 
-    # https://github.com/pytorch/pytorch/issues/40497#issuecomment-1262373602
-    scaler = GradScaler(growth_interval=100) if args.precision == "amp" else None
+    scaler = GradScaler() if args.precision == "amp" else None
 
     # optionally resume from a checkpoint
     start_epoch = 0
