@@ -76,7 +76,7 @@ def train_one_epoch(
     batch_time_m = AverageMeter()
     data_time_m = AverageMeter()
     end = time.time()
-
+    min_scale = 128
     for i, batch in enumerate(dataloader):
         # logging.info(f"batch {i} of {num_batches_per_epoch}")
         step = num_batches_per_epoch * epoch + i
@@ -134,6 +134,8 @@ def train_one_epoch(
                     else:
                         scaler.step(o_)
                 scaler.update()
+                if scaler._scale < min_scale:
+                    scaler._scale = torch.tensor(min_scale).to(scaler._scale)
             else:
                 total_loss.backward()
                 for o_ in optimizer.values():
@@ -149,6 +151,8 @@ def train_one_epoch(
                 else:
                     scaler.step(optimizer)
                 scaler.update()
+                if scaler._scale < min_scale:
+                    scaler._scale = torch.tensor(min_scale).to(scaler._scale)
             else:
                 total_loss.backward()
                 optimizer.step()
