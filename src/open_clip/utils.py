@@ -44,6 +44,7 @@ dataset_split = {
     "ravdess": ["train", "test"],
     "Europarl-st": ["train", "test"],
     "common_voice": ["train", "test"],
+    "Jamendo_16bit": ["train", "test"],
     }
 
 
