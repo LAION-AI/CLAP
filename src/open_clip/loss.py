@@ -220,6 +220,82 @@ class ClipLoss(nn.Module):
                     ) / 2
         return total_loss
 
+class MaxMarginHingeLoss(nn.Module):
+
+    def __init__(
+            self,
+            delta=0.2
+            include_slack_variables=False,
+    ):
+        super().__init__()
+        self.include_slack_variables = include_slack_variables
+        self.delta = delta
+        self.m = nn.ReLU()
+
+    def normalized_dot_product(self, A, T):
+        '''
+        This function is used to calculate the normalized dot product between audio and text embeddings
+        '''
+        assert A.shape[1] == T.shape[1], "#Audio embedding must equal to the #Text embedding"
+        n, d = A.shape
+        dot_product = torch.mm(A, T.t())
+        norm_A = torch.norm(A, dim=1).reshape(-1, 1)
+        norm_T = torch.norm(T, dim=1).reshape(-1, 1)
+        return dot_product / (norm_A @ norm_T.t())
+
+    def matrix_without_diag_element(self, matrix):
+        '''
+        get the non-diagonal elements of a matrix and reshape it to a vector include (n-1) x (n) elements
+        e.g.
+        input matrix: 
+            [[1, 2, 3],
+            [4, 5, 6],
+            [7, 8, 9]]
+        output vector:
+            [2, 3, 4, 6, 7, 8]
+        '''
+        mask = torch.eye(matrix.shape[0], dtype=bool)
+        non_diagonal = matrix[~mask]
+        return non_diagonal
+    
+    def forward(self, audio_features, text_features):
+        '''
+            description:
+                if include_slack_variables:
+                    L(text, audio) = sum_{+}sum_{i}[max(0, delta - dot(audio^{+}, text^{+}) + (-dot(text^{i}, text^{+}))*dot(audio^{i}, text^{+}))]
+                else:
+                    L(text, audio) = sum_{+}sum_{i}[max(0, delta - dot(audio^{+}, text^{+}) + dot(audio^{i}, text^{+}))]
+            e.g.
+                include_slack_variables = False
+                n = 3
+                d = 2
+                A = tensor([[0.0308, 0.1405],
+                            [0.0020, 0.2661],
+                            [0.9266, 0.8929]])
+                T = tensor([[0.6559, 0.2555],
+                            [0.9457, 0.4777],
+                            [0.3662, 0.0549]])
+                dot_A_T = normalized_dot_product(A,T) = tensor([[0.5539, 0.6313, 0.3562],
+                                                                [0.3700, 0.4576, 0.1556],
+                                                                [0.9229, 0.9556, 0.8149]])
+                delta*torch.ones(n*(n-1)) = tensor([0.2000, 0.2000, 0.2000, 0.2000, 0.2000, 0.2000])
+                torch.diag(dot_A_T).unsqueeze(1).repeat(1, n-1).flatten() = tensor([0.5539, 0.5539, 0.4576, 0.4576, 0.8149, 0.8149])
+                self.matrix_without_diag_element(dot_A_T.T) = tensor([0.3700, 0.9229, 0.6313, 0.9556, 0.3562, 0.1556])
+        '''
+        nA, dA = audio_features.shape
+        nT, dT = text_features.shape
+        assert dA == dT, "Audio embedding must equal to the Text embedding"
+        assert nA == nT, "Audio bs must equal to the Text bs"
+        n = nA
+        dot_A_T = self.normalized_dot_product(audio_features, text_features)
+        if self.include_slack_variables:
+            dot_T_T = self.normalized_dot_product(text_features, text_features)
+            return sum(self.m(self.delta*torch.ones(n*(n-1)) - torch.diag(dot_A_T).unsqueeze(1).repeat(1, n-1).flatten() - self.matrix_without_diag_element((dot_T_T*dot_A_T).T)))
+        return sum(self.m(self.delta*torch.ones(n*(n-1)) - torch.diag(dot_A_T).unsqueeze(1).repeat(1, n-1).flatten() + self.matrix_without_diag_element(dot_A_T.T)))
+
+
+
+
 def lp_gather_features(
         pred,
         target,
