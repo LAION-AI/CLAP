@@ -47,6 +47,9 @@ dataset_split = {
     "Europarl-st": ["train", "test"],
     "common_voice": ["train", "test"],
     "Jamendo_16bit": ["train", "test"],
+    "genius_16bit_128": ["train", "test"],
+    "juno_16bit": ["train", "test"],
+    "fma_full_16bit_128": ["train", "test"],
     }
 
 
