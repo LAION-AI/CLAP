@@ -332,7 +332,6 @@ class MaxMarginHingeLoss(nn.Module):
             self.m = nn.ReLU()
         else:
             self.m = nn.LeakyReLU(leakey)
-        self.m = nn.ReLU()
         self.isnormalize = isnormalize
         self.t_freeze = t_freeze
 
