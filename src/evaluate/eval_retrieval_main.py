@@ -2,7 +2,6 @@ import argparse
 import os.path
 import glob
 import json
-import librosa
 from tqdm import tqdm
 import random
 import numpy as np
