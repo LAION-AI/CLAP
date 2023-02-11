@@ -488,6 +488,7 @@ def main():
         # you will have to configure this for your project!
         wandb.init(
             entity="clap",
+            project="clap",
             notes=args.wandb_notes,
             name=args.wandb_notes,
             tags=[],
