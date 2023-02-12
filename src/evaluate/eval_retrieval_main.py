@@ -260,7 +260,7 @@ if __name__ == '__main__':
             param.requires_grad = False
 
         if args.datasetnames == ['esc50_no_overlap'] or args.datasetnames == ['VGGSound'] or \
-                args.datasetnames == ['usd8k_no_overlap']:
+                args.datasetnames == ['usd8k_no_overlap'] or 'ESC' in args.datasetnames[0]:
             # use the same dataset for all models
             evaluate_zeroshot(model, data, start_epoch, args, writer)
         else:
