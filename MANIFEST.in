@@ -1,0 +1,3 @@
+recursive-include src/laion_clap/open_clip/model_configs *.json
+recursive-include src/laion_clap/open_clip bpe_simple_vocab_16e6.txt.gz
+recursive-include src/laion_clap/training audioset_textmap.npy

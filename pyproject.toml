@@ -1,0 +1,53 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+[project]
+name = "laion_clap"
+version = "0.0.6"
+authors = [
+  { name="Ke Chen", email="knutchen@ucsd.edu" },
+  { name="Yusong Wu" },
+  { name="Tianyu Zhang" },
+  { name="Yuchen Hui" }
+]
+maintainers = [
+  { name="Ke Chen", email="knutchen@ucsd.edu" },
+  { name="Yusong Wu" },
+  { name="Tianyu Zhang" },
+  { name="Yuchen Hui" }
+]
+description = "Contrastive Language-Audio Pretraining Model from LAION"
+license = {file = "LICENSE"}
+readme = "README.md"
+requires-python = ">=3.7"
+dependencies = [
+  "soundfile",
+  "librosa",
+  "torchlibrosa",
+  "ftfy",
+  "braceexpand",
+  "webdataset",
+  "wget",
+  "wandb",
+  "llvmlite",
+  "scipy",
+  "scikit-learn",
+  "pandas",
+  "h5py",
+  "tqdm",
+  "regex",
+  "transformers",
+  "progressbar"
+]
+classifiers = [
+    'Development Status :: 3 - Alpha',
+    'Intended Audience :: Developers',
+    'Intended Audience :: Science/Research',
+    'License :: OSI Approved :: Apache Software License',
+    'Topic :: Scientific/Engineering :: Artificial Intelligence',
+]
+
+
+[project.urls]
+"Homepage" = "https://github.com/LAION-AI/CLAP"
+"Bug Tracker" = "https://github.com/LAION-AI/CLAP/issues"
