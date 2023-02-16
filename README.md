@@ -102,11 +102,11 @@ Because most of the dataset has copyright restriction, unfortunatly we cannot di
 ## Citation
 If you find this project and the LAION-Audio-630K dataset useful, please cite our paper:
 ```
-@article{wu2022large,
+@inproceedings{laionclap2023,
   title = {Large-scale Contrastive Language-Audio Pretraining with Feature Fusion and Keyword-to-Caption Augmentation},
-  author = {Wu, Yusong and Chen, Ke and Zhang, Tianyu and Hui, Yuchen and Berg-Kirkpatrick, Taylor and Dubnov, Shlomo},
-  journal={arXiv preprint arXiv:2211:06687},
-  year = {2022},
+  author = {Wu*, Yusong and Chen*, Ke and Zhang*, Tianyu and Hui*, Yuchen and Berg-Kirkpatrick, Taylor and Dubnov, Shlomo},
+  booktitle={IEEE International Conference on Acoustics, Speech and Signal Processing, ICASSP},
+  year = {2023},
 }
 ```
 
