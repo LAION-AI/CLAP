@@ -14,7 +14,7 @@ try:
 except ImportError:
     wandb = None
 
-from open_clip import ClipLoss, gather_features
+from open_clip import ClipLoss, gather_features, MaxMarginHingeLoss
 from .distributed import is_master
 from .zero_shot import zero_shot_eval
 
@@ -51,16 +51,25 @@ def train_one_epoch(
     device = torch.device(args.device)
     autocast = torch.cuda.amp.autocast if args.precision == "amp" else suppress
     model.train()
-    loss = ClipLoss(
-        local_loss=args.local_loss,
-        gather_with_grad=args.gather_with_grad,
-        cache_labels=True,
-        rank=args.rank,
-        world_size=args.world_size,
-        use_horovod=args.horovod,
-        mlp_loss=args.clap_mlploss,
-        weight_loss_kappa=args.kappa,
-    )
+
+    # added by yuchen: choose contrastive loss type
+    # can be clip or hinge or weighted_hinge or weighted_clip
+    contrastive_loss_type = args.contrastive_loss
+    if contrastive_loss_type == "clip" :
+
+        loss = ClipLoss(
+            local_loss=args.local_loss,
+            gather_with_grad=args.gather_with_grad,
+            cache_labels=True,
+            rank=args.rank,
+            world_size=args.world_size,
+            use_horovod=args.horovod,
+            mlp_loss=args.clap_mlploss,
+            weight_loss_kappa=args.kappa,
+        )
+
+    elif contrastive_loss_type == "hinge" :
+        loss = MaxMarginHingeLoss()
 
     dataloader, sampler = data["train"].dataloader, data["train"].sampler
     if args.distributed and sampler is not None:

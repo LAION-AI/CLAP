@@ -147,6 +147,9 @@ def main():
             args.pretrained == "" or args.pretrained is None
         ), "bert/roberta/bart text encoder does not support pretrained models."
 
+    # check if the specified contrastive loss is legal:
+    assert args.contrastive_loss in ["clip", "weighted_clip", "hinge", "weighted_hinge"], "contrastive loss not supported"
+
     # get the name of the experiments
     if args.name is None:
         args.name = "-".join(

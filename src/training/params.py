@@ -550,6 +550,13 @@ def parse_args():
         help="For selecting levels of augmented text. Type is among ['all', 'augment_only', 'none']",
     )
 
+    parser.add_argument(
+        "--contrastive-loss",
+        type=str,
+        default="clip",
+        help="Name of the text backbone to use. Can be [clip, weighted_clip , hinge, weighted hinge]",
+    )
+
     args = parser.parse_args()
 
     # If some params are not passed, we use the default values based on model name.
