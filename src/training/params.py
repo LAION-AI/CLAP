@@ -554,8 +554,44 @@ def parse_args():
         "--contrastive-loss",
         type=str,
         default="clip",
-        help="Name of the text backbone to use. Can be [clip, weighted_clip , hinge, weighted hinge]",
+        help="Name of the contrastive loss to use. Can be [clip, hinge]",
     )
+
+    parser.add_argument(
+        "--hinge-delta",
+        type=float,
+        default= 0.2,
+        help="the delta in the hinge loss formula, default is 0.2. source: https://ieeexplore.ieee.org/document/9414458/ ",
+    )
+
+    parser.add_argument(
+        "--hinge-include-slack-variable",
+        type= bool,
+        default= False,
+        help="weight that evaluates the 'degree of negativity' of negative samples. ",
+    )
+
+    parser.add_argument(
+        "--hinge-isnormalize",
+        type= bool,
+        default= True,
+        help="normalize audio and text embeddings in the dot product or not",
+    )
+
+    parser.add_argument(
+        "--hinge-t-freeze",
+        type= bool,
+        default= False,
+        help="freeze text embedding or not",
+    )
+
+    parser.add_argument(
+        "--hinge-leaky",
+        type= float,
+        default= 0.1,
+        help="leaky relu hyperparam",
+    )
+
 
     args = parser.parse_args()
 

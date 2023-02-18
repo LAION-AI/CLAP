@@ -53,8 +53,11 @@ def train_one_epoch(
     model.train()
 
     # added by yuchen: choose contrastive loss type
-    # can be clip or hinge or weighted_hinge or weighted_clip
+    # can be clip or hinge.
+    # As to weighted or not, it is controlled by args.XX_include_slack_variable
+
     contrastive_loss_type = args.contrastive_loss
+    # Todo: for clip loss, add an arg for weighted or not
     if contrastive_loss_type == "clip" :
 
         loss = ClipLoss(
@@ -69,7 +72,13 @@ def train_one_epoch(
         )
 
     elif contrastive_loss_type == "hinge" :
-        loss = MaxMarginHingeLoss()
+        loss = MaxMarginHingeLoss(
+            delta = args.hinge_delta,  
+            include_slack_variable = args.hinge_include_slack_variable,
+            isnormalize = args.hinge_isnormalize,
+            t_freeze = args.hinge_t_freeze,
+            leaky = args.hinge_leaky,
+        )
 
     dataloader, sampler = data["train"].dataloader, data["train"].sampler
     if args.distributed and sampler is not None:
@@ -162,11 +171,15 @@ def train_one_epoch(
                 total_loss.backward()
                 optimizer.step()
 
+
         # Note: we clamp to 4.6052 = ln(100), as in the original paper.
-        with torch.no_grad():
-            unwrap_model(model).logit_scale_a.clamp_(0, math.log(100))
-            if args.clap_mlploss:
-                unwrap_model(model).logit_scale_t.clamp_(0, math.log(100))
+        ## added by yuchen while implementing hinge loss with tianyu
+        if contrastive_loss_type == "clip" :
+
+            with torch.no_grad():
+                unwrap_model(model).logit_scale_a.clamp_(0, math.log(100))
+                if args.clap_mlploss:
+                    unwrap_model(model).logit_scale_t.clamp_(0, math.log(100))
 
         batch_time_m.update(time.time() - end)
         end = time.time()
