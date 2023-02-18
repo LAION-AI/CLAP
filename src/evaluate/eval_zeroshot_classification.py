@@ -2,7 +2,6 @@ import argparse
 import os.path
 import glob
 import json
-import librosa
 from tqdm import tqdm
 import random
 import numpy as np
@@ -134,7 +133,7 @@ if __name__ == '__main__':
     args.epochs = 1
     args.precision = 'fp32'
     args.save_logs = True
-    args.wandb = True
+    args.wandb = args.report_to == 'wandb'
     args.class_index_dict = None
 
     device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
@@ -260,9 +259,4 @@ if __name__ == '__main__':
         for param in model.parameters():
             param.requires_grad = False
 
-        if args.datasetnames == ['esc50_no_overlap'] or args.datasetnames == ['VGGSound'] or \
-                args.datasetnames == ['usd8k_no_overlap']:
-            # use the same dataset for all models
-            evaluate_zeroshot(model, data, start_epoch, args, writer)
-        else:
-            evaluate(model, data, start_epoch, args, writer)
+        evaluate_zeroshot(model, data, start_epoch, args, writer)

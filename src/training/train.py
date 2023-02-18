@@ -16,7 +16,6 @@ except ImportError:
 
 from open_clip import ClipLoss, gather_features, MaxMarginHingeLoss
 from .distributed import is_master
-from .zero_shot import zero_shot_eval
 
 
 class AverageMeter(object):
