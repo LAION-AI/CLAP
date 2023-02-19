@@ -76,7 +76,7 @@ def train_one_epoch(
             include_slack_variables = args.hinge_include_slack_variable,
             isnormalize = args.hinge_isnormalize,
             t_freeze = args.hinge_t_freeze,
-            leaky = args.hinge_leaky,
+            leakey = args.hinge_leaky,
         )
 
     dataloader, sampler = data["train"].dataloader, data["train"].sampler
