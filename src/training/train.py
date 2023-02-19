@@ -73,7 +73,7 @@ def train_one_epoch(
     elif contrastive_loss_type == "hinge" :
         loss = MaxMarginHingeLoss(
             delta = args.hinge_delta,  
-            include_slack_variable = args.hinge_include_slack_variable,
+            include_slack_variables = args.hinge_include_slack_variable,
             isnormalize = args.hinge_isnormalize,
             t_freeze = args.hinge_t_freeze,
             leaky = args.hinge_leaky,
