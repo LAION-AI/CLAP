@@ -124,21 +124,35 @@ def train_one_epoch(
                 logit_scale_t,
             ) = model(audios, texts, device)
 
-            if args.clap_mlploss:
-                total_loss = loss(
-                    audio_features=audio_features,
-                    text_features=text_features,
-                    logit_scale_a=logit_scale_a,
-                    logit_scale_t=logit_scale_t,
-                    audio_features_mlp=audio_features_mlp,
-                    text_features_mlp=text_features_mlp
-                )
-            else:
-                total_loss = loss(
-                    audio_features=audio_features,
-                    text_features=text_features,
-                    logit_scale_a=logit_scale_a
-                )
+            if args.contrastive_loss == "clip" :
+                if args.clap_mlploss:
+                    total_loss = loss(
+                        audio_features=audio_features,
+                        text_features=text_features,
+                        logit_scale_a=logit_scale_a,
+                        logit_scale_t=logit_scale_t,
+                        audio_features_mlp=audio_features_mlp,
+                        text_features_mlp=text_features_mlp
+                    )
+                else:
+                    total_loss = loss(
+                        audio_features=audio_features,
+                        text_features=text_features,
+                        logit_scale_a=logit_scale_a
+                    )
+            # hinge loss
+            elif args.contrastive_loss == "hinge" :
+                if args.clap_mlploss:
+                    total_loss = loss(
+                        audio_features=audio_features_mlp,
+                        text_features=text_features_mlp,
+                    ) 
+                else:
+                    total_loss = loss(
+                        audio_features=audio_features,
+                        text_features=text_features,
+                    )
+
         if isinstance(optimizer, dict):
             if scaler is not None:
                 scaler.scale(total_loss).backward()

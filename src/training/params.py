@@ -563,6 +563,7 @@ def parse_args():
         help="Name of the contrastive loss to use. Can be [clip, hinge]",
     )
 
+### arguments for hinge loss---------------
     parser.add_argument(
         "--hinge-delta",
         type=float,
@@ -572,21 +573,21 @@ def parse_args():
 
     parser.add_argument(
         "--hinge-include-slack-variable",
-        type= bool,
+        action = "store_true",
         default= False,
         help="weight that evaluates the 'degree of negativity' of negative samples. ",
     )
 
     parser.add_argument(
         "--hinge-isnormalize",
-        type= bool,
-        default= True,
-        help="normalize audio and text embeddings in the dot product or not",
+        action = "store_true",
+        default = False,
+        help = "normalize audio and text embeddings in the dot product or not",
     )
 
     parser.add_argument(
         "--hinge-t-freeze",
-        type= bool,
+        action = "store_true",
         default= False,
         help="freeze text embedding or not",
     )
@@ -598,6 +599,7 @@ def parse_args():
         help="leaky relu hyperparam",
     )
 
+### ---------------------------------------
 
     args = parser.parse_args()
 
