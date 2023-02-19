@@ -556,6 +556,7 @@ def parse_args():
         help="The prefetch factor for dataloader. Larger value will use more memory and CPU but faster.",
     )
 
+### arguments for hinge loss---------------
     parser.add_argument(
         "--contrastive-loss",
         type=str,
@@ -563,7 +564,6 @@ def parse_args():
         help="Name of the contrastive loss to use. Can be [clip, hinge]",
     )
 
-### arguments for hinge loss---------------
     parser.add_argument(
         "--hinge-delta",
         type=float,
