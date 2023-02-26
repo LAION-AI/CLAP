@@ -536,7 +536,7 @@ def get_audio_features(sample, audio_data, max_len, data_truncating, data_fillin
                     # logging.info(f"mel_shrink.shape: {mel_shrink.shape}")
 
                     # stack
-                    mel_fusion = torch.stack([mel_chunk_front, mel_chunk_middle, mel_chunk_back, mel_shrink], dim=0)
+                    mel_fusion = torch.stack([mel_shrink, mel_chunk_front, mel_chunk_middle, mel_chunk_back], dim=0)
                     sample["mel_fusion"] = mel_fusion
                     longer = torch.tensor([True])
             else:
