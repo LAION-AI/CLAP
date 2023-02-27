@@ -25,8 +25,8 @@ import io
 from pathlib import Path
 import wget
 
-from open_clip.utils import get_tar_path_from_dataset_name, dataset_split
-from open_clip.utils import load_p, load_class_label
+from clap_module.utils import get_tar_path_from_dataset_name, dataset_split
+from clap_module.utils import load_p, load_class_label
 import tempfile
 import copy
 
@@ -42,7 +42,7 @@ except ImportError:
 
 args = parse_args()
 if args.tmodel == "transformer":
-    from open_clip import tokenize
+    from clap_module import tokenize
 
     def tokenizer(text):
         return tokenize(text).squeeze(0)

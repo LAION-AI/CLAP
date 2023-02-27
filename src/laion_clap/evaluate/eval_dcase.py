@@ -3,8 +3,8 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.backends.cudnn as cudnn
-from open_clip import create_model
-from open_clip import tokenize
+from clap_module import create_model
+from clap_module import tokenize
 import glob
 import json
 import librosa
@@ -122,7 +122,7 @@ if __name__ == '__main__':
             text = json_data["text"]
 
             if args.tmodel == "transformer":
-                from open_clip import tokenize
+                from clap_module import tokenize
                 text = tokenize(text)
             else:
                 from training.data import tokenizer

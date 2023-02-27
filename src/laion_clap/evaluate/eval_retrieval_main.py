@@ -13,12 +13,12 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.backends.cudnn as cudnn
-from open_clip import create_model
-from open_clip import tokenize
+from clap_module import create_model
+from clap_module import tokenize
 from training.logger import setup_logging
 from training.data import get_data
 from training.train import evaluate
-from open_clip.utils import get_tar_path_from_dataset_name, dataset_split
+from clap_module.utils import get_tar_path_from_dataset_name, dataset_split
 from training.params import parse_args
 
 
@@ -55,7 +55,7 @@ def evaluate_zeroshot(model, data, start_epoch, args, writer):
         all_texts = ["This is a sound of " + t for t in args.class_index_dict.keys()]
         # (yusong): a hack, can make it better
         if args.tmodel == "transformer":
-            from open_clip import tokenize
+            from clap_module import tokenize
             all_texts = tokenize(all_texts)
         else:
             from training.data import tokenizer

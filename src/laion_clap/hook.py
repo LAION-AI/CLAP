@@ -9,16 +9,12 @@ import progressbar
 import os
 import torch
 import librosa
-from open_clip import create_model
+from clap_module import create_model
 from training.data import get_audio_features
 from training.data import int16_to_float32, float32_to_int16
 from transformers import RobertaTokenizer
 import wget
-from open_clip.factory import load_state_dict
-try:
-  from urllib.request import urlretrieve
-except ImportError:
-  from urllib import urlretrieve
+from clap_module.factory import load_state_dict
 
 pbar = None
 
@@ -37,21 +33,37 @@ def show_progress(block_num, block_size, total_size):
 
 
 class CLAP_Module:
-    def __init__(self) -> None:
+    def __init__(self, enable_fusion=True) -> None:
+        """Initialize CLAP Model
+
+        Parameters
+        ----------
+        enable_fusion: bool
+            if true, it will create the fusion clap model, otherwise non-fusion clap model (default: true) 
+        """
         device = 'cuda:0' if torch.cuda.is_available() else 'cpu'
         precision = 'fp32'
         amodel = 'HTSAT-tiny' # or 'PANN-14'
         tmodel = 'roberta' # the best text encoder in our training
-        enable_fusion = True # False if you do not want to use the fusion model
-        fusion_type = 'aff_2d'
-        model, model_cfg = create_model(
-            amodel,
-            tmodel,
-            precision=precision,
-            device=device,
-            enable_fusion=enable_fusion,
-            fusion_type=fusion_type
-        )
+        if enable_fusion:
+            fusion_type = 'aff_2d'
+            model, model_cfg = create_model(
+                amodel,
+                tmodel,
+                precision=precision,
+                device=device,
+                enable_fusion=enable_fusion,
+                fusion_type=fusion_type
+            )
+        else:
+            model, model_cfg = create_model(
+                amodel,
+                tmodel,
+                precision=precision,
+                device=device,
+                enable_fusion=enable_fusion
+            )
+        self.enbale_fusion = enable_fusion
         self.model = model
         self.model_cfg = model_cfg
         self.tokenize = RobertaTokenizer.from_pretrained('roberta-base')
@@ -66,27 +78,43 @@ class CLAP_Module:
         )
         return {k: v.squeeze(0) for k, v in result.items()}
 
-    def load_ckpt(self, ckpt = None):
+    def load_ckpt(self, ckpt = None, model_id = -1):
         """Load the pretrained checkpoint of CLAP model
 
         Parameters
         ----------
         ckpt: str
-            if ckpt is specified, the model will load this ckpt, otherwise the model will download the ckpt from zenodo.
+            if ckpt is specified, the model will load this ckpt, otherwise the model will download the ckpt from zenodo. \n 
+            For fusion model, it will download the 630k+audioset fusion model (id=3). For non-fusion model, it will download the 630k+audioset model (id=1).
+        model_id:
+            if model_id is specified, you can download our best ckpt, as:
+                id = 0 --> 630k non-fusion ckpt \n
+                id = 1 --> 630k+audioset non-fusion ckpt \n
+                id = 2 --> 630k fusion ckpt \n
+                id = 3 --> 630k+audioset fusion ckpt \n
+            Note that if your model is specied as non-fusion model but you download a fusion model ckpt, you will face an error.
         """
+        download_link = 'https://zenodo.org/record/7678859/files/'
+        download_names = [
+            '630k-best.pt',
+            '630k-audioset-best.pt',
+            '630k-fusion-best.pt',
+            '630k-audioset-fusion-best.pt'
+        ]
         if ckpt is not None:
             print(f'Load the specified checkpoint {ckpt} from users.')
         else:
             print(f'Load our best checkpoint in the paper.')
+            if model_id == -1:
+                model_id = 3 if self.enbale_fusion else 1
             package_dir = os.path.dirname(os.path.realpath(__file__))
-            weight_file_name = 'laion_clap_fullset_fusion.pt'
+            weight_file_name = download_names[model_id]
             ckpt = os.path.join(package_dir, weight_file_name)
             if os.path.exists(ckpt):
                 print(f'The checkpoint is already downloaded')
             else:
                 print('Downloading laion_clap weight files...')
-                ckpt = wget.download('https://zenodo.org/record/7641552/files/laion_clap_fullset_fusion.pt', os.path.dirname(ckpt))
-                # urlretrieve('https://zenodo.org/record/7641552/files/laion_clap_fullset_fusion.pt', ckpt, show_progress)
+                ckpt = wget.download(download_link + weight_file_name, os.path.dirname(ckpt))
                 print('Download completed!')
         print('Load Checkpoint...')
         ckpt = load_state_dict(ckpt, skip_params=True)
