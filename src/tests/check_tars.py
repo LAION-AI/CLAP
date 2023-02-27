@@ -10,7 +10,7 @@ import argparse
 import traceback
 import logging
 import json
-from open_clip import tokenize
+from laion_clap import tokenize
 
 
 def parse_args():

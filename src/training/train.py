@@ -14,7 +14,7 @@ try:
 except ImportError:
     wandb = None
 
-from open_clip import ClipLoss, gather_features
+from laion_clap import ClipLoss, gather_features
 from .distributed import is_master
 
 
@@ -597,7 +597,7 @@ def evaluate_clotho_audiocaps(
 
             # each item in the list has 5 texts
             if args.tmodel == "transformer":
-                from open_clip import tokenize
+                from laion_clap import tokenize
                 texts = [tokenize(t) for t in batch['full_text']]
                 texts = torch.cat(texts)
             else:

@@ -12,12 +12,12 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.backends.cudnn as cudnn
-from open_clip import create_model
-from open_clip import tokenize
+from laion_clap import create_model
+from laion_clap import tokenize
 from training.logger import setup_logging
 from training.data import get_data
 from training.train import evaluate
-from open_clip.utils import get_tar_path_from_dataset_name, dataset_split
+from laion_clap.utils import get_tar_path_from_dataset_name, dataset_split
 from training.params import parse_args
 
 

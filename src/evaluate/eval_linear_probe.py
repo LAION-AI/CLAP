@@ -37,7 +37,7 @@ try:
 except ImportError:
     hvd = None
 
-from open_clip import create_model_and_transforms, trace_model, create_model
+from laion_clap import create_model_and_transforms, trace_model, create_model
 from training.data import get_data
 from training.params import parse_args
 from training.distributed import is_master, init_distributed_device, world_info_from_env
@@ -45,9 +45,9 @@ from training.logger import setup_logging
 from training.scheduler import cosine_lr
 from training.lp_main import config_lp_optimizer
 from training.lp_train import train_one_epoch, evaluate
-from open_clip.utils import get_tar_path_from_dataset_name, dataset_split
-from open_clip.utils import load_p, load_class_label
-from open_clip.linear_probe import LinearProbe
+from laion_clap.utils import get_tar_path_from_dataset_name, dataset_split
+from laion_clap.utils import load_p, load_class_label
+from laion_clap.linear_probe import LinearProbe
 
 def maintain_ckpts(args, startidx, all_idx_len):
     for i in reversed(range(startidx, all_idx_len)):
