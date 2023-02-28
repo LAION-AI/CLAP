@@ -1,26 +1,13 @@
-'''
-Evalute the linear probe performance on different checkpoints
-'''
-from cmath import cos
-from doctest import master
-from inspect import getargs
 import logging
 import os
-from pickletools import optimize
 import random
 from datetime import datetime
-import bisect
 import copy
 import numpy as np
 import torch
 import torch.backends.cudnn as cudnn
-from torch import optim
 from torch.cuda.amp import GradScaler
-import torch.distributed as dist
-import faulthandler
-import pathlib
-import argparse
-import glob
+import time
 
 try:
     import wandb
@@ -37,17 +24,17 @@ try:
 except ImportError:
     hvd = None
 
-from open_clip import create_model_and_transforms, trace_model, create_model
-from training.data import get_data
-from training.params import parse_args
-from training.distributed import is_master, init_distributed_device, world_info_from_env
-from training.logger import setup_logging
-from training.scheduler import cosine_lr
-from training.lp_main import config_lp_optimizer
-from training.lp_train import train_one_epoch, evaluate
-from open_clip.utils import get_tar_path_from_dataset_name, dataset_split
-from open_clip.utils import load_p, load_class_label
-from open_clip.linear_probe import LinearProbe
+from laion_clap import trace_model, create_model
+from laion_clap.training.data import get_data
+from laion_clap.training.params import parse_args
+from laion_clap.training.distributed import is_master, init_distributed_device, world_info_from_env
+from laion_clap.training.logger import setup_logging
+from laion_clap.training.scheduler import cosine_lr
+from laion_clap.training.lp_train import train_one_epoch, evaluate
+from laion_clap.utils import dataset_split, get_optimizer
+from laion_clap.utils import load_class_label
+from laion_clap.linear_probe import LinearProbe
+
 
 def maintain_ckpts(args, startidx, all_idx_len):
     for i in reversed(range(startidx, all_idx_len)):
@@ -64,7 +51,7 @@ def maintain_ckpts(args, startidx, all_idx_len):
 
 
 def update_top_k_performance(
-    new_metrics_inputs, current_top_k_ckpt_metrics, args, ckpt, bignumbetter=True, pretrain_epoch=0
+    new_metrics_inputs, current_top_k_ckpt_metrics, args, ckpt, bignumbetter=True
 ):
     """
     Record the top-k performance of the current epoch.
@@ -78,7 +65,6 @@ def update_top_k_performance(
             args=args,
             ckpt=ckpt,
             bignumbetter=bignumbetter,
-            pretrain_epoch=pretrain_epoch
         )
     elif isinstance(new_metrics_inputs, dict):
         new_metrics_inputs = np.mean(list(new_metrics_inputs.values()))
@@ -88,7 +74,6 @@ def update_top_k_performance(
             args=args,
             ckpt=ckpt,
             bignumbetter=bignumbetter,
-            pretrain_epoch=pretrain_epoch
         )
     elif isinstance(new_metrics_inputs, (float, int)):
         update_flag = {k: False for k in current_top_k_ckpt_metrics.keys()}
@@ -113,7 +98,7 @@ def update_top_k_performance(
                     maintain_ckpts(args, i, len(sorted_keys))
                     torch.save(
                         ckpt,
-                        os.path.join(args.checkpoint_path, f"pretrain_epoch_{pretrain_epoch}_lp_epoch_top_{i}.pt"),
+                        os.path.join(args.checkpoint_path, f"epoch_top_{i}.pt"),
                     )
                     break
             return current_top_k_ckpt_metrics, new_metrics_inputs
@@ -139,13 +124,193 @@ def random_seed(seed=42, rank=0):
     np.random.seed(seed + rank)
     random.seed(seed + rank)
 
+def config_lp_optimizer(model, data, args):
+    # set wd-related params to 0 if use adam optimizer
+    if args.optimizer == "adam":
+        args.wd = 0
+        args.wd_pretrained = 0
+        args.wd_new = 0
+
+    in_clap = (
+        lambda n, p: n.startswith("clap_model")
+    )
+
+    named_parameters = list(model.named_parameters())
+
+    optimizer = {}
+    scheduler = {}
+
+    # freeze text encoder
+    text_freeze_parameters = [
+        p
+        for n, p in named_parameters
+        if n.startswith("clap_model.transformer")
+        or n in ["clap_model.positional_embedding", "clap_model.text_projection"]
+        or n.startswith("clap_model.token_embedding")
+        or n.startswith("clap_model.ln_final")
+    ]
+
+    if args.freeze_text:
+        logging.info("Freeze Text!!!!")
+        for k in text_freeze_parameters:
+            k.requires_grad = False
+
+    if not args.lp_freeze:
+        exclude = (
+            lambda n, p: p.ndim < 2
+            or "bn" in n
+            or "ln" in n
+            or "bias" in n
+            or "logit_scale" in n
+        )
+        include = lambda n, p: not exclude(n, p)
+
+        # (yusong): we do not split the learning rate anymore
+        # p for n, p in named_parameters if in_clap(n,p) and exclude(n, p) and p.requires_grad
+        gain_or_bias_params = [
+            p for n, p in named_parameters if exclude(n, p) and p.requires_grad
+        ]
+        # rest_params = [p for n, p in named_parameters if in_clap(n,p) and include(n, p) and p.requires_grad]
+        rest_params = [p for n, p in named_parameters if include(n, p) and p.requires_grad]
+
+        if args.train_data is None:
+            optimizer = None
+            scheduler = None
+        else:
+            total_steps = data["train"].dataloader.num_batches * args.epochs
+
+            if args.split_opt:
+                for x in ["lr", "beta1", "beta2", "eps", "wd"]:
+                    for y in ["_new", "_pretrained"]:
+                        if getattr(args, x + y) is None:
+                            setattr(args, x + y, getattr(args, x))
+
+                gain_or_bias_pretrained_params = [
+                    p
+                    for n, p in named_parameters
+                    if (exclude(n, p) and p.requires_grad) and is_pretrained_params(n)
+                ]
+                rest_pretrained_params = [
+                    p
+                    for n, p in named_parameters
+                    if (include(n, p) and p.requires_grad) and is_pretrained_params(n)
+                ]
+                gain_or_bias_new_params = [
+                    p
+                    for n, p in named_parameters
+                    if (exclude(n, p) and p.requires_grad) and (not is_pretrained_params(n))
+                ]
+                rest_new_params = [
+                    p
+                    for n, p in named_parameters
+                    if (include(n, p) and p.requires_grad) and (not is_pretrained_params(n))
+                ]
+
+                pretrained_params_optimizer = get_optimizer(
+                    [
+                        {"params": gain_or_bias_pretrained_params, "weight_decay": 0.0},
+                        {
+                            "params": rest_pretrained_params,
+                            "weight_decay": args.wd_pretrained,
+                        },
+                    ],
+                    lr=args.lr_pretrained,
+                    betas=(args.beta1_pretrained, args.beta2_pretrained),
+                    eps=args.eps_pretrained,
+                    momentum=args.momentum_pretrained,
+                    optimizer_name=args.optimizer,
+                )
+                pretrained_params_scheduler = cosine_lr(
+                    pretrained_params_optimizer,
+                    args.lr_pretrained,
+                    args.warmup,
+                    total_steps,
+                )
+
+                new_params_optimizer = get_optimizer(
+                    [
+                        {"params": gain_or_bias_new_params, "weight_decay": 0.0},
+                        {"params": rest_new_params, "weight_decay": args.wd_new},
+                    ],
+                    lr=args.lr_new,
+                    betas=(args.beta1_new, args.beta2_new),
+                    eps=args.eps_new,
+                    momentum=args.momentum_new,
+                    optimizer_name=args.optimizer,
+                )
+                new_params_scheduler = cosine_lr(
+                    new_params_optimizer, args.lr_new, args.warmup, total_steps
+                )
+
+                optimizer["text"] = pretrained_params_optimizer
+                optimizer["audio"] = new_params_optimizer
+                scheduler["text"] = pretrained_params_scheduler
+                scheduler["audio"] = new_params_scheduler
+
+                if args.horovod:
+                    pretrained_params_optimizer = hvd.DistributedOptimizer(
+                        pretrained_params_optimizer,
+                        named_parameters=model.named_parameters(),
+                    )
+                    new_params_optimizer = hvd.DistributedOptimizer(
+                        new_params_optimizer, named_parameters=model.named_parameters()
+                    )
+                    hvd.broadcast_parameters(model.state_dict(), root_rank=0)
+                    hvd.broadcast_optimizer_state(pretrained_params_optimizer, root_rank=0)
+                    hvd.broadcast_optimizer_state(new_params_optimizer, root_rank=0)
+            else:
+
+                optimizer["clap"] = get_optimizer(
+                    [
+                        {"params": gain_or_bias_params, "weight_decay": 0.0},
+                        {"params": rest_params, "weight_decay": args.wd},
+                    ],
+                    lr=args.lr,
+                    betas=(args.beta1, args.beta2),
+                    eps=args.eps,
+                    momentum=args.momentum,
+                    optimizer_name=args.optimizer,
+            )
+                scheduler["clap"] = cosine_lr(optimizer["clap"], args.lr, args.warmup, total_steps)
+
+                if args.horovod:
+                    optimizer["clap"] = hvd.DistributedOptimizer(
+                        optimizer["clap"], named_parameters=model.named_parameters()
+                    )
+                    hvd.broadcast_parameters(model.state_dict(), root_rank=0)
+                    hvd.broadcast_optimizer_state(optimizer["clap"], root_rank=0)
+
+    # linear probe optimizer
+    else:
+        lp_params = [p for n, p in named_parameters if (not in_clap(n, p)) and p.requires_grad]
+        lp_optim = get_optimizer(lp_params, lr=args.lp_lr, betas=(args.beta1, args.beta2), eps=args.eps, momentum=0.9,
+                                 optimizer_name=args.optimizer)
+        optimizer["lp"] = lp_optim
+
+    return optimizer, scheduler, text_freeze_parameters
+
+
 def main():
     args = parse_args()
+
+    time.sleep(args.sleep)
+
     # sanitize model name for filesystem / uri use, easier if we don't use / in name as a rule?
     args.amodel = args.amodel.replace("/", "-")
-    
-    pretrained_ckpts = sorted(glob.glob(os.path.join(args.pretrained, "*.pt")), key=os.path.getmtime)
+    # download sizes.json file
 
+    # (yusong): the below two lines are for debug
+    # print("setting up faulthandler")
+    # faulthandler.register(10)
+
+    random.seed(args.seed)
+    torch.manual_seed(args.seed)
+    torch.cuda.manual_seed(args.seed)
+    torch.cuda.manual_seed_all(args.seed)
+    np.random.seed(args.seed)
+    args.class_index_dict = load_class_label(args.class_label_path)
+
+    # get the name of the experiments
     if args.name is None:
         args.name = "-".join(
             [
@@ -171,6 +336,7 @@ def main():
                 os.system(
                     f"aws s3 cp s3://s-laion-audio/webdataset_tar/{dataset_name}/{split}/sizes.json ./json_files/{dataset_name}/{split}/sizes.json"
                 )
+
     args.log_path = None
     if is_master(args, local=args.log_local):
         log_base_path = os.path.join(args.logs, args.name)
@@ -239,62 +405,6 @@ def main():
 
     logging.info(f'openai cache dir: {os.path.expanduser(args.openai_model_cache_dir)}')
 
-    # determine if this worker should save logs and checkpoints. only do so if it is rank == 0
-    args.save_logs = args.logs and args.logs.lower() != "none" and is_master(args)
-    writer = None
-    if args.save_logs and args.tensorboard:
-        assert tensorboard is not None, "Please install tensorboard."
-        writer = tensorboard.SummaryWriter(args.tensorboard_path)
-
-    if args.wandb and is_master(args):
-        assert wandb is not None, "Please install wandb."
-        logging.debug("Starting wandb.")
-        # you will have to configure this for your project!
-        wandb.init(
-            project="clap",
-            notes=args.wandb_notes,
-            name=args.wandb_notes,
-            tags=[],
-            config=vars(args),
-        )
-        logging.debug("Finished loading wandb.")
-
-    for idx, f in enumerate(pretrained_ckpts):
-        logging.info(f"pretrained on {f}")
-        args.pretrained = f
-        ckpt = torch.load(f, map_location='cpu')
-        pretrain_epoch = 0
-        if 'epoch' in ckpt:
-            pretrain_epoch = ckpt['epoch']
-        # train 
-        best_metrics = lp_main(args, device, writer, pretrain_epoch, idx)
-        
-        if args.wandb and is_master(args):
-            assert wandb is not None, "Please install wandb."
-            for name, val in best_metrics.items():
-                wandb.log({f"val/summary/{name}": val, "epoch": pretrain_epoch})
-
-    if args.wandb and is_master(args):
-        wandb.finish()
-
-def update_metric(best_metric, new_metric):
-    for key in new_metric:
-        if key not in best_metric:
-            best_metric[key] = new_metric[key]
-        else:
-            best_metric[key] = max(best_metric[key], new_metric[key])
-    return best_metric
-
-def lp_main(args, device, writer, pretrain_epoch, idx):
-
-    random.seed(args.seed)
-    torch.manual_seed(args.seed)
-    torch.cuda.manual_seed(args.seed)
-    torch.cuda.manual_seed_all(args.seed)
-    np.random.seed(args.seed)
-    args.class_index_dict = load_class_label(args.class_label_path)
-
-
     # Create CLAP model
     clap_model, clap_model_cfg = create_model(
         args.amodel,
@@ -306,29 +416,30 @@ def lp_main(args, device, writer, pretrain_epoch, idx):
         force_quick_gelu=args.force_quick_gelu,
         openai_model_cache_dir=os.path.expanduser(args.openai_model_cache_dir),
         skip_params=False,
+        pretrained_audio=args.pretrained_audio,
+        pretrained_text=args.pretrained_text,
         enable_fusion=args.enable_fusion,
         fusion_type=args.fusion_type
     )
-    
+
     args.lp_out_ch = len(list(args.class_index_dict.keys()))
     # Linear Probe 
-    if idx == 0:
-        logging.info(f"linear probe using mlp: {args.lp_mlp}")
-        logging.info(f"linear probe using freeze: {args.lp_freeze}")
-        logging.info(f"linear probe act layer: {args.lp_act}")
-        logging.info(f"linear probe out ch: {args.lp_out_ch}")
-        logging.info(f"linear probe learning rate (if applicable): {args.lp_lr}")
-        logging.info(f"linear probe loss func: {args.lp_loss}")
-        logging.info(f"linear probe lp_metrics: {args.lp_metrics}")
+    logging.info(f"linear probe using mlp: {args.lp_mlp}")
+    logging.info(f"linear probe using freeze: {args.lp_freeze}")
+    logging.info(f"linear probe act layer: {args.lp_act}")
+    logging.info(f"linear probe out ch: {args.lp_out_ch}")
+    logging.info(f"linear probe learning rate (if applicable): {args.lp_lr}")
+    logging.info(f"linear probe loss func: {args.lp_loss}")
+    logging.info(f"linear probe lp_metrics: {args.lp_metrics}")
 
     model = LinearProbe(
-        clap_model, 
-        mlp=args.lp_mlp, freeze=args.lp_freeze, 
+        clap_model,
+        mlp=args.lp_mlp, freeze=args.lp_freeze,
         in_ch=512, out_ch=args.lp_out_ch,
         act=args.lp_act
     ) # in_ch is fixed (i.e., 512)
     model = model.to(device)
-    
+
     if args.horovod:
         with torch.no_grad():
             for param in model.parameters():
@@ -337,7 +448,7 @@ def lp_main(args, device, writer, pretrain_epoch, idx):
     if args.trace:
         model = trace_model(model, batch_size=args.batch_size, device=device)
 
-    if is_master(args) and idx == 0:
+    if is_master(args):
         logging.info("Linear Probe CLAP Model:")
         logging.info(f"{str(clap_model)}")
         logging.info("Params:")
@@ -347,7 +458,6 @@ def lp_main(args, device, writer, pretrain_epoch, idx):
                 val = getattr(args, name)
                 logging.info(f"  {name}: {val}")
                 f.write(f"{name}: {val}\n")
-    
 
     if args.distributed and not args.horovod:
         if args.use_bn_sync:
@@ -365,7 +475,9 @@ def lp_main(args, device, writer, pretrain_epoch, idx):
     if args.trace:
         assert "train" not in data, "Cannot train with traced model"
 
+
     optimizer, scheduler, text_freeze_parameters = config_lp_optimizer(model, data, args)
+
 
     scaler = GradScaler() if args.precision == "amp" else None
 
@@ -410,26 +522,37 @@ def lp_main(args, device, writer, pretrain_epoch, idx):
     cudnn.benchmark = True
     cudnn.deterministic = False
 
+    # determine if this worker should save logs and checkpoints. only do so if it is rank == 0
+    args.save_logs = args.logs and args.logs.lower() != "none" and is_master(args)
+    writer = None
+    if args.save_logs and args.tensorboard:
+        assert tensorboard is not None, "Please install tensorboard."
+        writer = tensorboard.SummaryWriter(args.tensorboard_path)
+
     if args.wandb and is_master(args):
+        assert wandb is not None, "Please install wandb."
+        logging.debug("Starting wandb.")
         args.train_sz = data["train"].dataloader.num_samples
         if args.val_data is not None:
             args.val_sz = data["val"].dataloader.num_samples
+        # you will have to configure this for your project!
+        wandb.init(
+            project="clap",
+            notes=args.wandb_notes,
+            name=args.wandb_notes,
+            tags=[],
+            config=vars(args),
+        )
         if args.debug:
             wandb.watch(model, log="all")
-        if idx == 0:
-            wandb.save(params_file)
-
-    best_metrics = {}
+        wandb.save(params_file)
+        logging.debug("Finished loading wandb.")
 
     if "train" not in data:
-        metric = evaluate(model, data, start_epoch, args, writer, extra_suffix="_pe@" + str(pretrain_epoch))
-        if is_master(args):
-            best_metrics = update_metric(best_metrics, metric)
+        evaluate(model, data, start_epoch, args, writer)
         return
     elif start_epoch == 0 and "val" in data and not args.no_eval:
-        metric = evaluate(model, data, 0, args, writer, extra_suffix="_pe@" + str(pretrain_epoch))
-        if is_master(args):
-            best_metrics = update_metric(best_metrics, metric)
+        evaluate(model, data, 0, args, writer)
     if args.save_top_performance:
         current_top_k_ckpt_metrics = {
             i: 0 for i in range(args.save_top_performance)
@@ -444,19 +567,17 @@ def lp_main(args, device, writer, pretrain_epoch, idx):
         if is_master(args):
             logging.info(f"Start epoch {epoch}")
 
-        train_one_epoch(model, data, epoch, optimizer, scaler, scheduler, args, writer, extra_suffix="_pe@" + str(pretrain_epoch))
+        train_one_epoch(model, data, epoch, optimizer, scaler, scheduler, args, writer)
         completed_epoch = epoch + 1
 
         if any(v in data for v in ("val", "imagenet-val", "imagenet-v2")) and not args.no_eval:
-            metric = evaluate(model, data, completed_epoch, args, writer, extra_suffix="_pe@" + str(pretrain_epoch))
-            if is_master(args):
-                best_metrics = update_metric(best_metrics, metric)
+            metrics = evaluate(model, data, completed_epoch, args, writer)
             if args.save_top_performance:
                 top_k_dataset = args.top_k_checkpoint_select_dataset
                 top_k_metric = args.top_k_checkpoint_select_metric
                 filtered_metrics = [
                     v
-                    for k, v in metric.items()
+                    for k, v in metrics.items()
                     if top_k_metric in k and top_k_dataset in k
                 ]  # check all R@10 metrics (all dataset) and use it to update the ckpt
         # Saving checkpoints.
@@ -466,7 +587,6 @@ def lp_main(args, device, writer, pretrain_epoch, idx):
                 }
             checkpoint_dict = {
                 "epoch": completed_epoch,
-                "pretrain_epoch": pretrain_epoch,
                 "name": args.name,
                 "state_dict": model.state_dict(),
             }
@@ -479,12 +599,12 @@ def lp_main(args, device, writer, pretrain_epoch, idx):
             ):
                 torch.save(
                     checkpoint_dict,
-                    os.path.join(args.checkpoint_path, f"pretrain_epoch_{pretrain_epoch}_lp_epoch_{completed_epoch}.pt"),
+                    os.path.join(args.checkpoint_path, f"epoch_{completed_epoch}.pt"),
                 )
             if args.save_most_recent:
                 torch.save(
                     checkpoint_dict,
-                    os.path.join(args.checkpoint_path, f"pretrain_epoch_{pretrain_epoch}_lp_epoch_latest.pt"),
+                    os.path.join(args.checkpoint_path, f"epoch_latest.pt"),
                 )
             if args.save_top_performance and not args.no_eval:
                 update_top_k_performance(
@@ -493,10 +613,10 @@ def lp_main(args, device, writer, pretrain_epoch, idx):
                     args,
                     checkpoint_dict,
                     bignumbetter=True,
-                    pretrain_epoch=pretrain_epoch
                 )
-    del clap_model
-    return best_metrics
+
+    if args.wandb and is_master(args):
+        wandb.finish()
 
 
 def copy_codebase(args):
@@ -521,5 +641,3 @@ def copy_codebase(args):
 
 if __name__ == "__main__":
     main()
-
-

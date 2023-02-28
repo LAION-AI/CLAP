@@ -6,12 +6,11 @@ import os
 import random
 import h5py
 from dataclasses import dataclass
-from training.params import parse_args
+from laion_clap.training.params import parse_args
 import braceexpand
 import numpy as np
 import pandas as pd
 import torch
-import torch.nn as nn
 import torch.nn.functional as F
 import torchvision.datasets as datasets
 import torchvision.transforms
@@ -20,14 +19,11 @@ from PIL import Image
 from torch.utils.data import Dataset, DataLoader, SubsetRandomSampler
 from torch.utils.data.distributed import DistributedSampler
 from functools import partial
-import soundfile as sf
-import io
 from pathlib import Path
 import wget
 
-from open_clip.utils import get_tar_path_from_dataset_name, dataset_split
-from open_clip.utils import load_p, load_class_label
-import tempfile
+from laion_clap.utils import get_tar_path_from_dataset_name, dataset_split
+from laion_clap.utils import load_class_label
 import copy
 
 try:
@@ -42,14 +38,17 @@ except ImportError:
 
 args = parse_args()
 if args.tmodel == "transformer":
-    from open_clip import tokenize
+    from laion_clap import tokenize
+
 
     def tokenizer(text):
         return tokenize(text).squeeze(0)
 
 elif args.tmodel == "bert":
     from transformers import BertTokenizer
+
     tokenize = BertTokenizer.from_pretrained("bert-base-uncased")
+
 
     def tokenizer(text):
         result = tokenize(
@@ -63,7 +62,9 @@ elif args.tmodel == "bert":
 
 elif args.tmodel == "roberta":
     from transformers import RobertaTokenizer
+
     tokenize = RobertaTokenizer.from_pretrained('roberta-base')
+
 
     def tokenizer(text):
         result = tokenize(
@@ -77,7 +78,9 @@ elif args.tmodel == "roberta":
 
 elif args.tmodel == "bart":
     from transformers import BartTokenizer
+
     tokenize = BartTokenizer.from_pretrained('facebook/bart-base')
+
 
     def tokenizer(text):
         result = tokenize(
@@ -101,6 +104,15 @@ def int16_to_float32(x):
 def float32_to_int16(x):
     x = np.clip(x, a_min=-1., a_max=1.)
     return (x * 32767.).astype(np.int16)
+
+
+def int16_to_float32_torch(x):
+    return (x / 32767.0).type(torch.float32)
+
+
+def float32_to_int16_torch(x):
+    x = torch.clamp(x, min=-1., max=1.)
+    return (x * 32767.).type(torch.int16)
 
 
 # For Toy Dataset
@@ -158,7 +170,7 @@ class ToyDataset(Dataset):
     def crop_wav(self, x):
         crop_size = self.audio_cfg["crop_size"]
         crop_pos = random.randint(0, len(x) - crop_size - 1)
-        return x[crop_pos : crop_pos + crop_size]
+        return x[crop_pos: crop_pos + crop_size]
 
     def prompt_text(self, target):
         events = _AUDIOSET_MAP[np.where(target > 0)]
@@ -202,10 +214,10 @@ class ToyDataset(Dataset):
         text = self.prompt_text(target)
         with h5py.File(hdf5_path, "r") as f:
             waveform = int16_to_float32(f["waveform"][r_idx])[
-                : self.audio_cfg["clip_samples"]
-            ]
+                       : self.audio_cfg["clip_samples"]
+                       ]
         assert (
-            len(waveform) == self.audio_cfg["clip_samples"]
+                len(waveform) == self.audio_cfg["clip_samples"]
         ), "The sample length is not match"
         # Time shift
         # if (self.config.enable_time_shift) and (not self.eval_mode):
@@ -224,11 +236,11 @@ class ToyDataset(Dataset):
         #             target[add_key] = 1.0
 
         # missing the text input
-        mel_spec = get_mel(torch.from_numpy(waveform), self.audio_cfg)[None,:,:]
-        mel_spec = torch.cat([mel_spec, mel_spec.clone(),mel_spec.clone(),mel_spec.clone()], dim=0).cpu().numpy()
+        mel_spec = get_mel(torch.from_numpy(waveform), self.audio_cfg)[None, :, :]
+        mel_spec = torch.cat([mel_spec, mel_spec.clone(), mel_spec.clone(), mel_spec.clone()], dim=0).cpu().numpy()
         longer = random.choice([True, False])
         if longer == False:
-            mel_spec[1:,:,:] = 0.0
+            mel_spec[1:, :, :] = 0.0
         data_dict = {
             "hdf5_path": hdf5_path,
             "index_in_hdf5": r_idx,
@@ -429,7 +441,8 @@ def sample_prop(sizefile, inputs, proportion, is_local=True):
         sampled_size_dict,
     )
 
-def get_mel(audio_data,audio_cfg):
+
+def get_mel(audio_data, audio_cfg):
     # mel shape: (n_mels, T)
     mel = torchaudio.transforms.MelSpectrogram(
         sample_rate=audio_cfg['sample_rate'],
@@ -484,7 +497,7 @@ def get_audio_features(sample, audio_data, max_len, data_truncating, data_fillin
                 # fusion
                 mel = get_mel(audio_data, audio_cfg)
                 # split to three parts
-                chunk_frames = max_len // audio_cfg['hop_size']+1  # the +1 related to how the spectrogram is computed
+                chunk_frames = max_len // audio_cfg['hop_size'] + 1  # the +1 related to how the spectrogram is computed
                 total_frames = mel.shape[0]
                 if chunk_frames == total_frames:
                     # there is a corner case where the audio length is
@@ -494,7 +507,7 @@ def get_audio_features(sample, audio_data, max_len, data_truncating, data_fillin
                     sample["mel_fusion"] = mel_fusion
                     longer = torch.tensor([False])
                 else:
-                    ranges = np.array_split(list(range(0, total_frames-chunk_frames+1)), 3)
+                    ranges = np.array_split(list(range(0, total_frames - chunk_frames + 1)), 3)
                     # print('total_frames-chunk_frames:', total_frames-chunk_frames,
                     #       'len(audio_data):', len(audio_data),
                     #       'chunk_frames:', chunk_frames,
@@ -510,16 +523,16 @@ def get_audio_features(sample, audio_data, max_len, data_truncating, data_fillin
                     idx_middle = np.random.choice(ranges[1])
                     idx_back = np.random.choice(ranges[2])
                     # select mel
-                    mel_chunk_front = mel[idx_front:idx_front+chunk_frames, :]
-                    mel_chunk_middle = mel[idx_middle:idx_middle+chunk_frames, :]
-                    mel_chunk_back = mel[idx_back:idx_back+chunk_frames, :]
+                    mel_chunk_front = mel[idx_front:idx_front + chunk_frames, :]
+                    mel_chunk_middle = mel[idx_middle:idx_middle + chunk_frames, :]
+                    mel_chunk_back = mel[idx_back:idx_back + chunk_frames, :]
 
                     # shrink the mel
                     mel_shrink = torchvision.transforms.Resize(size=[chunk_frames, 64])(mel[None])[0]
                     # logging.info(f"mel_shrink.shape: {mel_shrink.shape}")
 
                     # stack
-                    mel_fusion = torch.stack([mel_chunk_front, mel_chunk_middle, mel_chunk_back, mel_shrink], dim=0)
+                    mel_fusion = torch.stack([mel_shrink, mel_chunk_front, mel_chunk_middle, mel_chunk_back], dim=0)
                     sample["mel_fusion"] = mel_fusion
                     longer = torch.tensor([True])
             else:
@@ -534,7 +547,7 @@ def get_audio_features(sample, audio_data, max_len, data_truncating, data_fillin
         else:  # padding if too short
             if len(audio_data) < max_len:  # do nothing if equal
                 if data_filling == "repeatpad":
-                    n_repeat = int(max_len/len(audio_data))
+                    n_repeat = int(max_len / len(audio_data))
                     audio_data = audio_data.repeat(n_repeat)
                     # audio_data = audio_data.unsqueeze(0).unsqueeze(0).unsqueeze(0)
                     # audio_data = F.interpolate(audio_data,size=max_len,mode="bicubic")[0,0,0]
@@ -552,8 +565,8 @@ def get_audio_features(sample, audio_data, max_len, data_truncating, data_fillin
                         value=0,
                     )
                 elif data_filling == "repeat":
-                    n_repeat = int(max_len/len(audio_data))
-                    audio_data = audio_data.repeat(n_repeat+1)[:max_len]
+                    n_repeat = int(max_len / len(audio_data))
+                    audio_data = audio_data.repeat(n_repeat + 1)[:max_len]
                 else:
                     raise NotImplementedError(
                         f"data_filling {data_filling} not implemented"
@@ -570,47 +583,7 @@ def get_audio_features(sample, audio_data, max_len, data_truncating, data_fillin
     return sample
 
 
-def preprocess(
-    sample,
-    audio_ext,
-    text_ext,
-    max_len,
-    audio_cfg,
-    class_index_dict=None,
-    data_filling="pad",
-    data_truncating="rand_trunc",
-    text_augment_selection=None,
-):
-    """
-    Preprocess a single sample for wdsdataloader.
-    """
-    audio_data, orig_sr = sf.read(io.BytesIO(sample[audio_ext]))
-    audio_data = int16_to_float32(float32_to_int16(audio_data))
-    audio_data = torch.tensor(audio_data).float()
-
-    # TODO: (yusong) to be include in the future
-    # # if torchaudio not installed, use soundfile to load audio
-    # if torchaudio is None:
-    #     audio_data, orig_sr = sf.read(io.BytesIO(sample[audio_ext]))
-    #     audio_data = torch.tensor(audio_data).float()
-    # else:
-    #     # https://github.com/webdataset/webdataset/blob/main/webdataset/autodecode.py
-    #     with tempfile.TemporaryDirectory() as dirname:
-    #         os.makedirs(dirname, exist_ok=True)
-    #         fname = os.path.join(dirname, f"file.flac")
-    #         with open(fname, "wb") as stream:
-    #             stream.write(sample[audio_ext])
-    #         audio_data, orig_sr = torchaudio.load(fname)
-    #         audio_data = audio_data[0, :].float()
-
-    sample = get_audio_features(sample, audio_data, max_len, data_truncating, data_filling, audio_cfg)
-    del sample[audio_ext]
-
-    try:
-        json_dict_raw = json.loads(sample[text_ext].decode("utf-8"))
-    except:
-        print("sample[__url__]:", sample["__url__"])
-
+def select_text(json_dict_raw, text_augment_selection):
     # For selecting augmented text from dataset
     if text_augment_selection is None or text_augment_selection == "none":
         texts = json_dict_raw["text"]
@@ -631,6 +604,32 @@ def preprocess(
         raise NotImplementedError(
             f"text_augment_selection {text_augment_selection} not implemented"
         )
+    return texts
+
+
+def preprocess_single(
+        sample,
+        audio_ext,
+        text_ext,
+        max_len,
+        audio_cfg,
+        class_index_dict,
+        data_filling,
+        data_truncating,
+        text_augment_selection,
+):
+    """
+    Preprocess a single sample for wdsdataloader.
+    """
+    audio_data, orig_sr = sample[audio_ext]
+    audio_data = int16_to_float32_torch(float32_to_int16_torch(audio_data[0]))
+
+    sample = get_audio_features(sample, audio_data, max_len, data_truncating, data_filling, audio_cfg)
+    del sample[audio_ext]
+
+    json_dict_raw = sample[text_ext]
+
+    texts = select_text(json_dict_raw, text_augment_selection)
     sample["full_text"] = texts
 
     if isinstance(texts, list) and isinstance(texts[0], str) and len(texts) > 1:
@@ -640,13 +639,17 @@ def preprocess(
     if class_index_dict is not None:
         # https://stackoverflow.com/questions/48004243/how-to-share-large-read-only-dictionary-list-across-processes-in-multiprocessing
         # https://stackoverflow.com/questions/45693949/storing-strings-in-a-multiprocessing-sharedctypes-array
-        # key, val = class_index_dict
-        # key = key[:].split('\n')
-        # _dict = {k: v for k, v in zip(key, val)}
-        sample["class_label"] = np.zeros(len(class_index_dict.keys()))
-        for x in json_dict_raw["tag"]:
-            sample["class_label"][class_index_dict[x]] = 1
-        sample["class_label"] = torch.tensor(sample["class_label"]).float()
+
+        # in case the re-written version is wrong, here is the old version:
+        # sample["class_label"] = np.zeros(len(class_index_dict.keys()))
+        # for x in json_dict_raw["tag"]:
+        #     sample["class_label"][class_index_dict[x]] = 1
+        # sample["class_label"] = torch.tensor(sample["class_label"]).float()
+
+        class_labels = np.zeros(len(class_index_dict))
+        class_labels[np.in1d(list(class_index_dict.keys()), json_dict_raw["tag"])] = 1
+        sample["class_label"] = torch.tensor(class_labels).float()
+
     del sample[text_ext]
     sample["audio_name"] = sample["__key__"].split("/")[-1] + "." + audio_ext
     sample["text_name"] = sample["__key__"].split("/")[-1] + "." + text_ext
@@ -654,40 +657,57 @@ def preprocess(
     return sample
 
 
-def collate_fn(batch):
+def collate_fn_with_preprocess(batch,
+                               audio_ext,
+                               text_ext,
+                               max_len,
+                               audio_cfg,
+                               class_index_dict,
+                               data_filling,
+                               data_truncating,
+                               text_augment_selection,
+                               ):
     """
     Collate function for wdsdataloader.
     batch: a list of dict, each dict is a sample
     """
     # concatenate values in each dictionary. if it is a tensor, concatenate. if it is a list, extend.
+    data_preprocessed = []
+
+    for sample in batch:
+        data_preprocessed.append(
+            preprocess_single(sample, audio_ext, text_ext, max_len, audio_cfg, class_index_dict, data_filling,
+                              data_truncating, text_augment_selection))
+
     batch_dict = {}
-    for k in batch[0].keys():
-        if isinstance(batch[0][k], dict):  # dealwith bert tokenizer output
+    for k in data_preprocessed[0].keys():
+        if isinstance(data_preprocessed[0][k], dict):  # dealwith bert tokenizer output
             batch_dict[k] = {}
-            for kk in batch[0][k].keys():
+            for kk in data_preprocessed[0][k].keys():
                 tmp = []
-                for i in range(len(batch)):
-                    tmp.append(batch[i][k][kk])
+                for i in range(len(data_preprocessed)):
+                    tmp.append(data_preprocessed[i][k][kk])
                 batch_dict[k][kk] = torch.vstack(tmp)
-        elif isinstance(batch[0][k], torch.Tensor):
-            batch_dict[k] = torch.stack([sample[k] for sample in batch])
-        elif isinstance(batch[0][k], np.ndarray):
-            batch_dict[k] = torch.tensor(np.stack([sample[k] for sample in batch]))
+        elif isinstance(data_preprocessed[0][k], torch.Tensor):
+            batch_dict[k] = torch.stack([sample[k] for sample in data_preprocessed])
+        elif isinstance(data_preprocessed[0][k], np.ndarray):
+            batch_dict[k] = torch.tensor(np.stack([sample[k] for sample in data_preprocessed]))
         else:
-            batch_dict[k] = [sample[k] for sample in batch]
+            batch_dict[k] = [sample[k] for sample in data_preprocessed]
+    del data_preprocessed
     return batch_dict
 
 
 def get_wds_dataset(
-    args,
-    model_cfg,
-    is_train,
-    audio_ext="flac",
-    text_ext="json",
-    max_len=480000,
-    proportion=1.0,
-    sizefilepath_=None,
-    is_local=None,
+        args,
+        model_cfg,
+        is_train,
+        audio_ext="flac",
+        text_ext="json",
+        max_len=480000,
+        proportion=1.0,
+        sizefilepath_=None,
+        is_local=None,
 ):
     """
     Get a dataset for wdsdataloader.
@@ -722,7 +742,7 @@ def get_wds_dataset(
                 )
         else:
             num_samples = (
-                args.val_num_samples or 0
+                    args.val_num_samples or 0
             )  # eval will just exhaust the iterator if not specified
 
     pipeline = [wds.SimpleShardList(input_shards)]
@@ -756,27 +776,42 @@ def get_wds_dataset(
                 wds.tarfile_to_samples(handler=log_and_continue),
             ]
         )
+
     pipeline.append(
-        wds.map(
-            partial(
-                preprocess,
-                audio_ext=audio_ext,
-                text_ext=text_ext,
-                max_len=max_len,
-                audio_cfg=model_cfg['audio_cfg'],
-                class_index_dict=copy.deepcopy(args.class_index_dict),
-                data_filling=args.data_filling,
-                data_truncating=args.data_truncating,
-                text_augment_selection=args.text_augment_selection,
-            )
-        ),
+        wds.decode(wds.torch_audio),
     )
+
+    # pipeline.append(
+    #     wds.map(
+    #         partial(
+    #             preprocess,
+    #             audio_ext=audio_ext,
+    #             text_ext=text_ext,
+    #             max_len=max_len,
+    #             audio_cfg=model_cfg['audio_cfg'],
+    #             class_index_dict=copy.deepcopy(args.class_index_dict),
+    #             data_filling=args.data_filling,
+    #             data_truncating=args.data_truncating,
+    #             text_augment_selection=args.text_augment_selection,
+    #         )
+    #     ),
+    # )
 
     pipeline.append(
         wds.batched(
             args.batch_size,
             partial=not (is_train or args.parallel_eval),
-            collation_fn=collate_fn,
+            collation_fn=partial(collate_fn_with_preprocess,
+                                 audio_ext=audio_ext,
+                                 text_ext=text_ext,
+                                 max_len=max_len,
+                                 audio_cfg=model_cfg['audio_cfg'],
+                                 class_index_dict=copy.deepcopy(args.class_index_dict),
+                                 data_filling=args.data_filling,
+                                 data_truncating=args.data_truncating,
+                                 text_augment_selection=args.text_augment_selection,
+                                 ),
+
         )
     )
 
@@ -804,8 +839,22 @@ def get_wds_dataset(
     if args.horovod:  # multi-node training on summit
         kwargs["multiprocessing_context"] = "forkserver"
 
+    if is_train:
+        if args.prefetch_factor:
+            prefetch_factor = args.prefetch_factor
+        else:
+            prefetch_factor = max(2, args.batch_size // args.workers)
+    else:
+        prefetch_factor = 2
+
     dataloader = wds.WebLoader(
-        dataset, batch_size=None, shuffle=False, num_workers=args.workers, **kwargs
+        dataset,
+        batch_size=None,
+        shuffle=False,
+        num_workers=args.workers,
+        pin_memory=True,
+        prefetch_factor=prefetch_factor,
+        **kwargs
     )
 
     # FIXME not clear which approach is better, with_epoch before vs after dataloader?
@@ -830,17 +879,17 @@ def get_wds_dataset(
 
 
 def wds_batch_list2dict(
-    batch,
-    keys=[
-        "__url__",
-        "__key__",
-        "waveform",
-        "text",
-        "raw_text",
-        "audio_name",
-        "text_name",
-        "audio_orig_sr",
-    ],
+        batch,
+        keys=[
+            "__url__",
+            "__key__",
+            "waveform",
+            "text",
+            "raw_text",
+            "audio_name",
+            "text_name",
+            "audio_orig_sr",
+        ],
 ):
     """
     Return a dictionary of the batch, with keys as the names of the fields.
