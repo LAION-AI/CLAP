@@ -9,7 +9,7 @@ Support: LAION
 import librosa
 import laion_clap
 
-model = laion_clap.CLAP_Module(enable_fusion=False)
+model = laion_clap.CLAP_Module(enable_fusion=True)
 model.load_ckpt()
 
 # Directly get audio embeddings from audio files

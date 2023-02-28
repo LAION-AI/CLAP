@@ -32,19 +32,26 @@ def show_progress(block_num, block_size, total_size):
         pbar = None
 
 
-class CLAP_Module:
-    def __init__(self, enable_fusion=True) -> None:
+class CLAP_Module(torch.nn.Module):
+    def __init__(self, enable_fusion=False, device=None, amodel= 'HTSAT-tiny', tmodel='roberta') -> None:
         """Initialize CLAP Model
 
         Parameters
         ----------
         enable_fusion: bool
-            if true, it will create the fusion clap model, otherwise non-fusion clap model (default: true) 
+            if true, it will create the fusion clap model, otherwise non-fusion clap model (default: false) 
+        device: str
+            if None, it will automatically detect the device (gpu or cpu)
+        amodel: str
+            audio encoder architecture, default: HTSAT-tiny
+        tmodel: str
+            text encoder architecture, default: roberta
         """
-        device = 'cuda:0' if torch.cuda.is_available() else 'cpu'
+        super(CLAP_Module, self).__init__()
+        if device is None:
+            device = 'cuda:0' if torch.cuda.is_available() else 'cpu'
         precision = 'fp32'
-        amodel = 'HTSAT-tiny' # or 'PANN-14'
-        tmodel = 'roberta' # the best text encoder in our training
+
         if enable_fusion:
             fusion_type = 'aff_2d'
             model, model_cfg = create_model(
@@ -94,7 +101,7 @@ class CLAP_Module:
                 id = 3 --> 630k+audioset fusion ckpt \n
             Note that if your model is specied as non-fusion model but you download a fusion model ckpt, you will face an error.
         """
-        download_link = 'https://zenodo.org/record/7678859/files/'
+        download_link = 'https://huggingface.co/lukewys/laion_clap/resolve/main/'
         download_names = [
             '630k-best.pt',
             '630k-audioset-best.pt',
