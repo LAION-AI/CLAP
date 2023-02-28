@@ -1,25 +1,15 @@
 '''
 Evalute the linear probe performance on different checkpoints
 '''
-from cmath import cos
-from doctest import master
-from inspect import getargs
 import logging
 import os
-from pickletools import optimize
 import random
 from datetime import datetime
-import bisect
 import copy
 import numpy as np
 import torch
 import torch.backends.cudnn as cudnn
-from torch import optim
 from torch.cuda.amp import GradScaler
-import torch.distributed as dist
-import faulthandler
-import pathlib
-import argparse
 import glob
 
 try:

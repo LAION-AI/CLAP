@@ -1,4 +1,3 @@
-import os
 import torch
 import librosa
 from clap_module import create_model
