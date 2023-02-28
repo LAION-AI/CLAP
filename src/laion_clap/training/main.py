@@ -1,17 +1,12 @@
-from inspect import getargs
 import logging
 import os
 import random
 from datetime import datetime
-import bisect
 import copy
 import numpy as np
 import torch
 import torch.backends.cudnn as cudnn
-from torch import optim
 from torch.cuda.amp import GradScaler
-import faulthandler
-import pathlib
 
 try:
     import wandb
@@ -214,8 +209,9 @@ def main():
     assert args.precision in ["amp", "fp16", "fp32"]
     if args.precision == "fp16":
         logging.warning(
-            "It is recommended to use AMP mixed-precision instead of FP16. "
-            "FP16 support needs further verification and tuning, especially for train."
+            "It is recommended to use fp32 mixed-precision instead of FP16 and AMP in this model. "
+            "They will cause NaN loss and NaN gradients. "
+            "FP16 and AMP support needs further verification and tuning, especially for train."
         )
 
     if args.horovod:
@@ -486,6 +482,7 @@ def main():
             args.val_sz = data["val"].dataloader.num_samples
         # you will have to configure this for your project!
         wandb.init(
+            entity="clap",
             project="clap",
             notes=args.wandb_notes,
             name=args.wandb_notes,

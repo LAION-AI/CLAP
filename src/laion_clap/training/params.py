@@ -549,6 +549,12 @@ def parse_args():
         default=None,
         help="For selecting levels of augmented text. Type is among ['all', 'augment_only', 'none']",
     )
+    parser.add_argument(
+        "--prefetch-factor",
+        type=int,
+        default=None,
+        help="The prefetch factor for dataloader. Larger value will use more memory and CPU but faster.",
+    )
 
     args = parser.parse_args()
 

@@ -16,7 +16,6 @@ except ImportError:
 
 from clap_module import ClipLoss, gather_features
 from .distributed import is_master
-from .zero_shot import zero_shot_eval
 
 
 class AverageMeter(object):

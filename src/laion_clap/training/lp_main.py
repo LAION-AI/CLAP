@@ -1,20 +1,12 @@
-from cmath import cos
-from inspect import getargs
 import logging
 import os
 import random
 from datetime import datetime
-import bisect
 import copy
-from sched import scheduler
 import numpy as np
 import torch
 import torch.backends.cudnn as cudnn
-from torch import optim
 from torch.cuda.amp import GradScaler
-import faulthandler
-import pathlib
-import argparse
 import time
 
 try:

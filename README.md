@@ -44,7 +44,7 @@ To train on a single GPU machine, use `CUDA_VISIBLE_DEVICES=0 python -m ...` ins
 We use [Weights and Biases](https://wandb.ai/site) for experiment logging. You need to configure the weights and biases in your environment.
 
 ## Loading Model and Inference
-Please refer to [infer_demo.py](src/training/infer_demo.py) to get the whole view of using our model to infer the audio and text embeddings.
+Please refer to [infer_demo.py](src/laion_clap/training/infer_demo.py) to get the whole view of using our model to infer the audio and text embeddings.
 Below is the core code.
 ```python
 # import necessary libraries
