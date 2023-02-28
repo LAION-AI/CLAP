@@ -1,25 +1,15 @@
 '''
 Evalute the linear probe performance on different checkpoints
 '''
-from cmath import cos
-from doctest import master
-from inspect import getargs
 import logging
 import os
-from pickletools import optimize
 import random
 from datetime import datetime
-import bisect
 import copy
 import numpy as np
 import torch
 import torch.backends.cudnn as cudnn
-from torch import optim
 from torch.cuda.amp import GradScaler
-import torch.distributed as dist
-import faulthandler
-import pathlib
-import argparse
 import glob
 
 try:
@@ -37,16 +27,15 @@ try:
 except ImportError:
     hvd = None
 
-from laion_clap import create_model_and_transforms, trace_model, create_model
-from training.data import get_data
-from training.params import parse_args
-from training.distributed import is_master, init_distributed_device, world_info_from_env
-from training.logger import setup_logging
-from training.scheduler import cosine_lr
-from training.lp_main import config_lp_optimizer
-from training.lp_train import train_one_epoch, evaluate
-from laion_clap.utils import get_tar_path_from_dataset_name, dataset_split
-from laion_clap.utils import load_p, load_class_label
+from laion_clap import trace_model, create_model
+from laion_clap.training.data import get_data
+from laion_clap.training.params import parse_args
+from laion_clap.training.distributed import is_master, init_distributed_device, world_info_from_env
+from laion_clap.training.logger import setup_logging
+from laion_clap.training.lp_main import config_lp_optimizer
+from laion_clap.training.lp_train import train_one_epoch, evaluate
+from laion_clap.utils import dataset_split
+from laion_clap.utils import load_class_label
 from laion_clap.linear_probe import LinearProbe
 
 def maintain_ckpts(args, startidx, all_idx_len):

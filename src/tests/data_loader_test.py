@@ -1,10 +1,10 @@
-from laion_clap import create_model_and_transforms, trace_model, create_model
-from training.data import get_data
-from training.params import parse_args
+from laion_clap import create_model
+from laion_clap.training.data import get_data
+from laion_clap.training import parse_args
 import torch
 import os
 from tqdm import tqdm
-from training.distributed import is_master, init_distributed_device, world_info_from_env
+from laion_clap.training.distributed import is_master, world_info_from_env
 from laion_clap.utils import dataset_split
 
 

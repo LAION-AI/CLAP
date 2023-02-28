@@ -1,17 +1,12 @@
-from inspect import getargs
 import logging
 import os
 import random
 from datetime import datetime
-import bisect
 import copy
 import numpy as np
 import torch
 import torch.backends.cudnn as cudnn
-from torch import optim
 from torch.cuda.amp import GradScaler
-import faulthandler
-import pathlib
 
 try:
     import wandb
@@ -28,13 +23,13 @@ try:
 except ImportError:
     hvd = None
 
-from laion_clap import create_model_and_transforms, trace_model, create_model
-from training.data import get_data
-from training.distributed import is_master, init_distributed_device, world_info_from_env
-from training.logger import setup_logging
-from training.params import parse_args
-from training.scheduler import cosine_lr
-from training.train import train_one_epoch, evaluate
+from laion_clap import trace_model, create_model
+from laion_clap.training.data import get_data
+from laion_clap.training.distributed import is_master, init_distributed_device, world_info_from_env
+from laion_clap.training.logger import setup_logging
+from laion_clap.training.params import parse_args
+from laion_clap.training.scheduler import cosine_lr
+from laion_clap.training.train import train_one_epoch, evaluate
 from laion_clap.utils import dataset_split, get_optimizer
 
 

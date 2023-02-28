@@ -6,12 +6,11 @@ import os
 import random
 import h5py
 from dataclasses import dataclass
-from training.params import parse_args
+from laion_clap.training.params import parse_args
 import braceexpand
 import numpy as np
 import pandas as pd
 import torch
-import torch.nn as nn
 import torch.nn.functional as F
 import torchvision.datasets as datasets
 import torchvision.transforms
@@ -20,14 +19,11 @@ from PIL import Image
 from torch.utils.data import Dataset, DataLoader, SubsetRandomSampler
 from torch.utils.data.distributed import DistributedSampler
 from functools import partial
-import soundfile as sf
-import io
 from pathlib import Path
 import wget
 
 from laion_clap.utils import get_tar_path_from_dataset_name, dataset_split
-from laion_clap.utils import load_p, load_class_label
-import tempfile
+from laion_clap.utils import load_class_label
 import copy
 
 try:

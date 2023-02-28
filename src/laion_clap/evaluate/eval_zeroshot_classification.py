@@ -1,24 +1,17 @@
-import argparse
 import os.path
 import glob
-import json
-from tqdm import tqdm
 import random
 import numpy as np
 import logging
 import wandb
-import time
 import torch
-import torch.nn as nn
 import torch.nn.functional as F
 import torch.backends.cudnn as cudnn
 from laion_clap import create_model
-from laion_clap import tokenize
-from training.logger import setup_logging
-from training.data import get_data
-from training.train import evaluate
+from laion_clap.training.logger import setup_logging
+from laion_clap.training.data import get_data
 from laion_clap.utils import get_tar_path_from_dataset_name, dataset_split
-from training.params import parse_args
+from laion_clap.training.params import parse_args
 
 
 def find_params_value(file, key):
@@ -28,6 +21,69 @@ def find_params_value(file, key):
             if key + ': ' in line:
                 return line.split(': ')[1].strip()
     return None
+
+
+def evaluate_zeroshot(model, data, start_epoch, args, writer):
+    dataloader = data["val"].dataloader
+    metrics = {}
+    device = torch.device(args.device)
+    model.eval()
+    metrics.update({"epoch": start_epoch})
+
+    all_audio_features = []
+    all_class_labels = []
+    with torch.no_grad():
+        for i, batch in enumerate(dataloader):
+            audios = batch  # contains mel_spec, wavform, and longer list
+            audio_features = model(audios, None, device)
+            audio_features = F.normalize(audio_features, dim=-1)
+            all_audio_features.append(audio_features.detach().cpu())
+            all_class_labels.append(torch.argmax(batch["class_label"], 1).long())
+        all_audio_features = torch.cat(all_audio_features, dim=0)
+        all_class_labels = torch.cat(all_class_labels, dim=0)
+        metrics["num_samples"] = all_audio_features.shape[0]
+
+        # get text features
+        all_texts = ["This is a sound of " + t for t in args.class_index_dict.keys()]
+        # (yusong): a hack, can make it better
+        if args.tmodel == "transformer":
+            from laion_clap import tokenize
+            all_texts = tokenize(all_texts)
+        else:
+            from laion_clap.training.data import tokenizer
+            all_texts = tokenizer(all_texts)
+        all_text_features = model(None, all_texts, device)
+        all_text_features = F.normalize(all_text_features, dim=-1).detach().cpu()
+
+        # compute similarity
+        logit_scale_a, logit_scale_t = model(None, None, device)
+        logit_scale_a = logit_scale_a.cpu()
+
+        logits_per_audio = (logit_scale_a * all_audio_features @ all_text_features.t()).detach().cpu()
+        logits_per_text = logits_per_audio.t().detach().cpu()
+
+        ground_truth = all_class_labels.view(-1, 1)
+        logit = logits_per_audio
+
+        ranking = torch.argsort(logit, descending=True)
+        preds = torch.where(ranking == ground_truth)[1]  # (yusong) this line is slow because it uses single thread
+        preds = preds.detach().cpu().numpy()
+        metrics[f"{args.datasetnames[0]}_mean_rank"] = preds.mean() + 1
+        metrics[f"{args.datasetnames[0]}_median_rank"] = np.floor(np.median(preds)) + 1
+        for k in [1, 5, 10]:
+            metrics[f"{args.datasetnames[0]}_R@{k}"] = np.mean(preds < k)
+        # map@10
+        metrics[f"{args.datasetnames[0]}_mAP@10"] = np.mean(np.where(preds < 10, 1 / (preds + 1), 0.0))
+
+        logging.info(
+            f"Eval Epoch: {start_epoch} "
+            + "\t".join([f"{k}: {round(v, 4):.4f}" for k, v in metrics.items()])
+        )
+
+        if args.wandb:
+            assert wandb is not None, "Please install wandb."
+            for name, val in metrics.items():
+                wandb.log({f"val/{name}": val, "epoch": start_epoch})
 
 
 if __name__ == '__main__':
@@ -70,7 +126,7 @@ if __name__ == '__main__':
     args.epochs = 1
     args.precision = 'fp32'
     args.save_logs = True
-    args.wandb = True
+    args.wandb = args.report_to == 'wandb'
     args.class_index_dict = None
 
     device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
@@ -196,4 +252,4 @@ if __name__ == '__main__':
         for param in model.parameters():
             param.requires_grad = False
 
-        evaluate(model, data, start_epoch, args, writer)
+        evaluate_zeroshot(model, data, start_epoch, args, writer)

@@ -1,17 +1,14 @@
-import argparse
 import torch
-import torch.nn as nn
 import torch.nn.functional as F
 import torch.backends.cudnn as cudnn
 from laion_clap import create_model
-from laion_clap import tokenize
 import glob
 import json
 import librosa
 from tqdm import tqdm
 import numpy as np
 import os
-from training.params import parse_args
+from laion_clap.training.params import parse_args
 
 
 def get_output_from_single_audio(audio, text, model, device):
@@ -125,7 +122,7 @@ if __name__ == '__main__':
                 from laion_clap import tokenize
                 text = tokenize(text)
             else:
-                from training.data import tokenizer
+                from laion_clap.training.data import tokenizer
                 text = tokenizer(text)  # 5 texts for each audio
 
             audio_features, text_features, audio_features_mlp, text_features_mlp, logit_scale_a, logit_scale_t = \
