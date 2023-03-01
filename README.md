@@ -7,7 +7,7 @@ Contrastive Language-Audio Pretraining, known as CLAP. Referring to the CLIP (Co
 
 
 
-The repository contains code for the following paper:
+The repository contains code for the following paper, accepted by IEEE International Conference on Acoustics, Speech and Signal Processing, ICASSP 2023:
  - [Large-scale Contrastive Language-Audio Pretraining with Feature Fusion and Keyword-to-Caption Augmentation](https://arxiv.org/abs/2211.06687)
 
 ## About this project
