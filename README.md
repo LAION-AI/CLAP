@@ -2,7 +2,7 @@
 
 Contrastive Language-Audio Pretraining, known as CLAP. Referring to the CLIP (Contrastive Language-Image Pretraining) architecture, similarly, the CLAP architecture is as follows.  
 <p align="center">
-  <img src="./assets/audioclip-arch.png" alt="The Contrastive Language-Audio Pretraining Model Architecture" width="60%"/>
+  <img src="https://raw.githubusercontent.com/LAION-AI/CLAP/main/assets/audioclip-arch.png" alt="The Contrastive Language-Audio Pretraining Model Architecture" width="60%"/>
 </p>
 
 
@@ -18,8 +18,47 @@ The major opensource contributers of this project are (in equal contribution): Y
 
 many thanks to <a href="https://github.com/cfoster0/CLAP">@cfoster0</a> for allowing us to use his repo name.
 
+## Quick Start 
+We provide the library for our CLAP model:
+```bash
+pip install laion_clap
+```
+
+Then you can follow the below usage or refer to [unit_test.py](https://github.com/LAION-AI/CLAP/blob/laion_clap_pip/src/laion_clap/unit_test.py).
+
+```python
+import librosa
+import laion_clap
+
+model = laion_clap.CLAP_Module(enable_fusion=True)
+model.load_ckpt()
+
+# Directly get audio embeddings from audio files
+audio_file = [
+    '/home/la/kechen/Research/KE_CLAP/ckpt/test_clap_short.wav',
+    '/home/la/kechen/Research/KE_CLAP/ckpt/test_clap_long.wav'
+]
+audio_embed = model.get_audio_embedding_from_filelist(x = audio_file)
+print(audio_embed)
+print(audio_embed.shape)
+
+# Get audio embeddings from audio data
+audio_data, _ = librosa.load('/home/la/kechen/Research/KE_CLAP/ckpt/test_clap_short.wav', sr=48000) # sample rate should be 48000
+audio_data = audio_data.reshape(1, -1) # Make it (1,T) or (N,T)
+
+audio_embed = model.get_audio_embedding_from_data(x = audio_data)
+print(audio_embed)
+print(audio_embed.shape)
+
+# Get text embedings from texts:
+text_data = ["I love the contrastive learning", "I love the pretrain model"] 
+text_embed = model.get_text_embedding(text_data)
+print(text_embed)
+print(text_embed.shape)
+```
+
 ## Environment Installation
-To install the same environment as we use, please run the following command:
+If you want to check and reuse our model into your project instead of directly using the pip library, you need to install the same environment as we use, please run the following command:
 ```bash
 conda create env -n clap python=3.10
 conda activate clap
@@ -43,52 +82,11 @@ For example, in a single machine multi-GPU setting, you might want to use `torch
 To train on a single GPU machine, use `CUDA_VISIBLE_DEVICES=0 python -m ...` instead of `srun`.
 We use [Weights and Biases](https://wandb.ai/site) for experiment logging. You need to configure the weights and biases in your environment.
 
-## Loading Model and Inference
-Please refer to [infer_demo.py](src/training/infer_demo.py) to get the whole view of using our model to infer the audio and text embeddings.
-Below is the core code.
-```python
-# import necessary libraries
-def infer_audio():
-    
-    '''
-    set hyperparameters, and load pretrain model
-    '''
-    
-    # load the waveform of the shape (T,), should resample to 48000
-    audio_waveform, sr = librosa.load('/home/la/kechen/Research/KE_CLAP/ckpt/test_clap_long.wav', sr=48000) 
-    # quantize
-    audio_waveform = int16_to_float32(float32_to_int16(audio_waveform))
-    audio_waveform = torch.from_numpy(audio_waveform).float()
-    audio_dict = {}
-
-    # the 'fusion' truncate mode can be changed to 'rand_trunc' if run in unfusion mode
-    audio_dict = get_audio_features(
-        audio_dict, audio_waveform, 480000, 
-        data_truncating='fusion', 
-        data_filling='repeatpad',
-        audio_cfg=model_cfg['audio_cfg']
-    )
-    # can send a list to the model, to process many audio tracks in one time (i.e. batch size)
-    audio_embed = model.get_audio_embedding([audio_dict])
-    print(audio_embed.size())
-
-def infer_text():
-    '''
-    set hyperparameters, and load pretrain model
-    '''
-    
-    # load the text, can be a list (i.e. batch size)
-    text_data = ["I love the contrastive learning", "I love the pretrain model"] 
-    # tokenize for roberta, if you want to tokenize for another text encoder, please refer to data.py#L43-90 
-    text_data = tokenizer(text_data)
-    
-    text_embed = model.get_text_embedding(text_data)
-    print(text_embed.size())
-    
-```
+## Core Code
+Please refer to [main.py](https://github.com/LAION-AI/CLAP/blob/laion_clap_pip/src/laion_clap/training/main.py), [train.py](https://github.com/LAION-AI/CLAP/blob/laion_clap_pip/src/laion_clap/training/train.py), [data.py](https://github.com/LAION-AI/CLAP/blob/laion_clap_pip/src/laion_clap/training/data.py),and [model.py](https://github.com/LAION-AI/CLAP/blob/laion_clap_pip/src/laion_clap/clap_module/model.py) to quicly get familiar with our model.
 
 ## Pretrained Models
-The pretrained checkpoints can be found in [here](https://drive.google.com/drive/folders/1Ni8lZ2pryTESjgq8gELLQNM_HGdWtFrE?usp=sharing).
+The pretrained checkpoints can be found in [here](https://huggingface.co/lukewys/laion_clap/tree/main).
 Please refer to the previous section for how to load and run the checkpoints.
 
 The checkpoints list here for each model setting is the one with the highest average mAP score in training.
@@ -106,7 +104,13 @@ If you find this project and the LAION-Audio-630K dataset useful, please cite ou
   title = {Large-scale Contrastive Language-Audio Pretraining with Feature Fusion and Keyword-to-Caption Augmentation},
   author = {Wu*, Yusong and Chen*, Ke and Zhang*, Tianyu and Hui*, Yuchen and Berg-Kirkpatrick, Taylor and Dubnov, Shlomo},
   booktitle={IEEE International Conference on Acoustics, Speech and Signal Processing, ICASSP},
-  year = {2023},
+  year = {2023}
+}
+@inproceedings{htsatke2022,
+  author = {Ke Chen and Xingjian Du and Bilei Zhu and Zejun Ma and Taylor Berg-Kirkpatrick and Shlomo Dubnov},
+  title = {HTS-AT: A Hierarchical Token-Semantic Audio Transformer for Sound Classification and Detection},
+  booktitle={IEEE International Conference on Acoustics, Speech and Signal Processing, ICASSP},
+  year = {2022}
 }
 ```
 

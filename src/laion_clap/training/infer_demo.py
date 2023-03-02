@@ -1,7 +1,6 @@
-import os
 import torch
 import librosa
-from open_clip import create_model
+from clap_module import create_model
 from training.data import get_audio_features
 from training.data import int16_to_float32, float32_to_int16
 from transformers import RobertaTokenizer
@@ -39,9 +38,11 @@ def infer_text():
     text_data = ["I love the contrastive learning", "I love the pretrain model"] 
     # tokenize for roberta, if you want to tokenize for another text encoder, please refer to data.py#L43-90 
     text_data = tokenizer(text_data)
-    
+    model.eval()
     text_embed = model.get_text_embedding(text_data)
-    print(text_embed.size())
+    text_embed = text_embed.detach().cpu().numpy()
+    print(text_embed)
+    print(text_embed.shape)
 
 def infer_audio():
     
@@ -64,7 +65,7 @@ def infer_audio():
     )
 
     # load the waveform of the shape (T,), should resample to 48000
-    audio_waveform, sr = librosa.load('/home/la/kechen/Research/KE_CLAP/ckpt/test_clap_long.wav', sr=48000) 
+    audio_waveform, sr = librosa.load('/home/la/kechen/Research/KE_CLAP/ckpt/test_clap_short.wav', sr=48000) 
     # quantize
     audio_waveform = int16_to_float32(float32_to_int16(audio_waveform))
     audio_waveform = torch.from_numpy(audio_waveform).float()
@@ -77,11 +78,15 @@ def infer_audio():
         data_filling='repeatpad',
         audio_cfg=model_cfg['audio_cfg']
     )
+    model.eval()
     # can send a list to the model, to process many audio tracks in one time (i.e. batch size)
     audio_embed = model.get_audio_embedding([audio_dict])
-    print(audio_embed.size())
+    audio_embed = audio_embed.detach().cpu().numpy()
+    print(audio_embed)
+    print(audio_embed.shape)
     
 
 
 if __name__ == "__main__":
     infer_text()
+    # infer_audio()

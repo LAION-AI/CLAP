@@ -14,9 +14,8 @@ try:
 except ImportError:
     wandb = None
 
-from open_clip import ClipLoss, gather_features
+from clap_module import ClipLoss, gather_features
 from .distributed import is_master
-from .zero_shot import zero_shot_eval
 
 
 class AverageMeter(object):
@@ -598,7 +597,7 @@ def evaluate_clotho_audiocaps(
 
             # each item in the list has 5 texts
             if args.tmodel == "transformer":
-                from open_clip import tokenize
+                from clap_module import tokenize
                 texts = [tokenize(t) for t in batch['full_text']]
                 texts = torch.cat(texts)
             else:
