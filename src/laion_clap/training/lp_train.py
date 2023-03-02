@@ -14,8 +14,8 @@ try:
 except ImportError:
     wandb = None
 
-from laion_clap import LPLoss, LPMetrics, lp_gather_features
-from laion_clap.utils import do_mixup, get_mix_lambda
+from clap_module import LPLoss, LPMetrics, lp_gather_features
+from clap_module.utils import do_mixup, get_mix_lambda
 from .distributed import is_master
 from .zero_shot import zero_shot_eval
 

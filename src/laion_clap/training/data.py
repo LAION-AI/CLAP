@@ -22,8 +22,9 @@ from functools import partial
 from pathlib import Path
 import wget
 
-from laion_clap.utils import get_tar_path_from_dataset_name, dataset_split
-from laion_clap.utils import load_class_label
+from clap_module.utils import get_tar_path_from_dataset_name, dataset_split
+from clap_module.utils import load_p, load_class_label
+import tempfile
 import copy
 
 try:
@@ -38,8 +39,7 @@ except ImportError:
 
 args = parse_args()
 if args.tmodel == "transformer":
-    from laion_clap import tokenize
-
+    from clap_module import tokenize
 
     def tokenizer(text):
         return tokenize(text).squeeze(0)

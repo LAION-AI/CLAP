@@ -1,7 +1,8 @@
 import torch
 import torch.nn.functional as F
 import torch.backends.cudnn as cudnn
-from laion_clap import create_model
+from open_clip import create_model
+from open_clip import tokenize
 import glob
 import json
 import librosa
@@ -119,7 +120,7 @@ if __name__ == '__main__':
             text = json_data["text"]
 
             if args.tmodel == "transformer":
-                from laion_clap import tokenize
+                from open_clip import tokenize
                 text = tokenize(text)
             else:
                 from laion_clap.training.data import tokenizer
