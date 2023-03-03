@@ -69,10 +69,12 @@ python -m evaluate.eval_zeroshot_classification \
   --dataset-type="webdataset" \
   --precision="fp32" \
   --batch-size=512 \
-  --workers=6 \
-  --amodel HTSAT-tiny \
+  --workers=4 \
+  --amodel HTSAT-base \
   --tmodel roberta \
-  --datasetnames "ESC50_1" \
+    --report-to "wandb" \
+  --wandb-notes "3.2-zeroshot-esc50-no-overlap-music-speech" \
+  --datasetnames "esc50_no_overlap" \
   --remotedata \
   --datasetinfos "train" \
   --seed 3407 \
@@ -81,7 +83,47 @@ python -m evaluate.eval_zeroshot_classification \
   --data-truncating "rand_trunc" \
   --freeze-text \
   --class-label-path="../class_labels/ESC50_class_labels_indices_space.json" \
-  --pretrained="/fsx/clap_logs/2022_10_17-02_08_30-model_HTSAT-tiny-lr_0.0001-b_96-j_6-p_fp32/checkpoints/epoch_15.pt"
+  --pretrained="/fsx/clap_logs/2023_02_11-04_46_34-model_HTSAT-base-lr_0.0001-b_96-j_6-p_fp32/checkpoints"
+
+python -m evaluate.eval_zeroshot_classification \
+  --dataset-type="webdataset" \
+  --precision="fp32" \
+  --batch-size=512 \
+  --workers=4 \
+  --amodel HTSAT-base \
+  --tmodel roberta \
+    --report-to "wandb" \
+  --wandb-notes "3.2-zeroshot-esc50-no-overlap-music-speech-audioset" \
+  --datasetnames "esc50_no_overlap" \
+  --remotedata \
+  --datasetinfos "train" \
+  --seed 3407 \
+  --logs ./logs \
+  --data-filling "repeatpad" \
+  --data-truncating "rand_trunc" \
+  --freeze-text \
+  --class-label-path="../class_labels/ESC50_class_labels_indices_space.json" \
+  --pretrained="/fsx/clap_logs/2023_02_14-16_56_27-model_HTSAT-base-lr_0.0001-b_96-j_6-p_fp32/checkpoints"
+
+python -m evaluate.eval_zeroshot_classification \
+  --dataset-type="webdataset" \
+  --precision="fp32" \
+  --batch-size=512 \
+  --workers=4 \
+  --amodel HTSAT-base \
+  --tmodel roberta \
+    --report-to "wandb" \
+  --wandb-notes "3.2-zeroshot-esc50-no-overlap-music-audioset" \
+  --datasetnames "esc50_no_overlap" \
+  --remotedata \
+  --datasetinfos "train" \
+  --seed 3407 \
+  --logs ./logs \
+  --data-filling "repeatpad" \
+  --data-truncating "rand_trunc" \
+  --freeze-text \
+  --class-label-path="../class_labels/ESC50_class_labels_indices_space.json" \
+  --pretrained="/fsx/clap_logs/2023_02_14-16_56_26-model_HTSAT-base-lr_0.0001-b_96-j_6-p_fp32/checkpoints"
 
 
 python -m evaluate.eval_zeroshot_classification \
