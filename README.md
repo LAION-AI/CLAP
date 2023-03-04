@@ -73,7 +73,9 @@ pip install -r requirements.txt
 ## Dataset format
 We use training data in webdataset format. For details of our dataset please see https://github.com/LAION-AI/audio-dataset.
 
-You can find an example of our dataset format in [here](https://drive.google.com/drive/folders/1aU54FGctrjhxA2sTN0wgHVsPm0nPEc_E?usp=share_link).
+Due to copyright reason, we cannot release the dataset we train this model on. However, we released [LAION-audio-630K](https://github.com/LAION-AI/audio-dataset/tree/main/laion-audio-630k), the data source we used to compose the dataset with link to each audio and their caption. Please refer to [LAION-audio-630K](https://github.com/LAION-AI/audio-dataset/tree/main/laion-audio-630k) for more details. You could download the dataset and train locally. To train on local dataset, please change the `--remotedata` in training scripts (see [experiment_scripts](./experiment_scripts) folder) with `--datasetpath <your dir to datasets>`.
+
+You can find an example of our dataset format in [here](https://drive.google.com/drive/folders/1scyH43eQAcrBz-5fAw44C6RNBhC3ejvX?usp=sharing).
 It contains the full ESC50 dataset, split according to the first 5-fold split.
 
 ## Training, Fine-tuning and Evaluation
@@ -83,6 +85,7 @@ You need to change the script to fit your own environment.
 For example, in a single machine multi-GPU setting, you might want to use `torchrun` instead of `srun` to run the script.
 To train on a single GPU machine, use `CUDA_VISIBLE_DEVICES=0 python -m ...` instead of `srun`.
 We use [Weights and Biases](https://wandb.ai/site) for experiment logging. You need to configure the weights and biases in your environment.
+To train on local dataset, please change the `--remotedata` in training scripts (see [experiment_scripts](./experiment_scripts) folder) with `--datasetpath <your dir to datasets>`.
 
 ## Core Code
 Please refer to [main.py](https://github.com/LAION-AI/CLAP/blob/laion_clap_pip/src/laion_clap/training/main.py), [train.py](https://github.com/LAION-AI/CLAP/blob/laion_clap_pip/src/laion_clap/training/train.py), [data.py](https://github.com/LAION-AI/CLAP/blob/laion_clap_pip/src/laion_clap/training/data.py),and [model.py](https://github.com/LAION-AI/CLAP/blob/laion_clap_pip/src/laion_clap/clap_module/model.py) to quicly get familiar with our model.
