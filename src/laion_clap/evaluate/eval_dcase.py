@@ -124,7 +124,7 @@ if __name__ == '__main__':
                 text = tokenize(text)
             else:
                 from laion_clap.training.data import tokenizer
-                text = tokenizer(text)  # 5 texts for each audio
+                text = tokenizer(text, tmodel=args.tmodel)  # 5 texts for each audio
 
             audio_features, text_features, audio_features_mlp, text_features_mlp, logit_scale_a, logit_scale_t = \
                 get_output_from_single_audio(audio, text, model, device)

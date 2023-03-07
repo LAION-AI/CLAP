@@ -602,7 +602,7 @@ def evaluate_clotho_audiocaps(
                 texts = torch.cat(texts)
             else:
                 from .data import tokenizer
-                texts = [tokenizer(t) for t in batch['full_text']]  # 5 texts for each audio
+                texts = [tokenizer(t, tmodel=args.tmodel) for t in batch['full_text']]  # 5 texts for each audio
                 texts = {k: torch.cat([t[k] for t in texts]) for k in texts[0].keys()}  # 5 x batch
 
             # audios = audios.to(device=device, non_blocking=True)

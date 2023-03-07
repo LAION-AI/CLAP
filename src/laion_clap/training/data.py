@@ -6,7 +6,6 @@ import os
 import random
 import h5py
 from dataclasses import dataclass
-from laion_clap.training.params import parse_args
 import braceexpand
 import numpy as np
 import pandas as pd
@@ -21,11 +20,15 @@ from torch.utils.data.distributed import DistributedSampler
 from functools import partial
 from pathlib import Path
 import wget
+import tempfile
+import copy
 
 from clap_module.utils import get_tar_path_from_dataset_name, dataset_split
 from clap_module.utils import load_p, load_class_label
-import tempfile
-import copy
+from clap_module import tokenize as clip_tokenizer
+from transformers import BertTokenizer
+from transformers import RobertaTokenizer
+from transformers import BartTokenizer
 
 try:
     import horovod.torch as hvd
@@ -37,60 +40,49 @@ try:
 except ImportError:
     torchaudio = None
 
-args = parse_args()
-if args.tmodel == "transformer":
-    from clap_module import tokenize
 
-    def tokenizer(text):
-        return tokenize(text).squeeze(0)
+def tokenizer(text, tmodel="roberta", max_length=77):
+    """tokenizer for different models
+    tmodel is default to roberta as it is the best model for our task
+    max_length is default to 77 from the OpenAI CLIP parameters
+    We assume text to be a single string, but it can also be a list of strings
+    """
+    if tmodel == "transformer":
+        return clip_tokenizer(text).squeeze(0)
 
-elif args.tmodel == "bert":
-    from transformers import BertTokenizer
-
-    tokenize = BertTokenizer.from_pretrained("bert-base-uncased")
-
-
-    def tokenizer(text):
+    elif tmodel == "bert":
+        tokenize = BertTokenizer.from_pretrained("bert-base-uncased")
         result = tokenize(
             text,
             padding="max_length",
             truncation=True,
-            max_length=77,
+            max_length=max_length,
             return_tensors="pt",
         )
         return {k: v.squeeze(0) for k, v in result.items()}
 
-elif args.tmodel == "roberta":
-    from transformers import RobertaTokenizer
-
-    tokenize = RobertaTokenizer.from_pretrained('roberta-base')
-
-
-    def tokenizer(text):
+    elif tmodel == "roberta":
+        tokenize = RobertaTokenizer.from_pretrained('roberta-base')
         result = tokenize(
             text,
             padding="max_length",
             truncation=True,
-            max_length=77,
+            max_length=max_length,
             return_tensors="pt",
         )
         return {k: v.squeeze(0) for k, v in result.items()}
 
-elif args.tmodel == "bart":
-    from transformers import BartTokenizer
-
-    tokenize = BartTokenizer.from_pretrained('facebook/bart-base')
-
-
-    def tokenizer(text):
+    elif tmodel == "bart":
+        tokenize = BartTokenizer.from_pretrained('facebook/bart-base')
         result = tokenize(
             text,
             padding="max_length",
             truncation=True,
-            max_length=77,
+            max_length=max_length,
             return_tensors="pt",
         )
         return {k: v.squeeze(0) for k, v in result.items()}
+
 
 # initizlied the audioset map
 _AUDIOSET_MAP_PATH = os.path.join(Path(__file__).parent, "audioset_textmap.npy")
@@ -613,6 +605,7 @@ def preprocess_single(
         text_ext,
         max_len,
         audio_cfg,
+        tmodel,
         class_index_dict,
         data_filling,
         data_truncating,
@@ -635,7 +628,7 @@ def preprocess_single(
     if isinstance(texts, list) and isinstance(texts[0], str) and len(texts) > 1:
         texts = random.choice(texts)
     sample["raw_text"] = texts
-    sample["text"] = tokenizer(texts)  # text shape: [num_token]
+    sample["text"] = tokenizer(texts, tmodel=tmodel)  # text shape: [num_token]
     if class_index_dict is not None:
         # https://stackoverflow.com/questions/48004243/how-to-share-large-read-only-dictionary-list-across-processes-in-multiprocessing
         # https://stackoverflow.com/questions/45693949/storing-strings-in-a-multiprocessing-sharedctypes-array
@@ -662,21 +655,25 @@ def collate_fn_with_preprocess(batch,
                                text_ext,
                                max_len,
                                audio_cfg,
-                               class_index_dict,
-                               data_filling,
-                               data_truncating,
-                               text_augment_selection,
+                               args,
                                ):
     """
     Collate function for wdsdataloader.
     batch: a list of dict, each dict is a sample
     """
+
+    class_index_dict = copy.deepcopy(args.class_index_dict)  # To avoid deadlock in multiprocessing
+    data_filling = args.data_filling
+    data_truncating = args.data_truncating
+    text_augment_selection = args.text_augment_selection
+    tmodel = args.tmodel
+
     # concatenate values in each dictionary. if it is a tensor, concatenate. if it is a list, extend.
     data_preprocessed = []
 
     for sample in batch:
         data_preprocessed.append(
-            preprocess_single(sample, audio_ext, text_ext, max_len, audio_cfg, class_index_dict, data_filling,
+            preprocess_single(sample, audio_ext, text_ext, max_len, audio_cfg, tmodel, class_index_dict, data_filling,
                               data_truncating, text_augment_selection))
 
     batch_dict = {}
@@ -781,22 +778,6 @@ def get_wds_dataset(
         wds.decode(wds.torch_audio),
     )
 
-    # pipeline.append(
-    #     wds.map(
-    #         partial(
-    #             preprocess,
-    #             audio_ext=audio_ext,
-    #             text_ext=text_ext,
-    #             max_len=max_len,
-    #             audio_cfg=model_cfg['audio_cfg'],
-    #             class_index_dict=copy.deepcopy(args.class_index_dict),
-    #             data_filling=args.data_filling,
-    #             data_truncating=args.data_truncating,
-    #             text_augment_selection=args.text_augment_selection,
-    #         )
-    #     ),
-    # )
-
     pipeline.append(
         wds.batched(
             args.batch_size,
@@ -806,10 +787,7 @@ def get_wds_dataset(
                                  text_ext=text_ext,
                                  max_len=max_len,
                                  audio_cfg=model_cfg['audio_cfg'],
-                                 class_index_dict=copy.deepcopy(args.class_index_dict),
-                                 data_filling=args.data_filling,
-                                 data_truncating=args.data_truncating,
-                                 text_augment_selection=args.text_augment_selection,
+                                 args=args,
                                  ),
 
         )
