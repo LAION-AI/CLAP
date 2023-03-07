@@ -40,6 +40,9 @@ try:
 except ImportError:
     torchaudio = None
 
+bert_tokenizer = BertTokenizer.from_pretrained("bert-base-uncased")
+roberta_tokenizer = RobertaTokenizer.from_pretrained("roberta-base")
+bart_tokenizer = BartTokenizer.from_pretrained("facebook/bart-base")
 
 def tokenizer(text, tmodel="roberta", max_length=77):
     """tokenizer for different models
@@ -51,8 +54,7 @@ def tokenizer(text, tmodel="roberta", max_length=77):
         return clip_tokenizer(text).squeeze(0)
 
     elif tmodel == "bert":
-        tokenize = BertTokenizer.from_pretrained("bert-base-uncased")
-        result = tokenize(
+        result = bert_tokenizer(
             text,
             padding="max_length",
             truncation=True,
@@ -62,8 +64,7 @@ def tokenizer(text, tmodel="roberta", max_length=77):
         return {k: v.squeeze(0) for k, v in result.items()}
 
     elif tmodel == "roberta":
-        tokenize = RobertaTokenizer.from_pretrained('roberta-base')
-        result = tokenize(
+        result = roberta_tokenizer(
             text,
             padding="max_length",
             truncation=True,
@@ -73,8 +74,7 @@ def tokenizer(text, tmodel="roberta", max_length=77):
         return {k: v.squeeze(0) for k, v in result.items()}
 
     elif tmodel == "bart":
-        tokenize = BartTokenizer.from_pretrained('facebook/bart-base')
-        result = tokenize(
+        result = bart_tokenizer(
             text,
             padding="max_length",
             truncation=True,
