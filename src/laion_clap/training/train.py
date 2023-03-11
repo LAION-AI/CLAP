@@ -633,16 +633,18 @@ def evaluate_clotho_audiocaps(
 
             # each item in the list has 5 texts
             if args.tmodel == "transformer":
-                from open_clip import tokenize
+                from clap_module import tokenize
                 texts = [tokenize(t) for t in batch['full_text']]
                 texts = torch.cat(texts)
             else:
                 from .data import tokenizer
-                texts = [tokenizer(t) for t in batch['full_text']]  # 5 texts for each audio
+                texts = [tokenizer(t, tmodel=args.tmodel) for t in batch['full_text']]  # 5 texts for each audio
                 texts = {k: torch.cat([t[k] for t in texts]) for k in texts[0].keys()}  # 5 x batch
 
             # audios = audios.to(device=device, non_blocking=True)
 
+            # batch['__url__'] contains the path to the data tar this sample is from
+            # So, b.split("/")[-3:-1] will get you '<dataset_name>-<dataset-split>'
             all_names = list(set(["-".join(b.split("/")[-3:-1]) for b in batch['__url__']]))
             for name in all_names:
                 if name not in eval_info.keys():
