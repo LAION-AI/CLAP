@@ -29,10 +29,21 @@ Then you can follow the below usage or refer to [unit_test.py](https://github.co
 For the documentation of the API, please refer to [hook.py](https://github.com/LAION-AI/CLAP/blob/main/src/laion_clap/hook.py).
 
 ```python
+import numpy as np
 import librosa
+import torch
 import laion_clap
 
-model = laion_clap.CLAP_Module(enable_fusion=True)
+# quantization
+def int16_to_float32(x):
+    return (x / 32767.0).astype(np.float32)
+
+
+def float32_to_int16(x):
+    x = np.clip(x, a_min=-1., a_max=1.)
+    return (x * 32767.).astype(np.int16)
+
+model = laion_clap.CLAP_Module(enable_fusion=False)
 model.load_ckpt()
 
 # Directly get audio embeddings from audio files
@@ -40,23 +51,40 @@ audio_file = [
     '/home/la/kechen/Research/KE_CLAP/ckpt/test_clap_short.wav',
     '/home/la/kechen/Research/KE_CLAP/ckpt/test_clap_long.wav'
 ]
-audio_embed = model.get_audio_embedding_from_filelist(x = audio_file) # audio_embed will be a numpy array with shape (N, 512)
-print(audio_embed)
+audio_embed = model.get_audio_embedding_from_filelist(x = audio_file, use_tensor=False)
+print(audio_embed[:,-20:])
 print(audio_embed.shape)
 
 # Get audio embeddings from audio data
 audio_data, _ = librosa.load('/home/la/kechen/Research/KE_CLAP/ckpt/test_clap_short.wav', sr=48000) # sample rate should be 48000
 audio_data = audio_data.reshape(1, -1) # Make it (1,T) or (N,T)
+audio_embed = model.get_audio_embedding_from_data(x = audio_data, use_tensor=False)
+print(audio_embed[:,-20:])
+print(audio_embed.shape)
 
-audio_embed = model.get_audio_embedding_from_data(x = audio_data)
-print(audio_embed)
+# Directly get audio embeddings from audio files, but return torch tensor
+audio_file = [
+    '/home/la/kechen/Research/KE_CLAP/ckpt/test_clap_short.wav',
+    '/home/la/kechen/Research/KE_CLAP/ckpt/test_clap_long.wav'
+]
+audio_embed = model.get_audio_embedding_from_filelist(x = audio_file, use_tensor=True)
+print(audio_embed[:,-20:])
+print(audio_embed.shape)
+
+# Get audio embeddings from audio data
+audio_data, _ = librosa.load('/home/la/kechen/Research/KE_CLAP/ckpt/test_clap_short.wav', sr=48000) # sample rate should be 48000
+audio_data = audio_data.reshape(1, -1) # Make it (1,T) or (N,T)
+audio_data = torch.from_numpy(int16_to_float32(float32_to_int16(audio_data))).float() # quantize before send it in to the model
+audio_embed = model.get_audio_embedding_from_data(x = audio_data, use_tensor=True)
+print(audio_embed[:,-20:])
 print(audio_embed.shape)
 
 # Get text embedings from texts:
 text_data = ["I love the contrastive learning", "I love the pretrain model"] 
-text_embed = model.get_text_embedding(text_data) # text_embed will be a numpy array with shape (N, 512)
+text_embed = model.get_text_embedding(text_data)
 print(text_embed)
 print(text_embed.shape)
+
 ```
 
 ## Environment Installation
@@ -73,7 +101,9 @@ pip install -r requirements.txt
 ## Dataset format
 We use training data in webdataset format. For details of our dataset please see https://github.com/LAION-AI/audio-dataset.
 
-You can find an example of our dataset format in [here](https://drive.google.com/drive/folders/1aU54FGctrjhxA2sTN0wgHVsPm0nPEc_E?usp=share_link).
+Due to copyright reasons, we cannot release the dataset we train this model on. However, we released [LAION-audio-630K](https://github.com/LAION-AI/audio-dataset/tree/main/laion-audio-630k), the data source we used to compose the dataset with link to each audio and their caption. Please refer to [LAION-audio-630K](https://github.com/LAION-AI/audio-dataset/tree/main/laion-audio-630k) for more details. You could download the dataset, preprocess it on your own and train it locally. To train on the local dataset, please change the `--remotedata` in training scripts (see [experiment_scripts](./experiment_scripts) folder) with `--datasetpath <your dir to datasets>`.
+
+You can find an example of our dataset format in [here](https://drive.google.com/drive/folders/1scyH43eQAcrBz-5fAw44C6RNBhC3ejvX?usp=sharing).
 It contains the full ESC50 dataset, split according to the first 5-fold split.
 
 ## Training, Fine-tuning and Evaluation
@@ -83,6 +113,7 @@ You need to change the script to fit your own environment.
 For example, in a single machine multi-GPU setting, you might want to use `torchrun` instead of `srun` to run the script.
 To train on a single GPU machine, use `CUDA_VISIBLE_DEVICES=0 python -m ...` instead of `srun`.
 We use [Weights and Biases](https://wandb.ai/site) for experiment logging. You need to configure the weights and biases in your environment.
+To train on local dataset, please change the `--remotedata` in training scripts (see [experiment_scripts](./experiment_scripts) folder) with `--datasetpath <your dir to datasets>`.
 
 ## Core Code
 Please refer to [main.py](https://github.com/LAION-AI/CLAP/blob/laion_clap_pip/src/laion_clap/training/main.py), [train.py](https://github.com/LAION-AI/CLAP/blob/laion_clap_pip/src/laion_clap/training/train.py), [data.py](https://github.com/LAION-AI/CLAP/blob/laion_clap_pip/src/laion_clap/training/data.py),and [model.py](https://github.com/LAION-AI/CLAP/blob/laion_clap_pip/src/laion_clap/clap_module/model.py) to quicly get familiar with our model.
