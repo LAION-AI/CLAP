@@ -19,6 +19,7 @@ from clap_module.factory import load_state_dict
 
 pbar = None
 
+
 def show_progress(block_num, block_size, total_size):
     global pbar
     if pbar is None:
@@ -131,17 +132,18 @@ class CLAP_Module(torch.nn.Module):
         for n in param_names:
             print(n, "\t", "Loaded" if n in ckpt else "Unloaded")
     
-    def get_audio_embedding_from_filelist(self, x):
+    def get_audio_embedding_from_filelist(self, x, use_tensor=False):
         """get audio embeddings from the audio file list
 
         Parameters
         ----------
         x: List[str] (N,): 
             an audio file list to extract features, audio files can have different lengths (as we have the feature fusion machanism)
-        
+        use_tensor: boolean:
+            if True, it will return the torch tensor, preserving the gradient (default: False).
         Returns
         ----------
-        audio_embed : numpy.darray (N,D):
+        audio_embed : numpy.darray | torch.Tensor (N,D):
             audio embeddings that extracted from audio files
         """ 
         self.model.eval()
@@ -162,28 +164,33 @@ class CLAP_Module(torch.nn.Module):
             )
             audio_input.append(temp_dict)
         audio_embed = self.model.get_audio_embedding(audio_input)
-        audio_embed = audio_embed.detach().cpu().numpy()
+        if not use_tensor:
+            audio_embed = audio_embed.detach().cpu().numpy()
         return audio_embed
 
 
-    def get_audio_embedding_from_data(self, x):
+    def get_audio_embedding_from_data(self, x, use_tensor=False):
         """get audio embeddings from the audio data
 
         Parameters
         ----------
-        x: np.darray (N,T): 
-            audio data, must be mono audio tracks.      
+        x: np.darray | torch.Tensor (N,T): 
+            audio data, must be mono audio tracks.
+        use_tensor: boolean:
+            if True, x should be the tensor input and the output will be the tesnor, preserving the gradient (default: False).      
+            Note that if 'use tensor' is set to True, it will not do the quantize of the audio waveform (otherwise the gradient will not be preserved).
         Returns
         ----------
-        audio embed: numpy.darray (N,D):
+        audio embed: numpy.darray | torch.Tensor (N,D):
             audio embeddings that extracted from audio files
         """ 
         self.model.eval()
         audio_input = []
         for audio_waveform in x:          
             # quantize
-            audio_waveform = int16_to_float32(float32_to_int16(audio_waveform))
-            audio_waveform = torch.from_numpy(audio_waveform).float()
+            if not use_tensor:
+                audio_waveform = int16_to_float32(float32_to_int16(audio_waveform))
+                audio_waveform = torch.from_numpy(audio_waveform).float()
             temp_dict = {}
             # the 'fusion' truncate mode can be changed to 'rand_trunc' if run in unfusion mode
             temp_dict = get_audio_features(
@@ -194,7 +201,8 @@ class CLAP_Module(torch.nn.Module):
             )
             audio_input.append(temp_dict)
         audio_embed = self.model.get_audio_embedding(audio_input)
-        audio_embed = audio_embed.detach().cpu().numpy()
+        if not use_tensor:
+            audio_embed = audio_embed.detach().cpu().numpy()
         return audio_embed
 
     def get_text_embedding(self, x, tokenizer = None):
