@@ -22,6 +22,7 @@ from pathlib import Path
 import wget
 import tempfile
 import copy
+from contextlib import suppress
 
 from clap_module.utils import get_tar_path_from_dataset_name, dataset_split
 from clap_module.utils import load_p, load_class_label
@@ -396,7 +397,7 @@ def get_mel(audio_data, audio_cfg):
     return mel.T  # (T, n_mels)
 
 
-def get_audio_features(sample, audio_data, max_len, data_truncating, data_filling, audio_cfg):
+def get_audio_features(sample, audio_data, max_len, data_truncating, data_filling, audio_cfg, require_grad=False):
     """
     Calculate and add audio features to sample.
     Sample: a dict containing all the data of current sample.
@@ -405,8 +406,11 @@ def get_audio_features(sample, audio_data, max_len, data_truncating, data_fillin
     data_truncating: the method of truncating data.
     data_filling: the method of filling data.
     audio_cfg: a dict containing audio configuration. Comes from model_cfg['audio_cfg'].
+    require_grad: whether to require gradient for audio data.
+        This is useful when we want to apply gradient-based classifier-guidance.
     """
-    with torch.no_grad():
+    grad_fn = suppress if require_grad else torch.no_grad
+    with grad_fn():
         if len(audio_data) > max_len:
             if data_truncating == "rand_trunc":
                 longer = torch.tensor([True])
