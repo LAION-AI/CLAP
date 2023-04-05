@@ -362,7 +362,7 @@ def sample_prop(sizefile, inputs, proportion, is_local=True):
 
 def get_mel(audio_data, audio_cfg):
     # mel shape: (n_mels, T)
-    mel = torchaudio.transforms.MelSpectrogram(
+    mel_tf = torchaudio.transforms.MelSpectrogram(
         sample_rate=audio_cfg['sample_rate'],
         n_fft=audio_cfg['window_size'],
         win_length=audio_cfg['window_size'],
@@ -372,10 +372,12 @@ def get_mel(audio_data, audio_cfg):
         power=2.0,
         norm=None,
         onesided=True,
-        n_mels=64,
+        n_mels=audio_cfg['mel_bins'],
         f_min=audio_cfg['fmin'],
         f_max=audio_cfg['fmax']
-    )(audio_data)
+    ).to(audio_data.device)
+    
+    mel = mel_tf(audio_data)
     # Align to librosa:
     # librosa_melspec = librosa.feature.melspectrogram(
     #     waveform,
@@ -386,7 +388,7 @@ def get_mel(audio_data, audio_cfg):
     #     center=True,
     #     pad_mode="reflect",
     #     power=2.0,
-    #     n_mels=64,
+    #     n_mels=audio_cfg['mel_bins'],
     #     norm=None,
     #     htk=True,
     #     f_min=audio_cfg['fmin'],
@@ -449,7 +451,7 @@ def get_audio_features(sample, audio_data, max_len, data_truncating, data_fillin
                     mel_chunk_back = mel[idx_back:idx_back + chunk_frames, :]
 
                     # shrink the mel
-                    mel_shrink = torchvision.transforms.Resize(size=[chunk_frames, 64])(mel[None])[0]
+                    mel_shrink = torchvision.transforms.Resize(size=[chunk_frames, audio_cfg['mel_bins']])(mel[None])[0]
                     # logging.info(f"mel_shrink.shape: {mel_shrink.shape}")
 
                     # stack
