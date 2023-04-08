@@ -145,7 +145,7 @@ model.load_ckpt('checkpoint_path/checkpoint_name.pt')
 ```
 
 Please note that this is a temporary release for people who are working on larger-scale down-stream task. 
-We will release a more comprehensive version of the model and the experiments in the future.
+We will release a more comprehensive version of the model with detailed experiments in the future.
 Please take your own risk when using this model.
 
 * All the new checkpoints did not trained with fusion. The training dataset size for `music_speech_audioset_epoch_15_esc_89.98.pt` is around 4M samples. The zeroshot GTZAN score is evaluated using the prompt `This audio is a <genre> song.`
