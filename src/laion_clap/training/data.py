@@ -294,7 +294,7 @@ def get_dataset_size(shards, sizefilepath_=None, is_local=True):
                 total_size = ast.literal_eval(open(len_filename, "r").read())
             else:
                 raise Exception(
-                    "Cannot find sizes file for dataset. Please specify the path to the file."
+                    f"Cannot find sizes file for dataset {shards}. Please specify the path to the file."
                 )
                 # total_size = None  # num samples undefined
                 # some common dataset sizes (at time of authors last download)

@@ -46,11 +46,10 @@ def evaluate_zeroshot(model, data, start_epoch, args, writer):
         metrics["num_samples"] = all_audio_features.shape[0]
 
         # get text features
-        all_texts = [f"This audio clip belongs to the genre of {t}." for t in args.class_index_dict.keys()]
-        # if args.val_dataset_names == ['GTZAN']:
-        #     all_texts = [f"This is a {t} song." for t in args.class_index_dict.keys()]
-        # else:
-        #     all_texts = [f"This is a sound of {t}." for t in args.class_index_dict.keys()]
+        if args.val_dataset_names == ['GTZAN']:
+            all_texts = [f"This is a {t} song." for t in args.class_index_dict.keys()]
+        else:
+            all_texts = [f"This is a sound of {t}." for t in args.class_index_dict.keys()]
         logging.info(f'class label prompts: {all_texts}')
         # (yusong): a hack, can make it better
         if args.tmodel == "transformer":
