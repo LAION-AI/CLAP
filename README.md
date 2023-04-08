@@ -85,6 +85,12 @@ text_embed = model.get_text_embedding(text_data)
 print(text_embed)
 print(text_embed.shape)
 
+# Get text embedings from texts, but return torch tensor:
+text_data = ["I love the contrastive learning", "I love the pretrain model"] 
+text_embed = model.get_text_embedding(text_data, use_tensor=True)
+print(text_embed)
+print(text_embed.shape)
+
 ```
 
 ## Environment Installation
