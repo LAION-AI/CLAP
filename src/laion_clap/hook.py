@@ -5,7 +5,6 @@ Paper: https://arxiv.org/abs/2211.06687
 Authors (equal contributions): Ke Chen, Yusong Wu, Tianyu Zhang, Yuchen Hui
 Support: LAION
 """
-import progressbar
 import os
 import torch
 import librosa
@@ -16,22 +15,6 @@ from training.data import int16_to_float32, float32_to_int16
 from transformers import RobertaTokenizer
 import wget
 from clap_module.factory import load_state_dict
-
-pbar = None
-
-
-def show_progress(block_num, block_size, total_size):
-    global pbar
-    if pbar is None:
-        pbar = progressbar.ProgressBar(maxval=total_size)
-        pbar.start()
-    downloaded = block_num * block_size
-    print(downloaded, total_size)
-    if downloaded < total_size:
-        pbar.update(downloaded)
-    else:
-        pbar.finish()
-        pbar = None
 
 
 class CLAP_Module(torch.nn.Module):
