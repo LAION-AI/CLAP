@@ -20,7 +20,7 @@ def float32_to_int16(x):
     x = np.clip(x, a_min=-1., a_max=1.)
     return (x * 32767.).astype(np.int16)
 
-model = laion_clap.CLAP_Module(enable_fusion=True)
+model = laion_clap.CLAP_Module(enable_fusion=False)
 model.load_ckpt()
 
 # Directly get audio embeddings from audio files
