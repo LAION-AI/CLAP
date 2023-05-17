@@ -146,10 +146,10 @@ Please take your own risk when using this model.
 
 * All the new checkpoints did not trained with fusion. The training dataset size for `music_speech_audioset_epoch_15_esc_89.98.pt` is around 4M samples. The zeroshot GTZAN score is evaluated using the prompt `This audio is a <genre> song.`
 
-We provide the CLAP's performance on audio classification tasks under the zero-shot setting or the supervised setting. More results can be found at our paper.
+<!-- We provide the CLAP's performance on audio classification tasks under the zero-shot setting or the supervised setting. More results can be found at our paper.
 <p align="center">
   <img src="https://raw.githubusercontent.com/LAION-AI/CLAP/main/assets/clap-zeroshot.PNG" alt="Zero-shot Performance" width="100%"/>
-</p>
+</p> -->
 
 
 
