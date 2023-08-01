@@ -57,6 +57,9 @@ def load_state_dict(checkpoint_path: str, map_location="cpu", skip_params=True):
     if skip_params:
         if next(iter(state_dict.items()))[0].startswith("module"):
             state_dict = {k[7:]: v for k, v in state_dict.items()}
+
+        # removing position_ids to maintain compatibility with latest transformers update
+        del state_dict["text_branch.embeddings.position_ids"]
     # for k in state_dict:
     #     if k.startswith('transformer'):
     #         v = state_dict.pop(k)
