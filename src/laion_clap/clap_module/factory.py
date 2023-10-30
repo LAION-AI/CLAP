@@ -8,6 +8,7 @@ from pathlib import Path
 from packaging import version
 
 import torch
+import transformers
 
 from .model import CLAP, convert_weights_to_fp16
 from .openai import load_openai_model
