@@ -55,6 +55,7 @@ dataset_split = {
     "genius_16bit_128": ["train", "test"],
     "juno_16bit": ["train", "test"],
     "fma_full_16bit_128": ["train", "test"],
+    "GTZAN": ["train", "test"],
     }
 
 

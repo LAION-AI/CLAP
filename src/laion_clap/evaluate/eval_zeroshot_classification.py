@@ -7,7 +7,6 @@ import wandb
 import torch
 import torch.nn.functional as F
 import torch.backends.cudnn as cudnn
-<<<<<<< HEAD:src/laion_clap/evaluate/eval_retrieval_main.py
 from clap_module import create_model
 from clap_module import tokenize
 from training.logger import setup_logging
@@ -15,13 +14,6 @@ from training.data import get_data
 from training.train import evaluate
 from clap_module.utils import get_tar_path_from_dataset_name, dataset_split
 from training.params import parse_args
-=======
-from laion_clap import create_model
-from laion_clap.training.logger import setup_logging
-from laion_clap.training.data import get_data
-from laion_clap.utils import get_tar_path_from_dataset_name, dataset_split
-from laion_clap.training.params import parse_args
->>>>>>> 6aad20d31900bc623093e864a96f47bfd4c12cf7:src/laion_clap/evaluate/eval_zeroshot_classification.py
 
 
 def find_params_value(file, key):
@@ -54,17 +46,17 @@ def evaluate_zeroshot(model, data, start_epoch, args, writer):
         metrics["num_samples"] = all_audio_features.shape[0]
 
         # get text features
-        all_texts = ["This is a sound of " + t for t in args.class_index_dict.keys()]
+        if args.val_dataset_names == ['GTZAN']:
+            all_texts = [f"This is a {t} song." for t in args.class_index_dict.keys()]
+        else:
+            all_texts = [f"This is a sound of {t}." for t in args.class_index_dict.keys()]
+        logging.info(f'class label prompts: {all_texts}')
         # (yusong): a hack, can make it better
         if args.tmodel == "transformer":
-<<<<<<< HEAD:src/laion_clap/evaluate/eval_retrieval_main.py
-            from clap_module import tokenize
-=======
-            from laion_clap import tokenize
->>>>>>> 6aad20d31900bc623093e864a96f47bfd4c12cf7:src/laion_clap/evaluate/eval_zeroshot_classification.py
+            from clap_module.tokenizer import tokenize
             all_texts = tokenize(all_texts)
         else:
-            from laion_clap.training.data import tokenizer
+            from training.data import tokenizer
             all_texts = tokenizer(all_texts)
         all_text_features = model(None, all_texts, device)
         all_text_features = F.normalize(all_text_features, dim=-1).detach().cpu()

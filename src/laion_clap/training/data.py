@@ -6,7 +6,6 @@ import os
 import random
 import h5py
 from dataclasses import dataclass
-from laion_clap.training.params import parse_args
 import braceexpand
 import numpy as np
 import pandas as pd
@@ -21,11 +20,16 @@ from torch.utils.data.distributed import DistributedSampler
 from functools import partial
 from pathlib import Path
 import wget
+import tempfile
+import copy
+from contextlib import suppress
 
 from clap_module.utils import get_tar_path_from_dataset_name, dataset_split
 from clap_module.utils import load_p, load_class_label
-import tempfile
-import copy
+from clap_module import tokenize as clip_tokenizer
+from transformers import BertTokenizer
+from transformers import RobertaTokenizer
+from transformers import BartTokenizer
 
 try:
     import horovod.torch as hvd
@@ -37,60 +41,49 @@ try:
 except ImportError:
     torchaudio = None
 
-args = parse_args()
-if args.tmodel == "transformer":
-    from clap_module import tokenize
+bert_tokenizer = BertTokenizer.from_pretrained("bert-base-uncased")
+roberta_tokenizer = RobertaTokenizer.from_pretrained("roberta-base")
+bart_tokenizer = BartTokenizer.from_pretrained("facebook/bart-base")
 
-    def tokenizer(text):
-        return tokenize(text).squeeze(0)
+def tokenizer(text, tmodel="roberta", max_length=77):
+    """tokenizer for different models
+    tmodel is default to roberta as it is the best model for our task
+    max_length is default to 77 from the OpenAI CLIP parameters
+    We assume text to be a single string, but it can also be a list of strings
+    """
+    if tmodel == "transformer":
+        return clip_tokenizer(text).squeeze(0)
 
-elif args.tmodel == "bert":
-    from transformers import BertTokenizer
-
-    tokenize = BertTokenizer.from_pretrained("bert-base-uncased")
-
-
-    def tokenizer(text):
-        result = tokenize(
+    elif tmodel == "bert":
+        result = bert_tokenizer(
             text,
             padding="max_length",
             truncation=True,
-            max_length=77,
+            max_length=max_length,
             return_tensors="pt",
         )
         return {k: v.squeeze(0) for k, v in result.items()}
 
-elif args.tmodel == "roberta":
-    from transformers import RobertaTokenizer
-
-    tokenize = RobertaTokenizer.from_pretrained('roberta-base')
-
-
-    def tokenizer(text):
-        result = tokenize(
+    elif tmodel == "roberta":
+        result = roberta_tokenizer(
             text,
             padding="max_length",
             truncation=True,
-            max_length=77,
+            max_length=max_length,
             return_tensors="pt",
         )
         return {k: v.squeeze(0) for k, v in result.items()}
 
-elif args.tmodel == "bart":
-    from transformers import BartTokenizer
-
-    tokenize = BartTokenizer.from_pretrained('facebook/bart-base')
-
-
-    def tokenizer(text):
-        result = tokenize(
+    elif tmodel == "bart":
+        result = bart_tokenizer(
             text,
             padding="max_length",
             truncation=True,
-            max_length=77,
+            max_length=max_length,
             return_tensors="pt",
         )
         return {k: v.squeeze(0) for k, v in result.items()}
+
 
 # initizlied the audioset map
 _AUDIOSET_MAP_PATH = os.path.join(Path(__file__).parent, "audioset_textmap.npy")
@@ -175,7 +168,7 @@ class ToyDataset(Dataset):
     def prompt_text(self, target):
         events = _AUDIOSET_MAP[np.where(target > 0)]
         event_text = "The sounds of " + ", ".join(events[:-1]) + " and " + events[-1]
-        text = tokenize(event_text)[0]
+        text = tokenizer(event_text)[0]
         return text
 
     def __getitem__(self, index):
@@ -256,34 +249,10 @@ class ToyDataset(Dataset):
     def __len__(self):
         return self.total_size
 
-
-class CsvDataset(Dataset):
-    def __init__(self, input_filename, transforms, img_key, caption_key, sep="\t"):
-        logging.debug(f"Loading csv data from {input_filename}.")
-        df = pd.read_csv(input_filename, sep=sep)
-
-        self.images = df[img_key].tolist()
-        self.captions = df[caption_key].tolist()
-        self.transforms = transforms
-        logging.debug("Done loading data.")
-
-    def __len__(self):
-        return len(self.captions)
-
-    def __getitem__(self, idx):
-        images = self.transforms(Image.open(str(self.images[idx])))
-        texts = tokenize([str(self.captions[idx])])[0]
-        return images, texts
-
-
 @dataclass
 class DataInfo:
     dataloader: DataLoader
     sampler: DistributedSampler
-
-
-def preprocess_txt(text):
-    return tokenize([str(text)])[0]
 
 
 def get_dataset_size(shards, sizefilepath_=None, is_local=True):
@@ -325,7 +294,7 @@ def get_dataset_size(shards, sizefilepath_=None, is_local=True):
                 total_size = ast.literal_eval(open(len_filename, "r").read())
             else:
                 raise Exception(
-                    "Cannot find sizes file for dataset. Please specify the path to the file."
+                    f"Cannot find sizes file for dataset {shards}. Please specify the path to the file."
                 )
                 # total_size = None  # num samples undefined
                 # some common dataset sizes (at time of authors last download)
@@ -339,53 +308,6 @@ def get_dataset_size(shards, sizefilepath_=None, is_local=True):
         return total_size, num_shards
 
 
-def get_imagenet(args, preprocess_fns, split):
-    assert split in ["train", "val", "v2"]
-    is_train = split == "train"
-    preprocess_train, preprocess_val = preprocess_fns
-
-    if split == "v2":
-        from imagenetv2_pytorch import ImageNetV2Dataset
-
-        dataset = ImageNetV2Dataset(location=args.imagenet_v2, transform=preprocess_val)
-    else:
-        if is_train:
-            data_path = args.imagenet_train
-            preprocess_fn = preprocess_train
-        else:
-            data_path = args.imagenet_val
-            preprocess_fn = preprocess_val
-        assert data_path
-
-        dataset = datasets.ImageFolder(data_path, transform=preprocess_fn)
-
-    if is_train:
-        idxs = np.zeros(len(dataset.targets))
-        target_array = np.array(dataset.targets)
-        k = 50
-        for c in range(1000):
-            m = target_array == c
-            n = len(idxs[m])
-            arr = np.zeros(n)
-            arr[:k] = 1
-            np.random.shuffle(arr)
-            idxs[m] = arr
-
-        idxs = idxs.astype("int")
-        sampler = SubsetRandomSampler(np.where(idxs)[0])
-    else:
-        sampler = None
-
-    dataloader = torch.utils.data.DataLoader(
-        dataset,
-        batch_size=args.batch_size,
-        num_workers=args.workers,
-        sampler=sampler,
-    )
-
-    return DataInfo(dataloader, sampler)
-
-
 def count_samples(dataloader):
     os.environ["WDS_EPOCH"] = "0"
     n_elements, n_batches = 0, 0
@@ -394,10 +316,6 @@ def count_samples(dataloader):
         n_elements += len(images)
         assert len(images) == len(texts)
     return n_elements, n_batches
-
-
-def filter_no_caption(sample):
-    return "txt" in sample
 
 
 def log_and_continue(exn):
@@ -444,7 +362,7 @@ def sample_prop(sizefile, inputs, proportion, is_local=True):
 
 def get_mel(audio_data, audio_cfg):
     # mel shape: (n_mels, T)
-    mel = torchaudio.transforms.MelSpectrogram(
+    mel_tf = torchaudio.transforms.MelSpectrogram(
         sample_rate=audio_cfg['sample_rate'],
         n_fft=audio_cfg['window_size'],
         win_length=audio_cfg['window_size'],
@@ -454,10 +372,12 @@ def get_mel(audio_data, audio_cfg):
         power=2.0,
         norm=None,
         onesided=True,
-        n_mels=64,
+        n_mels=audio_cfg['mel_bins'],
         f_min=audio_cfg['fmin'],
         f_max=audio_cfg['fmax']
-    )(audio_data)
+    ).to(audio_data.device)
+    
+    mel = mel_tf(audio_data)
     # Align to librosa:
     # librosa_melspec = librosa.feature.melspectrogram(
     #     waveform,
@@ -468,7 +388,7 @@ def get_mel(audio_data, audio_cfg):
     #     center=True,
     #     pad_mode="reflect",
     #     power=2.0,
-    #     n_mels=64,
+    #     n_mels=audio_cfg['mel_bins'],
     #     norm=None,
     #     htk=True,
     #     f_min=audio_cfg['fmin'],
@@ -479,7 +399,7 @@ def get_mel(audio_data, audio_cfg):
     return mel.T  # (T, n_mels)
 
 
-def get_audio_features(sample, audio_data, max_len, data_truncating, data_filling, audio_cfg):
+def get_audio_features(sample, audio_data, max_len, data_truncating, data_filling, audio_cfg, require_grad=False):
     """
     Calculate and add audio features to sample.
     Sample: a dict containing all the data of current sample.
@@ -488,8 +408,11 @@ def get_audio_features(sample, audio_data, max_len, data_truncating, data_fillin
     data_truncating: the method of truncating data.
     data_filling: the method of filling data.
     audio_cfg: a dict containing audio configuration. Comes from model_cfg['audio_cfg'].
+    require_grad: whether to require gradient for audio data.
+        This is useful when we want to apply gradient-based classifier-guidance.
     """
-    with torch.no_grad():
+    grad_fn = suppress if require_grad else torch.no_grad
+    with grad_fn():
         if len(audio_data) > max_len:
             if data_truncating == "rand_trunc":
                 longer = torch.tensor([True])
@@ -528,7 +451,7 @@ def get_audio_features(sample, audio_data, max_len, data_truncating, data_fillin
                     mel_chunk_back = mel[idx_back:idx_back + chunk_frames, :]
 
                     # shrink the mel
-                    mel_shrink = torchvision.transforms.Resize(size=[chunk_frames, 64])(mel[None])[0]
+                    mel_shrink = torchvision.transforms.Resize(size=[chunk_frames, audio_cfg['mel_bins']])(mel[None])[0]
                     # logging.info(f"mel_shrink.shape: {mel_shrink.shape}")
 
                     # stack
@@ -613,6 +536,7 @@ def preprocess_single(
         text_ext,
         max_len,
         audio_cfg,
+        tmodel,
         class_index_dict,
         data_filling,
         data_truncating,
@@ -635,7 +559,7 @@ def preprocess_single(
     if isinstance(texts, list) and isinstance(texts[0], str) and len(texts) > 1:
         texts = random.choice(texts)
     sample["raw_text"] = texts
-    sample["text"] = tokenizer(texts)  # text shape: [num_token]
+    sample["text"] = tokenizer(texts, tmodel=tmodel)  # text shape: [num_token]
     if class_index_dict is not None:
         # https://stackoverflow.com/questions/48004243/how-to-share-large-read-only-dictionary-list-across-processes-in-multiprocessing
         # https://stackoverflow.com/questions/45693949/storing-strings-in-a-multiprocessing-sharedctypes-array
@@ -662,21 +586,25 @@ def collate_fn_with_preprocess(batch,
                                text_ext,
                                max_len,
                                audio_cfg,
-                               class_index_dict,
-                               data_filling,
-                               data_truncating,
-                               text_augment_selection,
+                               args,
                                ):
     """
     Collate function for wdsdataloader.
     batch: a list of dict, each dict is a sample
     """
+
+    class_index_dict = copy.deepcopy(args.class_index_dict)  # To avoid deadlock in multiprocessing
+    data_filling = args.data_filling
+    data_truncating = args.data_truncating
+    text_augment_selection = args.text_augment_selection
+    tmodel = args.tmodel
+
     # concatenate values in each dictionary. if it is a tensor, concatenate. if it is a list, extend.
     data_preprocessed = []
 
     for sample in batch:
         data_preprocessed.append(
-            preprocess_single(sample, audio_ext, text_ext, max_len, audio_cfg, class_index_dict, data_filling,
+            preprocess_single(sample, audio_ext, text_ext, max_len, audio_cfg, tmodel, class_index_dict, data_filling,
                               data_truncating, text_augment_selection))
 
     batch_dict = {}
@@ -781,22 +709,6 @@ def get_wds_dataset(
         wds.decode(wds.torch_audio),
     )
 
-    # pipeline.append(
-    #     wds.map(
-    #         partial(
-    #             preprocess,
-    #             audio_ext=audio_ext,
-    #             text_ext=text_ext,
-    #             max_len=max_len,
-    #             audio_cfg=model_cfg['audio_cfg'],
-    #             class_index_dict=copy.deepcopy(args.class_index_dict),
-    #             data_filling=args.data_filling,
-    #             data_truncating=args.data_truncating,
-    #             text_augment_selection=args.text_augment_selection,
-    #         )
-    #     ),
-    # )
-
     pipeline.append(
         wds.batched(
             args.batch_size,
@@ -806,10 +718,7 @@ def get_wds_dataset(
                                  text_ext=text_ext,
                                  max_len=max_len,
                                  audio_cfg=model_cfg['audio_cfg'],
-                                 class_index_dict=copy.deepcopy(args.class_index_dict),
-                                 data_filling=args.data_filling,
-                                 data_truncating=args.data_truncating,
-                                 text_augment_selection=args.text_augment_selection,
+                                 args=args,
                                  ),
 
         )
@@ -900,34 +809,6 @@ def wds_batch_list2dict(
     return {keys[i]: batch[i] for i in range(len(batch))}
 
 
-def get_csv_dataset(args, preprocess_fn, is_train):
-    input_filename = args.train_data if is_train else args.val_data
-    assert input_filename
-    dataset = CsvDataset(
-        input_filename,
-        preprocess_fn,
-        img_key=args.csv_img_key,
-        caption_key=args.csv_caption_key,
-        sep=args.csv_separator,
-    )
-    num_samples = len(dataset)
-    sampler = DistributedSampler(dataset) if args.distributed and is_train else None
-    shuffle = is_train and sampler is None
-
-    dataloader = DataLoader(
-        dataset,
-        batch_size=args.batch_size,
-        shuffle=shuffle,
-        num_workers=args.workers,
-        pin_memory=True,
-        sampler=sampler,
-        drop_last=is_train,
-    )
-    dataloader.num_samples = num_samples
-    dataloader.num_batches = len(dataloader)
-
-    return DataInfo(dataloader, sampler)
-
 
 def get_toy_dataset(args, model_cfg, is_train):
     index_path = args.train_data if is_train else args.val_data
@@ -957,21 +838,9 @@ def get_toy_dataset(args, model_cfg, is_train):
     return DataInfo(dataloader, sampler)
 
 
-def get_dataset_fn(data_path, dataset_type):
+def get_dataset_fn(dataset_type):
     if dataset_type == "webdataset":
         return get_wds_dataset
-    elif dataset_type == "csv":
-        return get_csv_dataset
-    elif dataset_type == "auto":
-        ext = data_path.split(".")[-1]
-        if ext in ["csv", "tsv"]:
-            return get_csv_dataset
-        elif ext in ["tar"]:
-            return get_wds_dataset
-        else:
-            raise ValueError(
-                f"Tried to figure out dataset type, but failed for extention {ext}."
-            )
     elif dataset_type == "toy":
         return get_toy_dataset
     else:
@@ -1014,12 +883,12 @@ def get_data(args, model_cfg):
         )
 
     if args.train_data:
-        data["train"] = get_dataset_fn(args.train_data, args.dataset_type)(
+        data["train"] = get_dataset_fn(args.dataset_type)(
             args, model_cfg, is_train=True
         )
 
     if args.val_data:
-        data["val"] = get_dataset_fn(args.val_data, args.dataset_type)(
+        data["val"] = get_dataset_fn(args.dataset_type)(
             args, model_cfg, is_train=False
         )
 

@@ -5,32 +5,16 @@ Paper: https://arxiv.org/abs/2211.06687
 Authors (equal contributions): Ke Chen, Yusong Wu, Tianyu Zhang, Yuchen Hui
 Support: LAION
 """
-import progressbar
 import os
 import torch
 import librosa
 from clap_module import create_model
-from training.data import get_audio_features
-from training.data import int16_to_float32, float32_to_int16
+from .training.data import get_audio_features
+from .training.data import int16_to_float32, float32_to_int16
 
 from transformers import RobertaTokenizer
 import wget
 from clap_module.factory import load_state_dict
-
-pbar = None
-
-def show_progress(block_num, block_size, total_size):
-    global pbar
-    if pbar is None:
-        pbar = progressbar.ProgressBar(maxval=total_size)
-        pbar.start()
-    downloaded = block_num * block_size
-    print(downloaded, total_size)
-    if downloaded < total_size:
-        pbar.update(downloaded)
-    else:
-        pbar.finish()
-        pbar = None
 
 
 class CLAP_Module(torch.nn.Module):
@@ -51,6 +35,7 @@ class CLAP_Module(torch.nn.Module):
         super(CLAP_Module, self).__init__()
         if device is None:
             device = 'cuda:0' if torch.cuda.is_available() else 'cpu'
+
         precision = 'fp32'
 
         if enable_fusion:
@@ -71,7 +56,7 @@ class CLAP_Module(torch.nn.Module):
                 device=device,
                 enable_fusion=enable_fusion
             )
-        self.enbale_fusion = enable_fusion
+        self.enable_fusion = enable_fusion
         self.model = model
         self.model_cfg = model_cfg
         self.tokenize = RobertaTokenizer.from_pretrained('roberta-base')
@@ -84,9 +69,9 @@ class CLAP_Module(torch.nn.Module):
             max_length=77,
             return_tensors="pt",
         )
-        return {k: v.squeeze(0) for k, v in result.items()}
+        return result
 
-    def load_ckpt(self, ckpt = None, model_id = -1):
+    def load_ckpt(self, ckpt = None, model_id = -1, verbose = True):
         """Load the pretrained checkpoint of CLAP model
 
         Parameters
@@ -114,7 +99,7 @@ class CLAP_Module(torch.nn.Module):
         else:
             print(f'Load our best checkpoint in the paper.')
             if model_id == -1:
-                model_id = 3 if self.enbale_fusion else 1
+                model_id = 3 if self.enable_fusion else 1
             package_dir = os.path.dirname(os.path.realpath(__file__))
             weight_file_name = download_names[model_id]
             ckpt = os.path.join(package_dir, weight_file_name)
@@ -127,21 +112,23 @@ class CLAP_Module(torch.nn.Module):
         print('Load Checkpoint...')
         ckpt = load_state_dict(ckpt, skip_params=True)
         self.model.load_state_dict(ckpt)
-        param_names = [n for n, p in self.model.named_parameters()]
-        for n in param_names:
-            print(n, "\t", "Loaded" if n in ckpt else "Unloaded")
+        if verbose:
+            param_names = [n for n, p in self.model.named_parameters()]
+            for n in param_names:
+                print(n, "\t", "Loaded" if n in ckpt else "Unloaded")
     
-    def get_audio_embedding_from_filelist(self, x):
+    def get_audio_embedding_from_filelist(self, x, use_tensor=False):
         """get audio embeddings from the audio file list
 
         Parameters
         ----------
         x: List[str] (N,): 
             an audio file list to extract features, audio files can have different lengths (as we have the feature fusion machanism)
-        
+        use_tensor: boolean:
+            if True, it will return the torch tensor, preserving the gradient (default: False).
         Returns
         ----------
-        audio_embed : numpy.darray (N,D):
+        audio_embed : numpy.darray | torch.Tensor (N,D):
             audio embeddings that extracted from audio files
         """ 
         self.model.eval()
@@ -153,51 +140,57 @@ class CLAP_Module(torch.nn.Module):
             audio_waveform = int16_to_float32(float32_to_int16(audio_waveform))
             audio_waveform = torch.from_numpy(audio_waveform).float()
             temp_dict = {}
-            # the 'fusion' truncate mode can be changed to 'rand_trunc' if run in unfusion mode
             temp_dict = get_audio_features(
                 temp_dict, audio_waveform, 480000, 
-                data_truncating='fusion', 
+                data_truncating='fusion' if self.enable_fusion else 'rand_trunc', 
                 data_filling='repeatpad',
-                audio_cfg=self.model_cfg['audio_cfg']
+                audio_cfg=self.model_cfg['audio_cfg'],
+                require_grad=audio_waveform.requires_grad
             )
             audio_input.append(temp_dict)
         audio_embed = self.model.get_audio_embedding(audio_input)
-        audio_embed = audio_embed.detach().cpu().numpy()
+        if not use_tensor:
+            audio_embed = audio_embed.detach().cpu().numpy()
         return audio_embed
 
 
-    def get_audio_embedding_from_data(self, x):
+    def get_audio_embedding_from_data(self, x, use_tensor=False):
         """get audio embeddings from the audio data
 
         Parameters
         ----------
-        x: np.darray (N,T): 
-            audio data, must be mono audio tracks.      
+        x: np.darray | torch.Tensor (N,T): 
+            audio data, must be mono audio tracks.
+        use_tensor: boolean:
+            if True, x should be the tensor input and the output will be the tesnor, preserving the gradient (default: False).      
+            Note that if 'use tensor' is set to True, it will not do the quantize of the audio waveform (otherwise the gradient will not be preserved).
         Returns
         ----------
-        audio embed: numpy.darray (N,D):
+        audio embed: numpy.darray | torch.Tensor (N,D):
             audio embeddings that extracted from audio files
         """ 
         self.model.eval()
         audio_input = []
         for audio_waveform in x:          
             # quantize
-            audio_waveform = int16_to_float32(float32_to_int16(audio_waveform))
-            audio_waveform = torch.from_numpy(audio_waveform).float()
+            if not use_tensor:
+                audio_waveform = int16_to_float32(float32_to_int16(audio_waveform))
+                audio_waveform = torch.from_numpy(audio_waveform).float()
             temp_dict = {}
-            # the 'fusion' truncate mode can be changed to 'rand_trunc' if run in unfusion mode
             temp_dict = get_audio_features(
                 temp_dict, audio_waveform, 480000, 
-                data_truncating='fusion', 
+                data_truncating='fusion' if self.enable_fusion else 'rand_trunc', 
                 data_filling='repeatpad',
-                audio_cfg=self.model_cfg['audio_cfg']
+                audio_cfg=self.model_cfg['audio_cfg'],
+                require_grad=audio_waveform.requires_grad
             )
             audio_input.append(temp_dict)
         audio_embed = self.model.get_audio_embedding(audio_input)
-        audio_embed = audio_embed.detach().cpu().numpy()
+        if not use_tensor:
+            audio_embed = audio_embed.detach().cpu().numpy()
         return audio_embed
 
-    def get_text_embedding(self, x, tokenizer = None):
+    def get_text_embedding(self, x, tokenizer = None, use_tensor = False):
         """get text embeddings from texts
 
         Parameters
@@ -206,10 +199,11 @@ class CLAP_Module(torch.nn.Module):
             text list 
         tokenizer: func:
             the tokenizer function, if not provided (None), will use the default Roberta tokenizer.
-        
+        use_tensor: boolean:
+            if True, the output will be the tesnor, preserving the gradient (default: False).      
         Returns
         ----------
-        text_embed : numpy.darray (N,D):
+        text_embed : numpy.darray | torch.Tensor (N,D):
             text embeddings that extracted from texts
         """ 
         self.model.eval()
@@ -218,7 +212,8 @@ class CLAP_Module(torch.nn.Module):
         else:
             text_input = self.tokenizer(x)
         text_embed = self.model.get_text_embedding(text_input)
-        text_embed = text_embed.detach().cpu().numpy()
+        if not use_tensor:
+            text_embed = text_embed.detach().cpu().numpy()
         return text_embed
         
     

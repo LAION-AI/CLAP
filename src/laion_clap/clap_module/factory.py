@@ -5,8 +5,10 @@ import pathlib
 import re
 from copy import deepcopy
 from pathlib import Path
+from packaging import version
 
 import torch
+import transformers
 
 from .model import CLAP, convert_weights_to_fp16
 from .openai import load_openai_model
@@ -57,6 +59,10 @@ def load_state_dict(checkpoint_path: str, map_location="cpu", skip_params=True):
     if skip_params:
         if next(iter(state_dict.items()))[0].startswith("module"):
             state_dict = {k[7:]: v for k, v in state_dict.items()}
+        
+        # removing position_ids to maintain compatibility with latest transformers update        
+        if version.parse(transformers.__version__) >= version.parse("4.31.0"): 
+            del state_dict["text_branch.embeddings.position_ids"]
     # for k in state_dict:
     #     if k.startswith('transformer'):
     #         v = state_dict.pop(k)

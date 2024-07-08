@@ -1,17 +1,17 @@
 import laion_clap
-from tqdm import tqdm
 import glob
 import json
 import torch
 import numpy as np
 
-device = torch.device('cuda:0')  # ('cuda:0')
+device = torch.device('cuda:0')
 
+# download https://drive.google.com/drive/folders/1scyH43eQAcrBz-5fAw44C6RNBhC3ejvX?usp=sharing and extract ./ESC50_1/test/0.tar to ./ESC50_1/test/
 esc50_test_dir = './ESC50_1/test/*/'
 class_index_dict_path = '/fsx/yusong/CLAP/class_labels/ESC50_class_labels_indices_space.json'
 
 # Load the model
-model = laion_clap.CLAP_Module()
+model = laion_clap.CLAP_Module(enable_fusion=False, device=device)
 model.load_ckpt()
 
 # Get the class index dict
