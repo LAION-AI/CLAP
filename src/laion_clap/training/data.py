@@ -91,12 +91,12 @@ _AUDIOSET_MAP = np.load(_AUDIOSET_MAP_PATH, allow_pickle=True)
 
 
 def int16_to_float32(x):
-    return (x / 32767.0).astype(np.float32)
+    return (x / 32767.0).astype('float32')
 
 
 def float32_to_int16(x):
     x = np.clip(x, a_min=-1., a_max=1.)
-    return (x * 32767.).astype(np.int16)
+    return (x * 32767.).astype('int16')
 
 
 def int16_to_float32_torch(x):
@@ -203,7 +203,7 @@ class ToyDataset(Dataset):
             )
         )
         r_idx = self.fp["index_in_hdf5"][s_index]
-        target = self.fp["target"][s_index].astype(np.float32)
+        target = self.fp["target"][s_index].astype('float32')
         text = self.prompt_text(target)
         with h5py.File(hdf5_path, "r") as f:
             waveform = int16_to_float32(f["waveform"][r_idx])[
@@ -464,7 +464,7 @@ def get_audio_features(sample, audio_data, max_len, data_truncating, data_fillin
                 )
             # random crop to max_len (for compatibility)
             overflow = len(audio_data) - max_len
-            idx = np.random.randint(0, overflow + 1)
+            idx = np.random.integers(0, overflow + 1)
             audio_data = audio_data[idx: idx + max_len]
 
         else:  # padding if too short
